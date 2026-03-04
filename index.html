@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panadería Marvin - Control de Turno</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; }
+        h1, h2, h3 { color: #333; margin-top: 0; }
+        .container { max-width: 900px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        
+        /* Formularios y Botones */
+        input, select, button { padding: 10px; margin: 5px 0; border: 1px solid #ccc; border-radius: 4px; font-size: 16px; }
+        button { background-color: #d35400; color: white; border: none; cursor: pointer; transition: background 0.3s; }
+        button:hover { background-color: #e67e22; }
+        .btn-danger { background-color: #c0392b; }
+        .btn-danger:hover { background-color: #e74c3c; }
+
+        /* Pestañas */
+        .tabs { display: flex; border-bottom: 2px solid #ddd; margin-bottom: 20px; }
+        .tab { padding: 10px 20px; cursor: pointer; background: #eee; border: none; margin-right: 5px; border-radius: 5px 5px 0 0; }
+        .tab.active { background: #d35400; color: white; font-weight: bold; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* Tablas */
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { padding: 12px; border: 1px solid #ddd; text-align: left; }
+        th { background-color: #f8f9fa; }
+
+        /* Secciones ocultas */
+        #dashboard { display: none; }
+        
+        .form-row { display: flex; gap: 10px; align-items: center; margin-bottom: 15px; flex-wrap: wrap; }
+        .cart-section { margin-top: 20px; padding: 15px; border: 1px dashed #d35400; border-radius: 5px; }
+        .header-dashboard { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+
+<div class="container" id="inicio-turno-section">
+    <h1>🥐 Iniciar Turno de Venta</h1>
+    <p>Agrega los productos disponibles y registra tus datos para comenzar el turno.</p>
+    
+    <div style="background: #f9f9f9; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
+        <h3>1. Cargar Inventario Inicial</h3>
+        <div class="form-row">
+            <input type="text" id="nuevo-pan" placeholder="Nombre del Pan (ej. Bolillo)">
+            <input type="number" id="nuevo-precio" placeholder="Precio ($)">
+            <input type="number" id="nueva-cantidad" placeholder="Cantidad Inicial">
+            <button onclick="agregarAInventarioLocal()">Agregar a la lista</button>
+        </div>
+        <ul id="lista-inventario-local"></ul>
+    </div>
+
+    <div style="background: #f9f9f9; padding: 15px; border-radius: 5px;">
+        <h3>2. Datos del Vendedor</h3>
+        <div class="form-row">
+            <input type="text" id="nombre-vendedor" placeholder="Tu Nombre">
+            <input type="password" id="firma-vendedor" placeholder="Clave secreta para cerrar turno">
+            <button onclick="iniciarTurno()" style="background-color: #27ae60;">🚀 Iniciar Turno</button>
+        </div>
+    </div>
+</div>
+
+<div class="container" id="dashboard">
+    <div class="header-dashboard">
+        <div>
+            <h1>🍞 Panadería Marvin</h1>
+            <p style="margin: 0;">Turno actual: <strong id="display-vendedor"></strong></p>
+        </div>
+        <button class="btn-danger" onclick="cerrarTurno()">Cerrar Turno 🔒</button>
+    </div>
+
+    <div class="tabs">
+        <button class="tab active" onclick="cambiarPestaña(event, 'punto-venta')">Punto de Venta</button>
+        <button class="tab" onclick="cambiarPestaña(event, 'inventario-vivo')">Inventario en Tiempo Real</button>
+        <button class="tab" onclick="cambiarPestaña(event, 'historial-ventas')">Historial de Ventas</button>
+    </div>
+
+    <div id="punto-venta" class="tab-content active">
+        <h2>Punto de Venta</h2>
+        <div class="form-row">
+            <select id="select-producto">
+                <option value="">Cargando productos...</option>
+            </select>
+            <input type="number" id="cantidad-venta" placeholder="Cant." style="width: 80px;" min="1" value="1">
+            <button onclick="agregarAlCarrito()">Añadir al carrito</button>
+        </div>
+
+        <div class="cart-section">
+            <h3>🛒 Carrito Actual</h3>
+            <ul id="carrito-lista"></ul>
+            <h4>Total: $<span id="carrito-total">0.00</span></h4>
+            <button onclick="completarVenta()" style="background-color: #27ae60; width: 100%; font-size: 18px;">✅ Finalizar Venta</button>
+        </div>
+    </div>
+
+    <div id="inventario-vivo" class="tab-content">
+        <h2>Inventario en Tiempo Real</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Producto</th>
+                    <th>Precio</th>
+                    <th>Stock Disponible</th>
+                </tr>
+            </thead>
+            <tbody id="tabla-inventario"></tbody>
+        </table>
+    </div>
+
+    <div id="historial-ventas" class="tab-content">
+        <h2>Historial de Ventas</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Hora</th>
+                    <th>Productos</th>
+                    <th>Total</th>
+                </tr>
+            </thead>
+            <tbody id="tabla-historial"></tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    // --- CONFIGURACIÓN DE FIREBASE ---
+    const firebaseConfig = {
+        apiKey: "AIzaSyD7iqWBCoScuHSID15itaShi7dRQuQwkEo",
+        authDomain: "panaderia-marvin.firebaseapp.com",
+        projectId: "panaderia-marvin",
+        storageBucket: "panaderia-marvin.firebasestorage.app",
+        messagingSenderId: "908203563116",
+        appId: "1:908203563116:web:69995ce1866a536bf3e049"
+    };
+
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    // Variables globales
+    let inventarioLocal = [];
+    let carrito = [];
+    let inventarioFirebase = [];
+
+    // --- AL CARGAR LA PÁGINA: REVISAR SI HAY UN TURNO ACTIVO ---
+    window.onload = () => {
+        if (localStorage.getItem('turnoActivo') === 'true') {
+            document.getElementById('inicio-turno-section').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'block';
+            document.getElementById('display-vendedor').innerText = localStorage.getItem('vendedor');
+            iniciarEscuchasEnTiempoReal();
+        }
+    };
+
+    // --- LÓGICA DE INICIO DE TURNO ---
+    function agregarAInventarioLocal() {
+        const nombre = document.getElementById('nuevo-pan').value.trim();
+        const precio = parseFloat(document.getElementById('nuevo-precio').value);
+        const cantidad = parseInt(document.getElementById('nueva-cantidad').value);
+
+        if(!nombre || isNaN(precio) || isNaN(cantidad)) {
+            alert("Por favor llena todos los campos del producto.");
+            return;
+        }
+
+        inventarioLocal.push({ nombre, precio, stock: cantidad });
+        actualizarListaLocal();
+        
+        document.getElementById('nuevo-pan').value = '';
+        document.getElementById('nuevo-precio').value = '';
+        document.getElementById('nueva-cantidad').value = '';
+    }
+
+    function actualizarListaLocal() {
+        const lista = document.getElementById('lista-inventario-local');
+        lista.innerHTML = '';
+        inventarioLocal.forEach((item, index) => {
+            lista.innerHTML += `<li>${item.nombre} - $${item.precio} (Cant: ${item.stock}) <button class="btn-danger" style="padding:2px 5px; font-size:12px;" onclick="inventarioLocal.splice(${index}, 1); actualizarListaLocal();">X</button></li>`;
+        });
+    }
+
+    async function iniciarTurno() {
+        const nombreVendedor = document.getElementById('nombre-vendedor').value.trim();
+        const firmaVendedor = document.getElementById('firma-vendedor').value.trim();
+
+        if(!nombreVendedor || !firmaVendedor) return alert("Ingresa tu nombre y tu clave secreta.");
+        if(inventarioLocal.length === 0) return alert("Agrega al menos un producto al inventario.");
+
+        const batch = db.batch();
+        inventarioLocal.forEach(item => {
+            const docRef = db.collection("inventario").doc(item.nombre.toLowerCase().replace(/\s+/g, '-'));
+            batch.set(docRef, item);
+        });
+
+        try {
+            await batch.commit();
+            
+            // GUARDAR SESIÓN EN EL NAVEGADOR
+            localStorage.setItem('turnoActivo', 'true');
+            localStorage.setItem('vendedor', nombreVendedor);
+            localStorage.setItem('firmaVendedor', firmaVendedor); // Guardamos la clave para pedirla al cerrar
+
+            document.getElementById('inicio-turno-section').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'block';
+            document.getElementById('display-vendedor').innerText = nombreVendedor;
+
+            iniciarEscuchasEnTiempoReal();
+        } catch (error) {
+            console.error("Error al iniciar turno:", error);
+            alert("Hubo un error al iniciar el turno.");
+        }
+    }
+
+    // --- LÓGICA DE CIERRE DE TURNO ---
+    async function cerrarTurno() {
+        const claveIngresada = prompt("Para cerrar el turno y limpiar el inventario, ingresa tu clave:");
+        
+        // Verificamos si la clave ingresada coincide con la guardada al iniciar el turno
+        // Ocultamente agrego "admin123" como clave maestra por si se les olvida.
+        if (claveIngresada === localStorage.getItem('firmaVendedor') || claveIngresada === "admin123") {
+            if (confirm("¿Estás seguro? Esto reiniciará el inventario a cero para el siguiente turno.")) {
+                try {
+                    // Borrar los documentos de la colección "inventario"
+                    const snapshot = await db.collection("inventario").get();
+                    const batch = db.batch();
+                    snapshot.docs.forEach((doc) => {
+                        batch.delete(doc.ref);
+                    });
+                    await batch.commit();
+
+                    // Limpiar la memoria del navegador
+                    localStorage.removeItem('turnoActivo');
+                    localStorage.removeItem('vendedor');
+                    localStorage.removeItem('firmaVendedor');
+
+                    alert("Turno cerrado exitosamente. El inventario ha sido limpiado.");
+                    // Recargar la página para volver a la pantalla de inicio
+                    window.location.reload();
+
+                } catch (error) {
+                    console.error("Error al limpiar el inventario:", error);
+                    alert("Hubo un error al cerrar el turno.");
+                }
+            }
+        } else if (claveIngresada !== null) {
+            alert("Clave incorrecta. No se puede cerrar el turno.");
+        }
+    }
+
+    // --- LÓGICA DEL DASHBOARD (TABS) ---
+    function cambiarPestaña(evt, nombrePestaña) {
+        let i, tabcontent, tablinks;
+        tabcontent = document.getElementsByClassName("tab-content");
+        for (i = 0; i < tabcontent.length; i++) {
+            tabcontent[i].style.display = "none";
+        }
+        tablinks = document.getElementsByClassName("tab");
+        for (i = 0; i < tablinks.length; i++) {
+            tablinks[i].className = tablinks[i].className.replace(" active", "");
+        }
+        document.getElementById(nombrePestaña).style.display = "block";
+        evt.currentTarget.className += " active";
+    }
+
+    // --- ESCUCHAS EN TIEMPO REAL (FIREBASE) ---
+    function iniciarEscuchasEnTiempoReal() {
+        // Escuchar Inventario
+        db.collection("inventario").onSnapshot((querySnapshot) => {
+            const selectProducto = document.getElementById('select-producto');
+            const tablaInventario = document.getElementById('tabla-inventario');
+            
+            // Guardar la selección actual para no perderla si la BD se actualiza mientras seleccionas
+            const valorSeleccionadoAnterior = selectProducto.value;
+            
+            selectProducto.innerHTML = '<option value="">Selecciona un producto...</option>';
+            tablaInventario.innerHTML = '';
+            inventarioFirebase = [];
+
+            querySnapshot.forEach((doc) => {
+                const prod = doc.data();
+                prod.id = doc.id;
+                inventarioFirebase.push(prod);
+
+                tablaInventario.innerHTML += `
+                    <tr>
+                        <td>${prod.nombre}</td>
+                        <td>$${prod.precio.toFixed(2)}</td>
+                        <td><strong>${prod.stock}</strong></td>
+                    </tr>
+                `;
+
+                if(prod.stock > 0) {
+                    selectProducto.innerHTML += `<option value="${doc.id}" data-nombre="${prod.nombre}" data-precio="${prod.precio}">${prod.nombre} - $${prod.precio} (Disp: ${prod.stock})</option>`;
+                }
+            });
+
+            // Restaurar selección si el producto aún tiene stock
+            if (valorSeleccionadoAnterior && inventarioFirebase.find(p => p.id === valorSeleccionadoAnterior && p.stock > 0)) {
+                selectProducto.value = valorSeleccionadoAnterior;
+            }
+        });
+
+        // Escuchar Historial de Ventas
+        db.collection("ventas").orderBy("timestamp", "desc").onSnapshot((querySnapshot) => {
+            const tablaHistorial = document.getElementById('tabla-historial');
+            tablaHistorial.innerHTML = '';
+
+            querySnapshot.forEach((doc) => {
+                const venta = doc.data();
+                const fecha = venta.timestamp ? new Date(venta.timestamp.toDate()).toLocaleTimeString() : 'Reciente...';
+                let resumenProductos = venta.productos.map(p => `${p.cantidad}x ${p.nombre}`).join(', ');
+
+                tablaHistorial.innerHTML += `
+                    <tr>
+                        <td>${fecha}</td>
+                        <td>${resumenProductos}</td>
+                        <td><strong>$${venta.total.toFixed(2)}</strong></td>
+                    </tr>
+                `;
+            });
+        });
+    }
+
+    // --- LÓGICA DE PUNTO DE VENTA ---
+    function agregarAlCarrito() {
+        const select = document.getElementById('select-producto');
+        if (select.selectedIndex === 0 || !select.value) return alert("Selecciona un producto válido.");
+        
+        const option = select.options[select.selectedIndex];
+        const id = select.value;
+        const nombre = option.getAttribute('data-nombre');
+        const precio = parseFloat(option.getAttribute('data-precio'));
+        const cantidad = parseInt(document.getElementById('cantidad-venta').value);
+
+        const productoEnBD = inventarioFirebase.find(p => p.id === id);
+        
+        // Calcular cuántos de este producto ya están en el carrito
+        const existe = carrito.find(item => item.id === id);
+        const cantidadEnCarrito = existe ? existe.cantidad : 0;
+
+        if(!productoEnBD || (cantidad + cantidadEnCarrito) > productoEnBD.stock) {
+            return alert(`Stock insuficiente. Solo quedan ${productoEnBD ? productoEnBD.stock - cantidadEnCarrito : 0} disponibles para añadir.`);
+        }
+
+        if (existe) {
+            existe.cantidad += cantidad;
+        } else {
+            carrito.push({ id, nombre, precio, cantidad });
+        }
+
+        actualizarCarrito();
+    }
+
+    function actualizarCarrito() {
+        const lista = document.getElementById('carrito-lista');
+        let total = 0;
+        lista.innerHTML = '';
+
+        carrito.forEach((item, index) => {
+            const subtotal = item.precio * item.cantidad;
+            total += subtotal;
+            lista.innerHTML += `<li>${item.cantidad}x ${item.nombre} - $${subtotal.toFixed(2)} 
+                <button class="btn-danger" style="padding:2px 5px; font-size:12px;" onclick="carrito.splice(${index}, 1); actualizarCarrito();">X</button>
+            </li>`;
+        });
+
+        document.getElementById('carrito-total').innerText = total.toFixed(2);
+    }
+
+    async function completarVenta() {
+        if (carrito.length === 0) return alert("El carrito está vacío.");
+
+        let totalVenta = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
+
+        try {
+            await db.collection("ventas").add({
+                vendedor: document.getElementById('display-vendedor').innerText,
+                productos: carrito,
+                total: totalVenta,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            });
+
+            const batch = db.batch();
+            carrito.forEach(item => {
+                const docRef = db.collection("inventario").doc(item.id);
+                batch.update(docRef, {
+                    stock: firebase.firestore.FieldValue.increment(-item.cantidad)
+                });
+            });
+            await batch.commit();
+
+            alert("Venta registrada con éxito!");
+            
+            carrito = [];
+            actualizarCarrito();
+            document.getElementById('cantidad-venta').value = 1;
+
+        } catch (error) {
+            console.error("Error al procesar la venta:", error);
+            alert("Error al procesar la venta.");
+        }
+    }
+</script>
+
+</body>
+</html>
