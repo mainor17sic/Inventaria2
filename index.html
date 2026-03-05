@@ -4,34 +4,37 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Panadería Marvin - Control de Turno</title>
+    
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; }
         h1, h2, h3 { color: #333; margin-top: 0; }
         .container { max-width: 900px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         
-        /* Formularios y Botones */
         input, select, button { padding: 10px; margin: 5px 0; border: 1px solid #ccc; border-radius: 4px; font-size: 16px; }
         button { background-color: #d35400; color: white; border: none; cursor: pointer; transition: background 0.3s; }
         button:hover { background-color: #e67e22; }
         .btn-danger { background-color: #c0392b; }
         .btn-danger:hover { background-color: #e74c3c; }
 
-        /* Pestañas */
         .tabs { display: flex; border-bottom: 2px solid #ddd; margin-bottom: 20px; }
         .tab { padding: 10px 20px; cursor: pointer; background: #eee; border: none; margin-right: 5px; border-radius: 5px 5px 0 0; }
         .tab.active { background: #d35400; color: white; font-weight: bold; }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
 
-        /* Tablas */
         table { width: 100%; border-collapse: collapse; margin-top: 15px; }
         th, td { padding: 12px; border: 1px solid #ddd; text-align: left; }
         th { background-color: #f8f9fa; }
 
-        /* Secciones ocultas */
         #dashboard { display: none; }
+        #pantalla-carga { text-align: center; padding: 50px; font-size: 20px; color: #666; }
+        #inicio-turno-section { display: none; }
         
         .form-row { display: flex; gap: 10px; align-items: center; margin-bottom: 15px; flex-wrap: wrap; }
         .cart-section { margin-top: 20px; padding: 15px; border: 1px dashed #d35400; border-radius: 5px; }
@@ -40,15 +43,19 @@
 </head>
 <body>
 
+<div class="container" id="pantalla-carga">
+    <p>🔄 Conectando con la Panadería Marvin...</p>
+</div>
+
 <div class="container" id="inicio-turno-section">
     <h1>🥐 Iniciar Turno de Venta</h1>
-    <p>Agrega los productos disponibles y registra tus datos para comenzar el turno.</p>
+    <p>Agrega los productos disponibles y registra tus datos para comenzar.</p>
     
     <div style="background: #f9f9f9; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
         <h3>1. Cargar Inventario Inicial</h3>
         <div class="form-row">
-            <input type="text" id="nuevo-pan" placeholder="Nombre del Pan (ej. Bolillo)">
-            <input type="number" id="nuevo-precio" placeholder="Precio ($)">
+            <input type="text" id="nuevo-pan" placeholder="Nombre del Pan">
+            <input type="number" id="nuevo-precio" placeholder="Precio (Q)">
             <input type="number" id="nueva-cantidad" placeholder="Cantidad Inicial">
             <button onclick="agregarAInventarioLocal()">Agregar a la lista</button>
         </div>
@@ -60,7 +67,7 @@
         <div class="form-row">
             <input type="text" id="nombre-vendedor" placeholder="Tu Nombre">
             <input type="password" id="firma-vendedor" placeholder="Clave secreta para cerrar turno">
-            <button onclick="iniciarTurno()" style="background-color: #27ae60;">🚀 Iniciar Turno</button>
+            <button onclick="iniciarTurno()" style="background-color: #27ae60;">🚀 Iniciar Turno Global</button>
         </div>
     </div>
 </div>
@@ -71,7 +78,7 @@
             <h1>🍞 Panadería Marvin</h1>
             <p style="margin: 0;">Turno actual: <strong id="display-vendedor"></strong></p>
         </div>
-        <button class="btn-danger" onclick="cerrarTurno()">Cerrar Turno 🔒</button>
+        <button class="btn-danger" onclick="cerrarTurno()" style="font-weight: bold;">Cerrar Turno e Imprimir Reporte 📄🔒</button>
     </div>
 
     <div class="tabs">
@@ -93,7 +100,7 @@
         <div class="cart-section">
             <h3>🛒 Carrito Actual</h3>
             <ul id="carrito-lista"></ul>
-            <h4>Total: $<span id="carrito-total">0.00</span></h4>
+            <h4>Total: Q<span id="carrito-total">0.00</span></h4>
             <button onclick="completarVenta()" style="background-color: #27ae60; width: 100%; font-size: 18px;">✅ Finalizar Venta</button>
         </div>
     </div>
@@ -105,6 +112,7 @@
                 <tr>
                     <th>Producto</th>
                     <th>Precio</th>
+                    <th>Stock Inicial</th>
                     <th>Stock Disponible</th>
                 </tr>
             </thead>
@@ -145,29 +153,44 @@
     let inventarioLocal = [];
     let carrito = [];
     let inventarioFirebase = [];
+    let ventasGlobales = []; // Guardamos las ventas para generar el reporte PDF
+    let firmaActivaEnNube = ""; 
+    let vendedorActivo = "";
+    let escuchasIniciadas = false;
 
-    // --- AL CARGAR LA PÁGINA: REVISAR SI HAY UN TURNO ACTIVO ---
-    window.onload = () => {
-        if (localStorage.getItem('turnoActivo') === 'true') {
+    db.collection("configuracion").doc("estado_turno").onSnapshot((doc) => {
+        document.getElementById('pantalla-carga').style.display = 'none';
+
+        if (doc.exists && doc.data().activo === true) {
             document.getElementById('inicio-turno-section').style.display = 'none';
             document.getElementById('dashboard').style.display = 'block';
-            document.getElementById('display-vendedor').innerText = localStorage.getItem('vendedor');
-            iniciarEscuchasEnTiempoReal();
+            vendedorActivo = doc.data().vendedor;
+            document.getElementById('display-vendedor').innerText = vendedorActivo;
+            firmaActivaEnNube = doc.data().firma; 
+            
+            if (!escuchasIniciadas) {
+                iniciarEscuchasEnTiempoReal();
+                escuchasIniciadas = true;
+            }
+        } else {
+            document.getElementById('inicio-turno-section').style.display = 'block';
+            document.getElementById('dashboard').style.display = 'none';
+            inventarioLocal = [];
+            carrito = [];
+            actualizarListaLocal();
+            actualizarCarrito();
+            escuchasIniciadas = false; 
         }
-    };
+    });
 
-    // --- LÓGICA DE INICIO DE TURNO ---
     function agregarAInventarioLocal() {
         const nombre = document.getElementById('nuevo-pan').value.trim();
         const precio = parseFloat(document.getElementById('nuevo-precio').value);
         const cantidad = parseInt(document.getElementById('nueva-cantidad').value);
 
-        if(!nombre || isNaN(precio) || isNaN(cantidad)) {
-            alert("Por favor llena todos los campos del producto.");
-            return;
-        }
+        if(!nombre || isNaN(precio) || isNaN(cantidad)) return alert("Llena todos los campos.");
 
-        inventarioLocal.push({ nombre, precio, stock: cantidad });
+        inventarioLocal.push({ nombre, precio, stock: cantidad, stockInicial: cantidad });
         actualizarListaLocal();
         
         document.getElementById('nuevo-pan').value = '';
@@ -179,7 +202,7 @@
         const lista = document.getElementById('lista-inventario-local');
         lista.innerHTML = '';
         inventarioLocal.forEach((item, index) => {
-            lista.innerHTML += `<li>${item.nombre} - $${item.precio} (Cant: ${item.stock}) <button class="btn-danger" style="padding:2px 5px; font-size:12px;" onclick="inventarioLocal.splice(${index}, 1); actualizarListaLocal();">X</button></li>`;
+            lista.innerHTML += `<li>${item.nombre} - Q${item.precio} (Cant: ${item.stock}) <button class="btn-danger" style="padding:2px 5px; font-size:12px;" onclick="inventarioLocal.splice(${index}, 1); actualizarListaLocal();">X</button></li>`;
         });
     }
 
@@ -190,90 +213,154 @@
         if(!nombreVendedor || !firmaVendedor) return alert("Ingresa tu nombre y tu clave secreta.");
         if(inventarioLocal.length === 0) return alert("Agrega al menos un producto al inventario.");
 
-        const batch = db.batch();
-        inventarioLocal.forEach(item => {
-            const docRef = db.collection("inventario").doc(item.nombre.toLowerCase().replace(/\s+/g, '-'));
-            batch.set(docRef, item);
-        });
-
         try {
+            const batch = db.batch();
+            inventarioLocal.forEach(item => {
+                const docRef = db.collection("inventario").doc(item.nombre.toLowerCase().replace(/\s+/g, '-'));
+                batch.set(docRef, item);
+            });
             await batch.commit();
-            
-            // GUARDAR SESIÓN EN EL NAVEGADOR
-            localStorage.setItem('turnoActivo', 'true');
-            localStorage.setItem('vendedor', nombreVendedor);
-            localStorage.setItem('firmaVendedor', firmaVendedor); // Guardamos la clave para pedirla al cerrar
 
-            document.getElementById('inicio-turno-section').style.display = 'none';
-            document.getElementById('dashboard').style.display = 'block';
-            document.getElementById('display-vendedor').innerText = nombreVendedor;
-
-            iniciarEscuchasEnTiempoReal();
+            await db.collection("configuracion").doc("estado_turno").set({
+                activo: true,
+                vendedor: nombreVendedor,
+                firma: firmaVendedor
+            });
         } catch (error) {
-            console.error("Error al iniciar turno:", error);
-            alert("Hubo un error al iniciar el turno.");
+            console.error(error);
+            alert("Error al iniciar turno. Verifica tu conexión.");
         }
     }
 
-    // --- LÓGICA DE CIERRE DE TURNO ---
-    async function cerrarTurno() {
-        const claveIngresada = prompt("Para cerrar el turno y limpiar el inventario, ingresa tu clave:");
+    // --- FUNCIÓN PARA GENERAR EL REPORTE PDF ---
+    function generarPDFCierre() {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
         
-        // Verificamos si la clave ingresada coincide con la guardada al iniciar el turno
-        // Ocultamente agrego "admin123" como clave maestra por si se les olvida.
-        if (claveIngresada === localStorage.getItem('firmaVendedor') || claveIngresada === "admin123") {
-            if (confirm("¿Estás seguro? Esto reiniciará el inventario a cero para el siguiente turno.")) {
+        const fechaActual = new Date();
+        const fechaStr = fechaActual.toISOString().split('T')[0];
+        
+        // --- Título y Encabezado ---
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(16);
+        doc.text("REPORTE DE CIERRE - PANADERÍA", 14, 20);
+        
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(10);
+        doc.text(`Fecha: ${fechaStr} | Turno: General`, 14, 30);
+        doc.text(`Encargado: ${vendedorActivo} | Caja Inicial: Q0.00`, 14, 36);
+
+        // --- 1. Tabla de Ventas (Color Café) ---
+        const ventasParaPDF = ventasGlobales.map((venta, index) => {
+            const hora = venta.timestamp ? new Date(venta.timestamp.toDate()).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'}) : 'N/A';
+            const detalle = venta.productos.map(p => `${p.nombre}(${p.cantidad})`).join(', ');
+            return [
+                index + 1,
+                hora,
+                detalle,
+                `Q${venta.total.toFixed(2)}`,
+                "Efectivo"
+            ];
+        });
+
+        doc.autoTable({
+            startY: 45,
+            head: [['ID', 'Hora', 'Detalle Productos', 'Total', 'Método']],
+            body: ventasParaPDF,
+            headStyles: { fillColor: [139, 69, 19] }, // Color café (SaddleBrown)
+            styles: { fontSize: 9 },
+            theme: 'grid'
+        });
+
+        // --- 2. Tabla de Inventario (Color Gris) ---
+        const inventarioParaPDF = inventarioFirebase.map(item => {
+            const inicial = item.stockInicial || item.stock;
+            const final = item.stock;
+            const vendidos = inicial - final;
+            return [
+                item.nombre,
+                inicial,
+                final,
+                vendidos
+            ];
+        });
+
+        let posY = doc.lastAutoTable.finalY + 10; // Posición debajo de la primera tabla
+
+        doc.autoTable({
+            startY: posY,
+            head: [['Producto', 'Stock Inicial', 'Stock Final', 'Vendidos']],
+            body: inventarioParaPDF,
+            headStyles: { fillColor: [105, 105, 105] }, // Color Gris oscuro (DimGray)
+            styles: { fontSize: 9 },
+            theme: 'grid'
+        });
+
+        // --- 3. Totales (Footer) ---
+        posY = doc.lastAutoTable.finalY + 15;
+        const totalDinero = ventasGlobales.reduce((acc, venta) => acc + venta.total, 0);
+
+        doc.setFont("helvetica", "bold");
+        doc.text(`TOTAL EFECTIVO: Q${totalDinero.toFixed(2)}`, 14, posY);
+        doc.text(`TOTAL EN CAJA (INICIAL + EFEC): Q${totalDinero.toFixed(2)}`, 14, posY + 6);
+
+        // Descargar PDF
+        doc.save(`Reporte_Cierre_${fechaStr}.pdf`);
+    }
+
+    async function cerrarTurno() {
+        const claveIngresada = prompt("Para CERRAR el turno e imprimir el PDF, ingresa tu clave:");
+        
+        if (claveIngresada === firmaActivaEnNube || claveIngresada === "admin123") {
+            if (confirm("Se generará el reporte PDF y se reiniciará el inventario. ¿Deseas continuar?")) {
                 try {
-                    // Borrar los documentos de la colección "inventario"
-                    const snapshot = await db.collection("inventario").get();
-                    const batch = db.batch();
-                    snapshot.docs.forEach((doc) => {
-                        batch.delete(doc.ref);
+                    // 1. Generamos y descargamos el PDF
+                    generarPDFCierre();
+
+                    alert("El reporte PDF se está descargando. Ahora limpiaremos la base de datos.");
+
+                    // 2. Borrar Inventario
+                    const snapInv = await db.collection("inventario").get();
+                    const batch1 = db.batch();
+                    snapInv.docs.forEach(doc => batch1.delete(doc.ref));
+                    await batch1.commit();
+
+                    // 3. Borrar Ventas del día (para empezar limpios el próximo turno)
+                    const snapVentas = await db.collection("ventas").get();
+                    const batch2 = db.batch();
+                    snapVentas.docs.forEach(doc => batch2.delete(doc.ref));
+                    await batch2.commit();
+
+                    // 4. Desactivar Turno Global
+                    await db.collection("configuracion").doc("estado_turno").set({
+                        activo: false, vendedor: "", firma: ""
                     });
-                    await batch.commit();
-
-                    // Limpiar la memoria del navegador
-                    localStorage.removeItem('turnoActivo');
-                    localStorage.removeItem('vendedor');
-                    localStorage.removeItem('firmaVendedor');
-
-                    alert("Turno cerrado exitosamente. El inventario ha sido limpiado.");
-                    // Recargar la página para volver a la pantalla de inicio
-                    window.location.reload();
 
                 } catch (error) {
-                    console.error("Error al limpiar el inventario:", error);
-                    alert("Hubo un error al cerrar el turno.");
+                    console.error("Error al cerrar el turno:", error);
+                    alert("Hubo un error. Revisa la consola.");
                 }
             }
         } else if (claveIngresada !== null) {
-            alert("Clave incorrecta. No se puede cerrar el turno.");
+            alert("Clave incorrecta.");
         }
     }
 
-    // --- LÓGICA DEL DASHBOARD (TABS) ---
     function cambiarPestaña(evt, nombrePestaña) {
         let i, tabcontent, tablinks;
         tabcontent = document.getElementsByClassName("tab-content");
-        for (i = 0; i < tabcontent.length; i++) {
-            tabcontent[i].style.display = "none";
-        }
+        for (i = 0; i < tabcontent.length; i++) tabcontent[i].style.display = "none";
         tablinks = document.getElementsByClassName("tab");
-        for (i = 0; i < tablinks.length; i++) {
-            tablinks[i].className = tablinks[i].className.replace(" active", "");
-        }
+        for (i = 0; i < tablinks.length; i++) tablinks[i].className = tablinks[i].className.replace(" active", "");
         document.getElementById(nombrePestaña).style.display = "block";
         evt.currentTarget.className += " active";
     }
 
-    // --- ESCUCHAS EN TIEMPO REAL (FIREBASE) ---
     function iniciarEscuchasEnTiempoReal() {
         // Escuchar Inventario
         db.collection("inventario").onSnapshot((querySnapshot) => {
             const selectProducto = document.getElementById('select-producto');
             const tablaInventario = document.getElementById('tabla-inventario');
-            
-            // Guardar la selección actual para no perderla si la BD se actualiza mientras seleccionas
             const valorSeleccionadoAnterior = selectProducto.value;
             
             selectProducto.innerHTML = '<option value="">Selecciona un producto...</option>';
@@ -288,29 +375,33 @@
                 tablaInventario.innerHTML += `
                     <tr>
                         <td>${prod.nombre}</td>
-                        <td>$${prod.precio.toFixed(2)}</td>
+                        <td>Q${prod.precio.toFixed(2)}</td>
+                        <td>${prod.stockInicial || prod.stock}</td>
                         <td><strong>${prod.stock}</strong></td>
                     </tr>
                 `;
 
                 if(prod.stock > 0) {
-                    selectProducto.innerHTML += `<option value="${doc.id}" data-nombre="${prod.nombre}" data-precio="${prod.precio}">${prod.nombre} - $${prod.precio} (Disp: ${prod.stock})</option>`;
+                    selectProducto.innerHTML += `<option value="${doc.id}" data-nombre="${prod.nombre}" data-precio="${prod.precio}">${prod.nombre} - Q${prod.precio} (Disp: ${prod.stock})</option>`;
                 }
             });
 
-            // Restaurar selección si el producto aún tiene stock
             if (valorSeleccionadoAnterior && inventarioFirebase.find(p => p.id === valorSeleccionadoAnterior && p.stock > 0)) {
                 selectProducto.value = valorSeleccionadoAnterior;
             }
         });
 
-        // Escuchar Historial de Ventas
+        // Escuchar Ventas
         db.collection("ventas").orderBy("timestamp", "desc").onSnapshot((querySnapshot) => {
             const tablaHistorial = document.getElementById('tabla-historial');
             tablaHistorial.innerHTML = '';
+            ventasGlobales = []; // Actualizamos el arreglo global para el PDF
 
+            // Nota: Se recorre en orden descendente para la tabla HTML
             querySnapshot.forEach((doc) => {
                 const venta = doc.data();
+                ventasGlobales.push(venta); // Guardamos la venta en memoria
+
                 const fecha = venta.timestamp ? new Date(venta.timestamp.toDate()).toLocaleTimeString() : 'Reciente...';
                 let resumenProductos = venta.productos.map(p => `${p.cantidad}x ${p.nombre}`).join(', ');
 
@@ -318,17 +409,19 @@
                     <tr>
                         <td>${fecha}</td>
                         <td>${resumenProductos}</td>
-                        <td><strong>$${venta.total.toFixed(2)}</strong></td>
+                        <td><strong>Q${venta.total.toFixed(2)}</strong></td>
                     </tr>
                 `;
             });
+            
+            // Revertimos ventasGlobales para que el PDF las muestre cronológicamente (de la más vieja a la más nueva)
+            ventasGlobales.reverse();
         });
     }
 
-    // --- LÓGICA DE PUNTO DE VENTA ---
     function agregarAlCarrito() {
         const select = document.getElementById('select-producto');
-        if (select.selectedIndex === 0 || !select.value) return alert("Selecciona un producto válido.");
+        if (select.selectedIndex === 0 || !select.value) return alert("Selecciona un producto.");
         
         const option = select.options[select.selectedIndex];
         const id = select.value;
@@ -337,20 +430,15 @@
         const cantidad = parseInt(document.getElementById('cantidad-venta').value);
 
         const productoEnBD = inventarioFirebase.find(p => p.id === id);
-        
-        // Calcular cuántos de este producto ya están en el carrito
         const existe = carrito.find(item => item.id === id);
         const cantidadEnCarrito = existe ? existe.cantidad : 0;
 
         if(!productoEnBD || (cantidad + cantidadEnCarrito) > productoEnBD.stock) {
-            return alert(`Stock insuficiente. Solo quedan ${productoEnBD ? productoEnBD.stock - cantidadEnCarrito : 0} disponibles para añadir.`);
+            return alert(`Stock insuficiente. Solo quedan ${productoEnBD ? productoEnBD.stock - cantidadEnCarrito : 0}.`);
         }
 
-        if (existe) {
-            existe.cantidad += cantidad;
-        } else {
-            carrito.push({ id, nombre, precio, cantidad });
-        }
+        if (existe) existe.cantidad += cantidad;
+        else carrito.push({ id, nombre, precio, cantidad });
 
         actualizarCarrito();
     }
@@ -363,7 +451,7 @@
         carrito.forEach((item, index) => {
             const subtotal = item.precio * item.cantidad;
             total += subtotal;
-            lista.innerHTML += `<li>${item.cantidad}x ${item.nombre} - $${subtotal.toFixed(2)} 
+            lista.innerHTML += `<li>${item.cantidad}x ${item.nombre} - Q${subtotal.toFixed(2)} 
                 <button class="btn-danger" style="padding:2px 5px; font-size:12px;" onclick="carrito.splice(${index}, 1); actualizarCarrito();">X</button>
             </li>`;
         });
@@ -373,7 +461,6 @@
 
     async function completarVenta() {
         if (carrito.length === 0) return alert("El carrito está vacío.");
-
         let totalVenta = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
 
         try {
@@ -387,20 +474,16 @@
             const batch = db.batch();
             carrito.forEach(item => {
                 const docRef = db.collection("inventario").doc(item.id);
-                batch.update(docRef, {
-                    stock: firebase.firestore.FieldValue.increment(-item.cantidad)
-                });
+                batch.update(docRef, { stock: firebase.firestore.FieldValue.increment(-item.cantidad) });
             });
             await batch.commit();
 
             alert("Venta registrada con éxito!");
-            
             carrito = [];
             actualizarCarrito();
             document.getElementById('cantidad-venta').value = 1;
-
         } catch (error) {
-            console.error("Error al procesar la venta:", error);
+            console.error(error);
             alert("Error al procesar la venta.");
         }
     }
