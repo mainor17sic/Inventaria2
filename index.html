@@ -67,6 +67,10 @@
         <div class="form-row">
             <input type="text" id="nombre-vendedor" placeholder="Tu Nombre">
             <input type="password" id="firma-vendedor" placeholder="Clave secreta para cerrar turno">
+            <select id="tipo-turno">
+    <option value="Diurno">☀️ Turno Diurno</option>
+    <option value="Tarde">🌙 Turno Tarde</option>
+</select>
             <button onclick="iniciarTurno()" style="background-color: #27ae60;">🚀 Iniciar Turno Global</button>
         </div>
     </div>
@@ -156,17 +160,22 @@
     let ventasGlobales = []; // Guardamos las ventas para generar el reporte PDF
     let firmaActivaEnNube = ""; 
     let vendedorActivo = "";
+    let turnoActivo = "";
     let escuchasIniciadas = false;
 
+   // Escucha el estado del turno global
     db.collection("configuracion").doc("estado_turno").onSnapshot((doc) => {
         document.getElementById('pantalla-carga').style.display = 'none';
 
         if (doc.exists && doc.data().activo === true) {
             document.getElementById('inicio-turno-section').style.display = 'none';
             document.getElementById('dashboard').style.display = 'block';
+            
             vendedorActivo = doc.data().vendedor;
-            document.getElementById('display-vendedor').innerText = vendedorActivo;
+            turnoActivo = doc.data().turno || "General"; // Leemos el turno de la nube
             firmaActivaEnNube = doc.data().firma; 
+
+            document.getElementById('display-vendedor').innerText = `${vendedorActivo} (${turnoActivo})`;
             
             if (!escuchasIniciadas) {
                 iniciarEscuchasEnTiempoReal();
@@ -178,7 +187,6 @@
             inventarioLocal = [];
             carrito = [];
             actualizarListaLocal();
-            actualizarCarrito();
             escuchasIniciadas = false; 
         }
     });
@@ -207,30 +215,32 @@
     }
 
     async function iniciarTurno() {
-        const nombreVendedor = document.getElementById('nombre-vendedor').value.trim();
-        const firmaVendedor = document.getElementById('firma-vendedor').value.trim();
+    const nombreVendedor = document.getElementById('nombre-vendedor').value.trim();
+    const firmaVendedor = document.getElementById('firma-vendedor').value.trim();
+    const tipoTurno = document.getElementById('tipo-turno').value; // <--- Nueva línea
 
-        if(!nombreVendedor || !firmaVendedor) return alert("Ingresa tu nombre y tu clave secreta.");
-        if(inventarioLocal.length === 0) return alert("Agrega al menos un producto al inventario.");
+    if(!nombreVendedor || !firmaVendedor) return alert("Ingresa tu nombre y tu clave secreta.");
+    if(inventarioLocal.length === 0) return alert("Agrega al menos un producto al inventario.");
 
-        try {
-            const batch = db.batch();
-            inventarioLocal.forEach(item => {
-                const docRef = db.collection("inventario").doc(item.nombre.toLowerCase().replace(/\s+/g, '-'));
-                batch.set(docRef, item);
-            });
-            await batch.commit();
+    try {
+        const batch = db.batch();
+        inventarioLocal.forEach(item => {
+            const docRef = db.collection("inventario").doc(item.nombre.toLowerCase().replace(/\s+/g, '-'));
+            batch.set(docRef, item);
+        });
+        await batch.commit();
 
-            await db.collection("configuracion").doc("estado_turno").set({
-                activo: true,
-                vendedor: nombreVendedor,
-                firma: firmaVendedor
-            });
-        } catch (error) {
-            console.error(error);
-            alert("Error al iniciar turno. Verifica tu conexión.");
-        }
+        await db.collection("configuracion").doc("estado_turno").set({
+            activo: true,
+            vendedor: nombreVendedor,
+            firma: firmaVendedor,
+            turno: tipoTurno // <--- Guardamos el turno en Firebase
+        });
+    } catch (error) {
+        console.error(error);
+        alert("Error al iniciar turno. Verifica tu conexión.");
     }
+}
 
     // --- FUNCIÓN PARA GENERAR EL REPORTE PDF ---
     function generarPDFCierre() {
@@ -247,7 +257,7 @@
         
         doc.setFont("helvetica", "normal");
         doc.setFontSize(10);
-        doc.text(`Fecha: ${fechaStr} | Turno: General`, 14, 30);
+        doc.text(`Fecha: ${fechaStr} | Turno: ${turnoActivo}`, 14, 30);
         doc.text(`Encargado: ${vendedorActivo} | Caja Inicial: Q0.00`, 14, 36);
 
         // --- 1. Tabla de Ventas (Color Café) ---
