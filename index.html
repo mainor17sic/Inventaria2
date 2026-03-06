@@ -149,41 +149,46 @@
             <button onclick="agregarAlCarrito()" style="background-color: #d35400;">Añadir al carrito</button>
         </div>
 
-        <div class="cart-section">
-            <h3>🛒 Carrito Actual</h3>
-            <ul id="carrito-lista"></ul>
-            <h4>Total: Q<span id="carrito-total">0.00</span></h4>
-            <button onclick="completarVenta()" style="background-color: #27ae60; width: 100%; font-size: 18px;">✅ Finalizar Venta</button>
+        <div class="container" id="inicio-turno-section">
+    <h1>🥐 Iniciar Turno de Venta</h1>
+    <p>Ingresa las cantidades iniciales para cada producto del día.</p>
+    
+    <div style="background: #f9f9f9; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #ddd;">
+        <h3>1. Inventario del Día</h3>
+        <table style="background: white; width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr style="background: #eee;">
+                    <th style="padding: 10px; border: 1px solid #ddd;">Producto</th>
+                    <th style="padding: 10px; border: 1px solid #ddd;">Precio (Q)</th>
+                    <th style="padding: 10px; border: 1px solid #ddd;">Cantidad Inicial</th>
+                </tr>
+            </thead>
+            <tbody id="tabla-pre-inventario">
+                </tbody>
+        </table>
+
+        <div style="margin-top: 15px; padding-top: 15px; border-top: 1px dashed #ccc;">
+            <h4>¿Agregar otro producto no listado?</h4>
+            <div class="form-row">
+                <input type="text" id="extra-nombre" placeholder="Nombre pan">
+                <input type="number" id="extra-precio" placeholder="Precio Q" style="width: 100px;">
+                <input type="number" id="extra-cantidad" placeholder="Cant." style="width: 80px;">
+                <button onclick="agregarExtra()" type="button" style="background-color: #7f8c8d;">+ Agregar a la lista</button>
+            </div>
         </div>
     </div>
 
-    <div id="inventario-vivo" class="tab-content">
-        <h2>Inventario en Tiempo Real</h2>
-        <table>
-            <thead>
-                <tr>
-                    <th>Producto</th>
-                    <th>Precio</th>
-                    <th>Stock Inicial</th>
-                    <th>Stock Disponible</th>
-                </tr>
-            </thead>
-            <tbody id="tabla-inventario"></tbody>
-        </table>
-    </div>
-
-    <div id="historial-ventas" class="tab-content">
-        <h2>Historial de Ventas</h2>
-        <table>
-            <thead>
-                <tr>
-                    <th>Hora</th>
-                    <th>Productos</th>
-                    <th>Total</th>
-                </tr>
-            </thead>
-            <tbody id="tabla-historial"></tbody>
-        </table>
+    <div style="background: #fff3e0; padding: 15px; border-radius: 8px; border: 1px solid #e67e22;">
+        <h3>2. Datos del Vendedor</h3>
+        <div class="form-row">
+            <input type="text" id="nombre-vendedor" placeholder="Tu Nombre">
+            <input type="password" id="firma-vendedor" placeholder="Clave de cierre">
+            <select id="tipo-turno">
+                <option value="Diurno">☀️ Turno Diurno</option>
+                <option value="Tarde">🌙 Turno Tarde</option>
+            </select>
+            <button onclick="prepararYEnviarInventario()" style="background-color: #27ae60; font-weight: bold;">🚀 Iniciar Turno Global</button>
+        </div>
     </div>
 </div>
 
@@ -240,40 +245,97 @@
         }
     });
 
-    function agregarAInventarioLocal() {
-        const nombre = document.getElementById('nuevo-pan').value.trim();
-        const precio = parseFloat(document.getElementById('nuevo-precio').value);
-        const cantidad = parseInt(document.getElementById('nueva-cantidad').value);
+    // --- NUEVO: CATALOGO AUTOMATIZADO ---
+    // Edita esta lista con tus productos frecuentes
+    const CATALOGO_BASE = [
+        { nombre: "Pan Frances", precio: 0.50 },
+        { nombre: "Pan Dulce", precio: 1.00 },
+        { nombre: "Concha", precio: 1.50 },
+        { nombre: "Dona", precio: 2.00 },
+        { nombre: "Pastelito", precio: 5.00 },
+        { nombre: "Pirujo", precio: 0.50 }
+    ];
 
-        if(!nombre || isNaN(precio) || isNaN(cantidad)) return alert("Llena todos los campos.");
-
-        inventarioLocal.push({ nombre, precio, stock: cantidad, stockInicial: cantidad });
-        actualizarListaLocal();
+    // Función que se activa al cargar la página para dibujar la tabla
+    function inicializarPantallaCarga() {
+        const tabla = document.getElementById('tabla-pre-inventario');
+        if (!tabla) return;
         
-        document.getElementById('nuevo-pan').value = '';
-        document.getElementById('nuevo-precio').value = '';
-        document.getElementById('nueva-cantidad').value = '';
-    }
-
-    function actualizarListaLocal() {
-        const lista = document.getElementById('lista-inventario-local');
-        lista.innerHTML = '';
-        inventarioLocal.forEach((item, index) => {
-            lista.innerHTML += `<li>${item.nombre} - Q${item.precio} (Cant: ${item.stock}) <button class="btn-danger" style="padding:2px 5px; font-size:12px;" onclick="inventarioLocal.splice(${index}, 1); actualizarListaLocal();">X</button></li>`;
+        tabla.innerHTML = '';
+        CATALOGO_BASE.forEach(prod => {
+            tabla.innerHTML += `
+                <tr>
+                    <td style="padding: 10px; border: 1px solid #ddd;">${prod.nombre}</td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">Q${prod.precio.toFixed(2)}</td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">
+                        <input type="number" class="cant-input" 
+                               data-nombre="${prod.nombre}" 
+                               data-precio="${prod.precio}" 
+                               placeholder="0" min="0" style="width: 80px;">
+                    </td>
+                </tr>`;
         });
     }
 
-    async function iniciarTurno() {
+    // Llamamos a la función cuando el documento esté listo
+    document.addEventListener('DOMContentLoaded', inicializarPantallaCarga);
+
+    // Función para agregar productos que no están en el catálogo
+    function agregarExtra() {
+        const nombre = document.getElementById('extra-nombre').value.trim();
+        const precio = parseFloat(document.getElementById('extra-precio').value);
+        const cantidad = document.getElementById('extra-cantidad').value;
+
+        if(!nombre || isNaN(precio)) return alert("El nombre y el precio son obligatorios.");
+
+        const tabla = document.getElementById('tabla-pre-inventario');
+        const nuevaFila = `
+            <tr style="background: #e8f8f5;">
+                <td style="padding: 10px; border: 1px solid #ddd;">${nombre} (Extra)</td>
+                <td style="padding: 10px; border: 1px solid #ddd;">Q${precio.toFixed(2)}</td>
+                <td style="padding: 10px; border: 1px solid #ddd;">
+                    <input type="number" class="cant-input" 
+                           data-nombre="${nombre}" 
+                           data-precio="${precio}" 
+                           value="${cantidad}" style="width: 80px;">
+                </td>
+            </tr>`;
+        tabla.insertAdjacentHTML('beforeend', nuevaFila);
+
+        // Limpiar campos
+        document.getElementById('extra-nombre').value = '';
+        document.getElementById('extra-precio').value = '';
+        document.getElementById('extra-cantidad').value = '';
+    }
+
+    // Función principal para iniciar el turno enviando todo a Firebase
+    async function prepararYEnviarInventario() {
         const nombreVendedor = document.getElementById('nombre-vendedor').value.trim();
         const firmaVendedor = document.getElementById('firma-vendedor').value.trim();
         const tipoTurno = document.getElementById('tipo-turno').value;
+        
+        if(!nombreVendedor || !firmaVendedor) return alert("Por favor, ingresa tu nombre y clave.");
 
-        if(!nombreVendedor || !firmaVendedor) return alert("Ingresa tu nombre y tu clave secreta.");
-        if(inventarioLocal.length === 0) return alert("Agrega al menos un producto al inventario.");
+        const inputs = document.querySelectorAll('.cant-input');
+        let productosParaSubir = [];
+
+        inputs.forEach(input => {
+            const cant = parseInt(input.value);
+            if(cant > 0) { // Solo subimos los que tengan cantidad ingresada
+                productosParaSubir.push({
+                    nombre: input.dataset.nombre,
+                    precio: parseFloat(input.dataset.precio),
+                    stock: cant,
+                    stockInicial: cant
+                });
+            }
+        });
+
+        if(productosParaSubir.length === 0) return alert("No has ingresado cantidad para ningún producto.");
 
         try {
             const batch = db.batch();
-            inventarioLocal.forEach(item => {
+            productosParaSubir.forEach(item => {
                 const docRef = db.collection("inventario").doc(item.nombre.toLowerCase().replace(/\s+/g, '-'));
                 batch.set(docRef, item);
             });
@@ -285,9 +347,13 @@
                 firma: firmaVendedor,
                 turno: tipoTurno 
             });
+            
+            // Recargar para limpiar tabla si fuera necesario
+            inicializarPantallaCarga();
+
         } catch (error) {
             console.error(error);
-            alert("Error al iniciar turno. Verifica tu conexión.");
+            alert("Error al iniciar el turno en la nube.");
         }
     }
 
