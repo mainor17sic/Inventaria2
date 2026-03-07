@@ -95,15 +95,29 @@
     <p>Agrega los productos disponibles y registra tus datos para comenzar.</p>
     
     <div style="background: #f9f9f9; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
-        <h3>1. Cargar Inventario Inicial</h3>
-        <div class="form-row">
-            <input type="text" id="nuevo-pan" placeholder="Nombre del Pan">
-            <input type="number" id="nuevo-precio" placeholder="Precio (Q)">
-            <input type="number" id="nueva-cantidad" placeholder="Cantidad Inicial">
-            <button onclick="agregarAInventarioLocal()">Agregar a la lista</button>
-        </div>
-        <ul id="lista-inventario-local"></ul>
+    <h3>1. Inventario del Día</h3>
+    <table style="width: 100%; background: white; margin-bottom: 15px;">
+        <thead>
+            <tr style="background: #eee;">
+                <th>Pan</th>
+                <th>Precio</th>
+                <th>Cantidad</th>
+            </tr>
+        </thead>
+        <tbody id="tabla-automatica">
+            </tbody>
+    </table>
+
+    <hr>
+    <h4>¿Agregar otro producto extra?</h4>
+    <div class="form-row">
+        <input type="text" id="nuevo-pan" placeholder="Nombre">
+        <input type="number" id="nuevo-precio" placeholder="Q" style="width: 70px;">
+        <input type="number" id="nueva-cantidad" placeholder="Cant" style="width: 70px;">
+        <button onclick="agregarAInventarioLocal()">+ Agregar</button>
     </div>
+    <ul id="lista-inventario-local"></ul>
+</div>
 
     <div style="background: #f9f9f9; padding: 15px; border-radius: 5px;">
         <h3>2. Datos del Vendedor</h3>
@@ -240,56 +254,82 @@
         }
     });
 
-    function agregarAInventarioLocal() {
-        const nombre = document.getElementById('nuevo-pan').value.trim();
-        const precio = parseFloat(document.getElementById('nuevo-precio').value);
-        const cantidad = parseInt(document.getElementById('nueva-cantidad').value);
+    // 1. Define aquí tus panes de siempre
+const CATALOGO_PREDETERMINADO = [
+    { nombre: "Pan Frances", precio: 0.50 },
+    { nombre: "Pan Dulce", precio: 1.00 },
+    { nombre: "Concha", precio: 1.50 },
+    { nombre: "Dona", precio: 2.00 }
+];
 
-        if(!nombre || isNaN(precio) || isNaN(cantidad)) return alert("Llena todos los campos.");
+// 2. Función para mostrar los panes automáticamente al cargar
+function cargarCatalogo() {
+    const tabla = document.getElementById('tabla-automatica');
+    tabla.innerHTML = "";
+    CATALOGO_PREDETERMINADO.forEach((item, index) => {
+        tabla.innerHTML += `
+            <tr>
+                <td>${item.nombre}</td>
+                <td>Q${item.precio.toFixed(2)}</td>
+                <td>
+                    <input type="number" class="cant-auto" 
+                           data-nombre="${item.nombre}" 
+                           data-precio="${item.precio}" 
+                           placeholder="0" style="width: 60px;">
+                </td>
+            </tr>`;
+    });
+}
 
-        inventarioLocal.push({ nombre, precio, stock: cantidad, stockInicial: cantidad });
-        actualizarListaLocal();
-        
-        document.getElementById('nuevo-pan').value = '';
-        document.getElementById('nuevo-precio').value = '';
-        document.getElementById('nueva-cantidad').value = '';
-    }
+// Ejecutar al abrir la página
+window.onload = cargarCatalogo;
 
-    function actualizarListaLocal() {
-        const lista = document.getElementById('lista-inventario-local');
-        lista.innerHTML = '';
-        inventarioLocal.forEach((item, index) => {
-            lista.innerHTML += `<li>${item.nombre} - Q${item.precio} (Cant: ${item.stock}) <button class="btn-danger" style="padding:2px 5px; font-size:12px;" onclick="inventarioLocal.splice(${index}, 1); actualizarListaLocal();">X</button></li>`;
-        });
-    }
+// 3. Modificar la función iniciarTurno para que lea ambos (tabla y extras)
+async function iniciarTurno() {
+    const nombreVendedor = document.getElementById('nombre-vendedor').value.trim();
+    const firmaVendedor = document.getElementById('firma-vendedor').value.trim();
+    const tipoTurno = document.getElementById('tipo-turno').value;
 
-    async function iniciarTurno() {
-        const nombreVendedor = document.getElementById('nombre-vendedor').value.trim();
-        const firmaVendedor = document.getElementById('firma-vendedor').value.trim();
-        const tipoTurno = document.getElementById('tipo-turno').value;
+    if(!nombreVendedor || !firmaVendedor) return alert("Faltan datos del vendedor");
 
-        if(!nombreVendedor || !firmaVendedor) return alert("Ingresa tu nombre y tu clave secreta.");
-        if(inventarioLocal.length === 0) return alert("Agrega al menos un producto al inventario.");
+    let inventarioFinal = [];
 
-        try {
-            const batch = db.batch();
-            inventarioLocal.forEach(item => {
-                const docRef = db.collection("inventario").doc(item.nombre.toLowerCase().replace(/\s+/g, '-'));
-                batch.set(docRef, item);
+    // Leer cantidades de la tabla automática
+    document.querySelectorAll('.cant-auto').forEach(input => {
+        const cant = parseInt(input.value);
+        if(cant > 0) {
+            inventarioFinal.push({
+                nombre: input.dataset.nombre,
+                precio: parseFloat(input.dataset.precio),
+                stock: cant,
+                stockInicial: cant
             });
-            await batch.commit();
-
-            await db.collection("configuracion").doc("estado_turno").set({
-                activo: true,
-                vendedor: nombreVendedor,
-                firma: firmaVendedor,
-                turno: tipoTurno 
-            });
-        } catch (error) {
-            console.error(error);
-            alert("Error al iniciar turno. Verifica tu conexión.");
         }
+    });
+
+    // Sumar los productos extras agregados manualmente
+    inventarioFinal = inventarioFinal.concat(inventarioLocal);
+
+    if(inventarioFinal.length === 0) return alert("Debes ingresar al menos un producto.");
+
+    try {
+        const batch = db.batch();
+        inventarioFinal.forEach(item => {
+            const docRef = db.collection("inventario").doc(item.nombre.toLowerCase().replace(/\s+/g, '-'));
+            batch.set(docRef, item);
+        });
+        await batch.commit();
+
+        await db.collection("configuracion").doc("estado_turno").set({
+            activo: true,
+            vendedor: nombreVendedor,
+            firma: firmaVendedor,
+            turno: tipoTurno 
+        });
+    } catch (error) {
+        alert("Error al conectar con la base de datos.");
     }
+}
 
     // --- FUNCIÓN PARA GENERAR EL REPORTE PDF ---
     function generarPDFCierre() {
