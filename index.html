@@ -1,3 +1,4 @@
+fullText:
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -263,9 +264,9 @@
             <div style="margin-top: 20px; padding-top: 15px; border-top: 2px dashed #ccc;">
                 <h4>¿Agregar otro producto extra?</h4>
                 <div class="form-row">
-                    <input type="text" id="nuevo-pan" placeholder="Nombre" style="flex: 2; min-width: 150px;">
-                    <input type="number" id="nuevo-precio" placeholder="Q" style="width: 80px;" step="0.50">
-                    <input type="number" id="nueva-cantidad" placeholder="Cant" style="width: 80px;">
+                    <input type="text" id="nuevo-pan" placeholder="Nombre" style="flex: 2; min-width: 150px;" autocomplete="off">
+                    <input type="number" id="nuevo-precio" placeholder="Q" style="width: 80px;" step="0.50" autocomplete="off">
+                    <input type="number" id="nueva-cantidad" placeholder="Cant" style="width: 80px;" autocomplete="off">
                     <button onclick="agregarAInventarioLocal()" style="background-color: #333; width: auto; flex-grow: 0;">+ Agregar</button>
                 </div>
                 <ul id="lista-inventario-local" style="font-size: 14px; color: #555; padding-left: 20px;"></ul>
@@ -275,8 +276,8 @@
         <div class="inicio-vendedor" style="background: #f9f9f9; padding: 15px; border-radius: 8px; border: 1px solid #eee;">
             <h3>2. Datos del Vendedor</h3>
             <div style="display: flex; flex-direction: column; gap: 10px;">
-                <input type="text" id="nombre-vendedor" placeholder="Tu Nombre">
-                <input type="password" id="firma-vendedor" placeholder="Clave secreta para cerrar">
+                <input type="text" id="nombre-vendedor" placeholder="Tu Nombre" autocomplete="off">
+                <input type="password" id="firma-vendedor" placeholder="Clave secreta para cerrar" autocomplete="off">
                 <select id="tipo-turno">
                     <option value="Diurno">☀️ Turno Diurno</option>
                     <option value="Tarde">🌙 Turno Tarde</option>
@@ -317,7 +318,7 @@
                         <strong>Pan:</strong> <span id="nombre-prod-sel" style="color: #d35400; font-weight: bold;">Ninguno</span>
                     </div>
                     <div style="display: flex; gap: 10px; align-items: center; justify-content: space-between;">
-                        <input type="number" id="cantidad-venta" placeholder="Cant." min="1" value="1">
+                        <input type="number" id="cantidad-venta" placeholder="Cant." min="1" value="1" autocomplete="off">
                         <button onclick="agregarAlCarrito()" style="background-color: #333; flex-shrink: 0;">Añadir 🛒</button>
                     </div>
                 </div>
@@ -456,6 +457,7 @@
         const tabla = document.getElementById('tabla-automatica');
         tabla.innerHTML = "";
         CATALOGO_PREDETERMINADO.forEach((item, index) => {
+            // === CAMBIO AQUÍ: Se añade autocomplete="off" ===
             tabla.innerHTML += `
                 <tr>
                     <td>${item.nombre}</td>
@@ -464,7 +466,7 @@
                         <input type="number" class="cant-auto" 
                                data-nombre="${item.nombre}" 
                                data-precio="${item.precio}" 
-                               placeholder="0" style="width: 100%; max-width: 80px; margin:0;">
+                               placeholder="0" style="width: 100%; max-width: 80px; margin:0;" autocomplete="off">
                     </td>
                 </tr>`;
         });
@@ -635,6 +637,7 @@
     }
 
     async function cerrarTurno() {
+        // === CAMBIO AQUÍ: Se añade autocomplete="off" a los prompts (aunque los prompts nativos no siempre lo respetan) ===
         const claveIngresada = prompt("Para CERRAR el turno e imprimir el PDF, ingresa tu clave:");
 
         if (claveIngresada === firmaActivaEnNube || claveIngresada === "admin123") {
