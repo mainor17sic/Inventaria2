@@ -344,67 +344,74 @@
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
     const hoy = new Date();
-    const fechaStr = hoy.toLocaleDateString(); // Fecha actual formateada
+    // Fecha automática del día presente
+    const fechaStr = hoy.toLocaleDateString('es-GT', { year: 'numeric', month: '2-digit', day: '2-digit' });
 
+    // Título y Datos de Encabezado (Estilo Imagen)
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(18);
-    doc.text("REPORTE DE CIERRE - PANADERIA MARVIN", 14, 20);
+    doc.setFontSize(14);
+    doc.text("REPORTE DE CIERRE - PANADERÍA", 14, 20);
 
-    doc.setFontSize(10);
-    doc.text(`Fecha del Reporte: ${fechaStr} | Turno: ${turnoActivo}`, 14, 30);
-    doc.text(`Responsable: ${vendedorActivo}`, 14, 36);
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Fecha: ${fechaStr} | Turno: ${turnoActivo}`, 14, 28);
+    doc.text(`Encargado: ${vendedorActivo} | Caja Inicial: Q0.00`, 14, 33);
 
-    // Separar Ventas
-    const ventasEfectivo = ventasGlobales.filter(v => v.metodo !== "Fiado");
-    const ventasFiado = ventasGlobales.filter(v => v.metodo === "Fiado");
+    // Mapeo de datos para la tabla de ventas
+    const cuerpoVentas = ventasGlobales.map((v, i) => {
+        const horaVenta = v.timestamp ? new Date(v.timestamp.toDate()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }) : "--:--";
+        
+        // Formato: Pan(Cantidad) - Si es fiado, agrega el nombre
+        let detalle = v.productos.map(p => `${p.nombre}(${p.cantidad})`).join(', ');
+        if (v.metodo === "Fiado") detalle += ` [FIADO A: ${v.cliente.toUpperCase()}]`;
 
-    // TABLA 1: VENTAS EFECTIVO
-    doc.setTextColor(249, 115, 22); // Naranja
-    doc.text("DETALLE DE VENTAS (EFECTIVO)", 14, 45);
-    
-    const bodyEfectivo = ventasEfectivo.map((v, i) => [
-        i + 1, 
-        v.productos.map(p => `${p.cantidad}x ${p.nombre}`).join(', '), 
-        `Q${v.total.toFixed(2)}`
-    ]);
-
-    doc.autoTable({
-        startY: 48, head: [['#', 'Productos', 'Total']], body: bodyEfectivo,
-        headStyles: { fillColor: [249, 115, 22] }, theme: 'grid'
+        return [i + 1, horaVenta, detalle, `Q${v.total.toFixed(2)}`, v.metodo];
     });
 
-    // TABLA 2: CUENTAS POR COBRAR (FIADOS) - Remarcado
-    let posY = doc.lastAutoTable.finalY + 15;
-    doc.setTextColor(59, 130, 246); // Azul
-    doc.text("CUENTAS POR COBRAR (FIADOS)", 14, posY);
-
-    const bodyFiados = ventasFiado.map((v, i) => [
-        v.cliente, 
-        v.productos.map(p => `${p.cantidad}x ${p.nombre}`).join(', '), 
-        `Q${v.total.toFixed(2)}`
-    ]);
-
     doc.autoTable({
-        startY: posY + 3, 
-        head: [['Cliente', 'Detalle', 'Deuda']], 
-        body: bodyFiados,
-        headStyles: { fillColor: [59, 130, 246] }, // Azul para diferenciar
-        styles: { lineColor: [59, 130, 246], lineWidth: 0.5 }, // Borde azul
-        theme: 'grid'
+        startY: 40,
+        head: [['ID', 'Hora', 'Detalle Productos', 'Total', 'Método']],
+        body: cuerpoVentas,
+        theme: 'grid',
+        headStyles: { fillColor: [132, 76, 44] }, // Color Café de tu imagen
+        styles: { fontSize: 8 },
+        didDrawCell: function(data) {
+            // Si la fila es 'Fiado', dibujamos el encuadre rojo
+            if (data.row.raw[4] === 'Fiado') {
+                doc.setDrawColor(255, 0, 0); // Rojo puro
+                doc.setLineWidth(0.5);
+                // Dibuja el borde de la celda actual
+                doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height);
+            }
+        }
     });
 
-    // Totales finales
+    // Tabla de Inventario (Color Gris)
+    let posY = doc.lastAutoTable.finalY + 10;
+    doc.autoTable({
+        startY: posY,
+        head: [['Producto', 'Stock Inicial', 'Stock Final', 'Vendidos']],
+        body: inventarioFirebase.map(item => [
+            item.nombre, 
+            item.stockInicial || item.stock, 
+            item.stock, 
+            (item.stockInicial || item.stock) - item.stock
+        ]),
+        theme: 'grid',
+        headStyles: { fillColor: [108, 116, 124] } // Color Gris de tu imagen
+    });
+
+    // Totales Finales
     posY = doc.lastAutoTable.finalY + 15;
-    const totalEfectivo = ventasEfectivo.reduce((acc, v) => acc + v.total, 0);
-    const totalFiado = ventasFiado.reduce((acc, v) => acc + v.total, 0);
-
-    doc.setFontSize(12);
-    doc.setTextColor(0, 0, 0);
-    doc.text(`TOTAL EN CAJA (EFECTIVO): Q${totalEfectivo.toFixed(2)}`, 14, posY);
-    doc.text(`TOTAL PENDIENTE (FIADO): Q${totalFiado.toFixed(2)}`, 14, posY + 7);
+    const totalEfectivo = ventasGlobales.filter(v => v.metodo !== "Fiado").reduce((acc, v) => acc + v.total, 0);
     
-    doc.save(`Cierre_Turno_${fechaStr.replace(/\//g, '-')}.pdf`);
+    doc.setFont("helvetica", "bold");
+    doc.text(`TOTAL EFECTIVO: Q${totalEfectivo.toFixed(2)}`, 14, posY);
+    doc.text(`TOTAL EN CAJA (INICIAL + EFEC): Q${totalEfectivo.toFixed(2)}`, 14, posY + 5);
+
+    doc.save(`Cierre_${vendedorActivo}_${fechaStr}.pdf`);
 }
+
 
 
     async function cerrarTurno() {
@@ -583,10 +590,10 @@
     async function completarVenta(esFiado = false) {
     if (carrito.length === 0) return alert("El carrito está vacío.");
     
-    let clienteNombre = "Venta Contado";
+    let clienteNombre = "";
     if (esFiado) {
-        clienteNombre = prompt("Ingrese el nombre del cliente (Fiado):");
-        if (!clienteNombre) return alert("Debe ingresar un nombre para registrar el fiado.");
+        clienteNombre = prompt("¿A quién se le fía?");
+        if (!clienteNombre) return; // Cancela si no hay nombre
     }
 
     let totalVenta = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
@@ -597,11 +604,10 @@
             productos: carrito,
             total: totalVenta,
             metodo: esFiado ? "Fiado" : "Efectivo",
-            cliente: clienteNombre,
+            cliente: clienteNombre, // Guardamos el nombre por separado
             timestamp: firebase.firestore.FieldValue.serverTimestamp()
         });
 
-        // ... resto de la lógica de actualización de stock (el batch que ya tienes)
         const batch = db.batch();
         carrito.forEach(item => {
             const docRef = db.collection("inventario").doc(item.id);
@@ -611,12 +617,12 @@
 
         carrito = [];
         actualizarCarrito();
-        alert(esFiado ? `Venta fiada a ${clienteNombre} guardada.` : "Venta completada.");
-        // ... limpiar selección
+        alert(esFiado ? `Venta registrada a nombre de: ${clienteNombre}` : "Venta completada.");
     } catch (error) {
         alert("Error al procesar la venta.");
     }
 }
+
 
 </script>
 
