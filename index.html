@@ -632,7 +632,7 @@
         doc.setTextColor(0, 0, 0); // Regresar a Negro
         doc.text(`TOTAL GENERAL DE VENTAS: Q${(totalEfectivo + totalFiado).toFixed(2)}`, 14, posY + 12);
 
-        doc.save(`Reporte_Cierre_${fechaStr}.pdf`);
+        doc.save(`${turnoActivo}_${fechaStr}.pdf`);
     }
 
     async function cerrarTurno() {
