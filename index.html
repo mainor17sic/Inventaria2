@@ -10,184 +10,225 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
-    
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
     <style>
-        body { -webkit-tap-highlight-color: transparent; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; }
+        h1, h2, h3 { color: #333; margin-top: 0; }
+        .container { max-width: 900px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+
+        input, select, button { padding: 10px; margin: 5px 0; border: 1px solid #ccc; border-radius: 4px; font-size: 16px; box-sizing: border-box; }
+        button { background-color: #d35400; color: white; border: none; cursor: pointer; transition: background 0.3s; }
+        button:hover { background-color: #e67e22; }
+        .btn-danger { background-color: #c0392b; }
+        .btn-danger:hover { background-color: #e74c3c; }
+        .btn-success { background-color: #27ae60; }
+        .btn-success:hover { background-color: #2ecc71; }
+
+        .tabs { display: flex; border-bottom: 2px solid #ddd; margin-bottom: 20px; flex-wrap: wrap; }
+        .tab { padding: 10px 20px; cursor: pointer; background: #eee; border: none; margin-right: 5px; border-radius: 5px 5px 0 0; flex-grow: 1; text-align: center; }
+        .tab.active { background: #d35400; color: white; font-weight: bold; }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
-        /* Clases auxiliares para JS */
+
+        .table-responsive { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; min-width: 500px; }
+        th, td { padding: 12px; border: 1px solid #ddd; text-align: left; }
+        th { background-color: #f8f9fa; }
+
+        #dashboard { display: none; }
+        #pantalla-carga { text-align: center; padding: 50px; font-size: 20px; color: #666; }
+        #inicio-turno-section { display: none; }
+
+        .form-row { display: flex; gap: 10px; align-items: center; margin-bottom: 15px; flex-wrap: wrap; }
+        .cart-section { margin-top: 20px; padding: 15px; border: 1px dashed #d35400; border-radius: 5px; }
+        .header-dashboard { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
+
+        /* === ESTILOS DE LA REJILLA === */
+        #productos-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .producto-card {
+            background: #fff;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .producto-card:hover {
+            border-color: #d35400;
+            transform: translateY(-3px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
         .producto-card.selected {
-            border-color: #22c55e !important; /* text-green-500 */
-            background-color: #f0fdf4 !important; /* bg-green-50 */
-            box-shadow: 0 4px 6px -1px rgba(34, 197, 94, 0.2) !important;
+            border-color: #27ae60;
+            background-color: #eafaf1;
+            box-shadow: 0 0 10px rgba(39, 174, 96, 0.3);
+        }
+
+        .producto-card h4 { margin: 5px 0; color: #333; font-size: 15px; }
+        .producto-card p { margin: 0; color: #d35400; font-weight: bold; }
+        .producto-card small { color: #888; }
+
+        .producto-card.sin-stock {
+            opacity: 0.5;
+            cursor: not-allowed;
+            background: #f0f0f0;
+        }
+
+        .text-rojo { color: #c0392b; font-weight: bold; }
+
+        /* === MEDIA QUERIES PARA MÓVILES === */
+        @media (max-width: 600px) {
+            body { padding: 10px; }
+            .container { padding: 15px; }
+            .form-row { flex-direction: column; align-items: stretch; }
+            .form-row input, .form-row select, .form-row button { width: 100%; }
+            .tab { margin-bottom: 5px; border-radius: 5px; }
+            .header-dashboard { flex-direction: column; text-align: center; }
+            #productos-grid { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; }
+            .producto-card { padding: 10px; }
+            .cart-botones { flex-direction: column; }
+            .cart-botones button { width: 100%; margin-bottom: 5px; }
         }
     </style>
 </head>
-<body class="bg-slate-50 font-sans text-slate-800 min-h-screen pb-10">
+<body>
 
-<div id="pantalla-carga" class="flex flex-col items-center justify-center min-h-screen">
-    <i class="fa-solid fa-circle-notch fa-spin text-4xl text-orange-500 mb-4"></i>
-    <p class="text-lg font-medium text-slate-500">Conectando con la base de datos...</p>
+<div class="container" id="pantalla-carga">
+    <p>🔄 Conectando con la Panadería Marvin...</p>
 </div>
 
-<div id="inicio-turno-section" class="hidden max-w-4xl mx-auto mt-8 px-4">
-    <div class="text-center mb-8">
-        <h1 class="text-3xl font-black text-slate-800 tracking-tight">🥐 Iniciar Turno de Venta</h1>
-        <p class="text-slate-500 mt-2">Registra el inventario base y tus datos para abrir la caja.</p>
-    </div>
+<div class="container" id="inicio-turno-section">
+    <h1>🥐 Iniciar Turno de Venta</h1>
+    <p>Agrega los productos disponibles y registra tus datos para comenzar.</p>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
-            <h3 class="text-sm font-black text-slate-400 uppercase tracking-widest mb-4">1. Inventario del Día</h3>
-            
-            <div class="max-h-60 overflow-y-auto mb-4 pr-2">
-                <table class="w-full text-left border-collapse">
-                    <thead class="sticky top-0 bg-white">
-                        <tr class="text-xs text-slate-400 uppercase border-b border-slate-200">
-                            <th class="py-2">Pan</th>
-                            <th class="py-2">Precio</th>
-                            <th class="py-2">Stock Inicial</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tabla-automatica" class="text-sm">
-                        </tbody>
-                </table>
-            </div>
-
-            <hr class="my-4 border-slate-100">
-            <h4 class="text-xs font-bold text-slate-600 mb-3">¿Agregar producto extra?</h4>
-            <div class="flex gap-2 flex-wrap">
-                <input type="text" id="nuevo-pan" placeholder="Nombre" class="flex-1 bg-slate-50 p-2 rounded-xl border border-slate-200 focus:border-orange-400 outline-none text-sm">
-                <input type="number" id="nuevo-precio" placeholder="Q" class="w-20 bg-slate-50 p-2 rounded-xl border border-slate-200 focus:border-orange-400 outline-none text-sm text-center">
-                <input type="number" id="nueva-cantidad" placeholder="Cant" class="w-20 bg-slate-50 p-2 rounded-xl border border-slate-200 focus:border-orange-400 outline-none text-sm text-center">
-                <button onclick="agregarAInventarioLocal()" class="bg-slate-800 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-slate-700"><i class="fa-solid fa-plus"></i></button>
-            </div>
-            <ul id="lista-inventario-local" class="mt-3 text-sm text-slate-600 space-y-1"></ul>
+    <div style="background: #f9f9f9; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
+        <h3>1. Inventario del Día</h3>
+        <div class="table-responsive">
+            <table style="width: 100%; background: white; margin-bottom: 15px;">
+                <thead>
+                    <tr style="background: #eee;">
+                        <th>Pan</th>
+                        <th>Precio</th>
+                        <th>Cantidad</th>
+                    </tr>
+                </thead>
+                <tbody id="tabla-automatica">
+                </tbody>
+            </table>
         </div>
 
-        <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 h-fit">
-            <h3 class="text-sm font-black text-slate-400 uppercase tracking-widest mb-4">2. Credenciales</h3>
-            <div class="space-y-4">
-                <input type="text" id="nombre-vendedor" placeholder="Tu Nombre o Alias" class="w-full bg-slate-50 p-4 rounded-xl border border-slate-200 focus:border-orange-400 outline-none font-medium">
-                <input type="password" id="firma-vendedor" placeholder="Clave secreta para cerrar turno" class="w-full bg-slate-50 p-4 rounded-xl border border-slate-200 focus:border-orange-400 outline-none font-medium">
-                <select id="tipo-turno" class="w-full bg-slate-50 p-4 rounded-xl border border-slate-200 focus:border-orange-400 outline-none font-medium text-slate-600">
-                    <option value="Diurno">☀️ Turno Diurno</option>
-                    <option value="Tarde">🌙 Turno Tarde</option>
-                </select>
-                <button onclick="iniciarTurno()" class="w-full bg-green-500 hover:bg-green-600 text-white font-black text-lg py-4 rounded-2xl shadow-lg shadow-green-500/30 transition-transform active:scale-95 mt-4">
-                    🚀 Abrir Turno
-                </button>
-            </div>
+        <hr>
+        <h4>¿Agregar otro producto extra?</h4>
+        <div class="form-row">
+            <input type="text" id="nuevo-pan" placeholder="Nombre">
+            <input type="number" id="nuevo-precio" placeholder="Q" style="width: 80px;">
+            <input type="number" id="nueva-cantidad" placeholder="Cant" style="width: 80px;">
+            <button onclick="agregarAInventarioLocal()">+ Agregar</button>
+        </div>
+        <ul id="lista-inventario-local"></ul>
+    </div>
+
+    <div style="background: #f9f9f9; padding: 15px; border-radius: 5px;">
+        <h3>2. Datos del Vendedor</h3>
+        <div class="form-row">
+            <input type="text" id="nombre-vendedor" placeholder="Tu Nombre">
+            <input type="password" id="firma-vendedor" placeholder="Clave secreta para cerrar turno">
+            <select id="tipo-turno">
+                <option value="Diurno">☀️ Turno Diurno</option>
+                <option value="Tarde">🌙 Turno Tarde</option>
+            </select>
+            <button onclick="iniciarTurno()" class="btn-success">🚀 Iniciar Turno Global</button>
         </div>
     </div>
 </div>
 
-<div id="dashboard" class="hidden max-w-7xl mx-auto px-4 mt-6">
-    
-    <div class="flex flex-col md:flex-row justify-between items-center bg-white p-4 md:p-6 rounded-3xl shadow-sm border border-slate-100 mb-6 gap-4">
+<div class="container" id="dashboard">
+    <div class="header-dashboard">
         <div>
-            <h1 class="text-2xl font-black tracking-tight"><i class="fa-solid fa-store text-orange-500"></i> Panadería Marvin</h1>
-            <p class="text-sm text-slate-500 font-medium mt-1">Atendiendo: <span id="display-vendedor" class="text-slate-800 font-bold bg-orange-100 px-2 py-0.5 rounded-lg"></span></p>
+            <h1>🍞 Panadería Marvin</h1>
+            <p style="margin: 0;">Turno actual: <strong id="display-vendedor"></strong></p>
         </div>
-        <button onclick="cerrarTurno()" class="bg-red-50 text-red-600 border-2 border-red-100 hover:bg-red-600 hover:text-white px-6 py-3 rounded-2xl font-bold transition-colors w-full md:w-auto">
-            <i class="fa-solid fa-lock mr-2"></i> Cerrar Turno (PDF)
-        </button>
+        <button class="btn-danger" onclick="cerrarTurno()" style="font-weight: bold;">Cerrar Turno e Imprimir Reporte 📄🔒</button>
     </div>
 
-    <div class="flex overflow-x-auto gap-2 mb-6 scrollbar-hide pb-2">
-        <button class="tab active whitespace-nowrap bg-orange-500 text-white px-6 py-3 rounded-2xl font-bold text-sm shadow-md shadow-orange-500/20" onclick="cambiarPestaña(event, 'punto-venta')">Punto de Venta</button>
-        <button class="tab whitespace-nowrap bg-white text-slate-500 hover:bg-slate-100 px-6 py-3 rounded-2xl font-bold text-sm border border-slate-200" onclick="cambiarPestaña(event, 'inventario-vivo')">Inventario en Vivo</button>
-        <button class="tab whitespace-nowrap bg-white text-slate-500 hover:bg-slate-100 px-6 py-3 rounded-2xl font-bold text-sm border border-slate-200" onclick="cambiarPestaña(event, 'historial-ventas')">Historial Ventas</button>
+    <div class="tabs">
+        <button class="tab active" onclick="cambiarPestaña(event, 'punto-venta')">Punto de Venta</button>
+        <button class="tab" onclick="cambiarPestaña(event, 'inventario-vivo')">Inventario en Tiempo Real</button>
+        <button class="tab" onclick="cambiarPestaña(event, 'historial-ventas')">Historial de Ventas</button>
     </div>
 
     <div id="punto-venta" class="tab-content active">
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-            
-            <div class="lg:col-span-8 bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
-                <h2 class="text-sm font-black text-slate-400 uppercase tracking-widest mb-6">Selecciona el Producto</h2>
-                <div id="productos-grid" class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
-                    <p class="col-span-full text-center text-slate-400">Cargando catálogo...</p>
-                </div>
+        <h2>Punto de Venta</h2>
+
+        <div id="productos-grid">
+            <p>Cargando productos...</p>
+        </div>
+
+        <div class="form-row" style="background: #eee; padding: 15px; border-radius: 8px;">
+            <div id="info-seleccion" style="flex-grow: 1;">
+                <strong>Seleccionado:</strong> <span id="nombre-prod-sel">Ninguno</span>
             </div>
+            <input type="number" id="cantidad-venta" placeholder="Cant." style="width: 80px;" min="1" value="1">
+            <button onclick="agregarAlCarrito()" style="background-color: #d35400;">Añadir al carrito</button>
+        </div>
 
-            <div class="lg:col-span-4 lg:sticky lg:top-6 space-y-4">
-                
-                <div class="bg-slate-900 rounded-3xl p-6 text-white shadow-xl shadow-slate-900/20">
-                    <p class="text-xs text-slate-400 font-bold uppercase tracking-wider mb-2">Producto Seleccionado</p>
-                    <div class="text-xl font-black mb-4 min-h-[1.75rem] text-orange-400" id="nombre-prod-sel">Ninguno</div>
-                    
-                    <div class="flex gap-3">
-                        <input type="number" id="cantidad-venta" placeholder="1" min="1" value="1" class="w-24 bg-slate-800 text-white text-center text-2xl font-black rounded-2xl border-2 border-slate-700 focus:border-orange-500 outline-none py-3">
-                        <button onclick="agregarAlCarrito()" class="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-2xl flex items-center justify-center gap-2 transition-colors">
-                            <i class="fa-solid fa-cart-plus"></i> Agregar
-                        </button>
-                    </div>
-                </div>
-
-                <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 flex flex-col h-[40vh] lg:h-auto">
-                    <h3 class="text-sm font-black text-slate-400 uppercase tracking-widest mb-4"><i class="fa-solid fa-basket-shopping"></i> Ticket de Venta</h3>
-                    
-                    <div class="flex-1 overflow-y-auto mb-4 pr-2">
-                        <ul id="carrito-lista" class="space-y-3">
-                            <li class="text-center text-slate-400 text-sm mt-4">El carrito está vacío</li>
-                        </ul>
-                    </div>
-
-                    <div class="border-t border-slate-100 pt-4 mt-auto">
-                        <div class="flex justify-between items-end mb-4">
-                            <span class="text-slate-400 font-bold uppercase text-xs">Total a Cobrar</span>
-                            <span class="text-3xl font-black text-slate-800">Q<span id="carrito-total">0.00</span></span>
-                        </div>
-                        <div class="flex flex-col gap-2">
-    <button onclick="completarVenta(false)" class="w-full bg-green-500 hover:bg-green-600 text-white font-black text-lg py-4 rounded-2xl shadow-lg shadow-green-500/30 transition-transform active:scale-95">
-        ✅ Finalizar Venta (Efectivo)
-    </button>
-    <button onclick="completarVenta(true)" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-black text-lg py-4 rounded-2xl shadow-lg shadow-blue-500/30 transition-transform active:scale-95">
-        📝 Venta al Fiado
-    </button>
-</div>
-                </div>
-
+        <div class="cart-section">
+            <h3>🛒 Carrito Actual</h3>
+            <ul id="carrito-lista"></ul>
+            <h4>Total: Q<span id="carrito-total">0.00</span></h4>
+            
+            <div class="form-row cart-botones" style="margin-top: 15px;">
+                <button onclick="completarVenta('efectivo')" class="btn-success" style="flex: 1; font-size: 18px;">✅ Cobrar Efectivo</button>
+                <button onclick="completarVenta('fiar')" class="btn-danger" style="flex: 1; font-size: 18px;">📒 Fiar (Crédito)</button>
             </div>
         </div>
     </div>
 
     <div id="inventario-vivo" class="tab-content">
-        <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 overflow-x-auto">
-            <h2 class="text-sm font-black text-slate-400 uppercase tracking-widest mb-6">Stock en Tiempo Real</h2>
-            <table class="w-full text-left border-collapse min-w-[500px]">
+        <h2>Inventario en Tiempo Real</h2>
+        <div class="table-responsive">
+            <table>
                 <thead>
-                    <tr class="bg-slate-50 text-slate-500 text-xs uppercase">
-                        <th class="py-3 px-4 rounded-l-xl">Producto</th>
-                        <th class="py-3 px-4">Precio</th>
-                        <th class="py-3 px-4">Entrada Inicial</th>
-                        <th class="py-3 px-4 rounded-r-xl">Disponible</th>
+                    <tr>
+                        <th>Producto</th>
+                        <th>Precio</th>
+                        <th>Stock Inicial</th>
+                        <th>Stock Disponible</th>
                     </tr>
                 </thead>
-                <tbody id="tabla-inventario" class="text-sm divide-y divide-slate-100"></tbody>
+                <tbody id="tabla-inventario"></tbody>
             </table>
         </div>
     </div>
 
     <div id="historial-ventas" class="tab-content">
-        <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 overflow-x-auto">
-            <h2 class="text-sm font-black text-slate-400 uppercase tracking-widest mb-6">Últimas Transacciones</h2>
-            <table class="w-full text-left border-collapse min-w-[600px]">
+        <h2>Historial de Ventas</h2>
+        <div class="table-responsive">
+            <table>
                 <thead>
-                    <tr class="bg-slate-50 text-slate-500 text-xs uppercase">
-                        <th class="py-3 px-4 rounded-l-xl">Hora</th>
-                        <th class="py-3 px-4">Detalle de Productos</th>
-                        <th class="py-3 px-4 rounded-r-xl">Total Ingresado</th>
+                    <tr>
+                        <th>Hora</th>
+                        <th>Productos</th>
+                        <th>Total</th>
+                        <th>Método</th>
                     </tr>
                 </thead>
-                <tbody id="tabla-historial" class="text-sm divide-y divide-slate-100"></tbody>
+                <tbody id="tabla-historial"></tbody>
             </table>
         </div>
     </div>
-
 </div>
 
 <script>
@@ -204,6 +245,7 @@
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
+    // Variables globales
     let inventarioLocal = [];
     let carrito = [];
     let inventarioFirebase = [];
@@ -214,6 +256,7 @@
     let escuchasIniciadas = false;
     let productoSeleccionadoId = null;
 
+   // Escucha el estado del turno global
     db.collection("configuracion").doc("estado_turno").onSnapshot((doc) => {
         document.getElementById('pantalla-carga').style.display = 'none';
 
@@ -236,7 +279,7 @@
             document.getElementById('dashboard').style.display = 'none';
             inventarioLocal = [];
             carrito = [];
-            document.getElementById('lista-inventario-local').innerHTML = '';
+            actualizarListaLocal();
             escuchasIniciadas = false; 
         }
     });
@@ -265,16 +308,16 @@
     function cargarCatalogo() {
         const tabla = document.getElementById('tabla-automatica');
         tabla.innerHTML = "";
-        CATALOGO_PREDETERMINADO.forEach((item) => {
+        CATALOGO_PREDETERMINADO.forEach((item, index) => {
             tabla.innerHTML += `
-                <tr class="border-b border-slate-100 hover:bg-slate-50">
-                    <td class="py-2 font-medium">${item.nombre}</td>
-                    <td class="py-2 text-slate-500">Q${item.precio.toFixed(2)}</td>
-                    <td class="py-2">
-                        <input type="number" class="cant-auto w-20 bg-slate-100 border border-slate-200 rounded-lg p-1.5 text-center focus:bg-white focus:border-orange-400 outline-none" 
+                <tr>
+                    <td>${item.nombre}</td>
+                    <td>Q${item.precio.toFixed(2)}</td>
+                    <td>
+                        <input type="number" class="cant-auto" 
                                data-nombre="${item.nombre}" 
                                data-precio="${item.precio}" 
-                               placeholder="0">
+                               placeholder="0" style="width: 100%; max-width: 80px;">
                     </td>
                 </tr>`;
         });
@@ -283,20 +326,37 @@
     window.onload = cargarCatalogo;
 
     function agregarAInventarioLocal() {
-        const nom = document.getElementById('nuevo-pan').value.trim();
-        const pre = parseFloat(document.getElementById('nuevo-precio').value);
-        const cant = parseInt(document.getElementById('nueva-cantidad').value);
+        const nombre = document.getElementById('nuevo-pan').value;
+        const precio = parseFloat(document.getElementById('nuevo-precio').value);
+        const cantidad = parseInt(document.getElementById('nueva-cantidad').value);
 
-        if(!nom || isNaN(pre) || isNaN(cant) || cant <= 0) return alert("Verifica los datos del producto extra.");
+        if (nombre && !isNaN(precio) && !isNaN(cantidad)) {
+            inventarioLocal.push({
+                nombre: nombre,
+                precio: precio,
+                stock: cantidad,
+                stockInicial: cantidad
+            });
+            actualizarListaLocal();
+            document.getElementById('nuevo-pan').value = '';
+            document.getElementById('nuevo-precio').value = '';
+            document.getElementById('nueva-cantidad').value = '';
+        } else {
+            alert("Completa todos los campos correctamente.");
+        }
+    }
 
-        inventarioLocal.push({ nombre: nom, precio: pre, stock: cant, stockInicial: cant });
-        
-        document.getElementById('nuevo-pan').value = "";
-        document.getElementById('nuevo-precio').value = "";
-        document.getElementById('nueva-cantidad').value = "";
-        
+    function actualizarListaLocal() {
         const lista = document.getElementById('lista-inventario-local');
-        lista.innerHTML += `<li><i class="fa-solid fa-check text-green-500 mr-2"></i> ${cant}x ${nom} - Q${pre.toFixed(2)}</li>`;
+        lista.innerHTML = "";
+        inventarioLocal.forEach((item, index) => {
+            lista.innerHTML += `<li>${item.nombre} - Q${item.precio} (Cant: ${item.stock}) <button class="btn-danger" style="padding: 2px 5px;" onclick="eliminarLocal(${index})">X</button></li>`;
+        });
+    }
+
+    function eliminarLocal(index) {
+        inventarioLocal.splice(index, 1);
+        actualizarListaLocal();
     }
 
     async function iniciarTurno() {
@@ -322,7 +382,7 @@
 
         inventarioFinal = inventarioFinal.concat(inventarioLocal);
 
-        if(inventarioFinal.length === 0) return alert("Debes ingresar al menos un producto con cantidad.");
+        if(inventarioFinal.length === 0) return alert("Debes ingresar al menos un producto.");
 
         try {
             const batch = db.batch();
@@ -333,95 +393,109 @@
             await batch.commit();
 
             await db.collection("configuracion").doc("estado_turno").set({
-                activo: true, vendedor: nombreVendedor, firma: firmaVendedor, turno: tipoTurno 
+                activo: true,
+                vendedor: nombreVendedor,
+                firma: firmaVendedor,
+                turno: tipoTurno 
             });
         } catch (error) {
             alert("Error al conectar con la base de datos.");
         }
     }
 
+    // --- FUNCIÓN PARA GENERAR EL REPORTE PDF ---
     function generarPDFCierre() {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-    const hoy = new Date();
-    // Fecha automática del día presente
-    const fechaStr = hoy.toLocaleDateString('es-GT', { year: 'numeric', month: '2-digit', day: '2-digit' });
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
 
-    // Título y Datos de Encabezado (Estilo Imagen)
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(14);
-    doc.text("REPORTE DE CIERRE - PANADERÍA", 14, 20);
+        const fechaActual = new Date();
+        const fechaStr = fechaActual.toISOString().split('T')[0];
 
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "normal");
-    doc.text(`Fecha: ${fechaStr} | Turno: ${turnoActivo}`, 14, 28);
-    doc.text(`Encargado: ${vendedorActivo} | Caja Inicial: Q0.00`, 14, 33);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(16);
+        doc.text("REPORTE DE CIERRE - PANADERÍA", 14, 20);
 
-    // Mapeo de datos para la tabla de ventas
-    const cuerpoVentas = ventasGlobales.map((v, i) => {
-        const horaVenta = v.timestamp ? new Date(v.timestamp.toDate()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }) : "--:--";
-        
-        // Formato: Pan(Cantidad) - Si es fiado, agrega el nombre
-        let detalle = v.productos.map(p => `${p.nombre}(${p.cantidad})`).join(', ');
-        if (v.metodo === "Fiado") detalle += ` [FIADO A: ${v.cliente.toUpperCase()}]`;
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(10);
+        doc.text(`Fecha: ${fechaStr} | Turno: ${turnoActivo}`, 14, 30);
+        doc.text(`Encargado: ${vendedorActivo}`, 14, 36);
 
-        return [i + 1, horaVenta, detalle, `Q${v.total.toFixed(2)}`, v.metodo];
-    });
+        let totalEfectivo = 0;
+        let totalFiado = 0;
 
-    doc.autoTable({
-        startY: 40,
-        head: [['ID', 'Hora', 'Detalle Productos', 'Total', 'Método']],
-        body: cuerpoVentas,
-        theme: 'grid',
-        headStyles: { fillColor: [132, 76, 44] }, // Color Café de tu imagen
-        styles: { fontSize: 8 },
-        didDrawCell: function(data) {
-            // Si la fila es 'Fiado', dibujamos el encuadre rojo
-            if (data.row.raw[4] === 'Fiado') {
-                doc.setDrawColor(255, 0, 0); // Rojo puro
-                doc.setLineWidth(0.5);
-                // Dibuja el borde de la celda actual
-                doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height);
+        const ventasParaPDF = ventasGlobales.map((venta, index) => {
+            const hora = venta.timestamp ? new Date(venta.timestamp.toDate()).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'}) : 'N/A';
+            const detalle = venta.productos.map(p => `${p.nombre}(${p.cantidad})`).join(', ');
+            
+            let metodoVenta = "Efectivo";
+            let tipo = venta.tipo || "efectivo"; // Por si hay ventas antiguas sin tipo
+
+            if (tipo === 'fiar') {
+                metodoVenta = `Fiado: ${venta.cliente}`;
+                totalFiado += venta.total;
+            } else {
+                totalEfectivo += venta.total;
             }
-        }
-    });
 
-    // Tabla de Inventario (Color Gris)
-    let posY = doc.lastAutoTable.finalY + 10;
-    doc.autoTable({
-        startY: posY,
-        head: [['Producto', 'Stock Inicial', 'Stock Final', 'Vendidos']],
-        body: inventarioFirebase.map(item => [
-            item.nombre, 
-            item.stockInicial || item.stock, 
-            item.stock, 
-            (item.stockInicial || item.stock) - item.stock
-        ]),
-        theme: 'grid',
-        headStyles: { fillColor: [108, 116, 124] } // Color Gris de tu imagen
-    });
+            return [index + 1, hora, detalle, `Q${venta.total.toFixed(2)}`, metodoVenta];
+        });
 
-    // Totales Finales
-    posY = doc.lastAutoTable.finalY + 15;
-    const totalEfectivo = ventasGlobales.filter(v => v.metodo !== "Fiado").reduce((acc, v) => acc + v.total, 0);
-    
-    doc.setFont("helvetica", "bold");
-    doc.text(`TOTAL EFECTIVO: Q${totalEfectivo.toFixed(2)}`, 14, posY);
-    doc.text(`TOTAL EN CAJA (INICIAL + EFEC): Q${totalEfectivo.toFixed(2)}`, 14, posY + 5);
+        // Configuración de la tabla de ventas para pintar en rojo los fiados
+        doc.autoTable({
+            startY: 45,
+            head: [['ID', 'Hora', 'Detalle Productos', 'Total', 'Método']],
+            body: ventasParaPDF,
+            headStyles: { fillColor: [139, 69, 19] },
+            styles: { fontSize: 9 },
+            theme: 'grid',
+            didParseCell: function(data) {
+                // Columna 4 es "Método". Si contiene la palabra "Fiado", se pinta de rojo.
+                if (data.column.index === 4 && data.cell.raw && data.cell.raw.toString().includes('Fiado')) {
+                    data.cell.styles.textColor = [192, 57, 43]; // Rojo
+                    data.cell.styles.fontStyle = 'bold';
+                }
+            }
+        });
 
-    doc.save(`Cierre_${vendedorActivo}_${fechaStr}.pdf`);
-}
+        const inventarioParaPDF = inventarioFirebase.map(item => {
+            const inicial = item.stockInicial || item.stock;
+            const final = item.stock;
+            const vendidos = inicial - final;
+            return [item.nombre, inicial, final, vendidos];
+        });
 
+        let posY = doc.lastAutoTable.finalY + 10; 
 
+        doc.autoTable({
+            startY: posY,
+            head: [['Producto', 'Stock Inicial', 'Stock Final', 'Vendidos']],
+            body: inventarioParaPDF,
+            headStyles: { fillColor: [105, 105, 105] }, 
+            styles: { fontSize: 9 },
+            theme: 'grid'
+        });
+
+        posY = doc.lastAutoTable.finalY + 15;
+
+        doc.setFont("helvetica", "bold");
+        doc.text(`TOTAL EFECTIVO (Caja): Q${totalEfectivo.toFixed(2)}`, 14, posY);
+        doc.setTextColor(192, 57, 43); // Texto Rojo para Fiado
+        doc.text(`TOTAL FIADO (Cuentas por cobrar): Q${totalFiado.toFixed(2)}`, 14, posY + 6);
+        doc.setTextColor(0, 0, 0); // Regresar a Negro
+        doc.text(`TOTAL GENERAL DE VENTAS: Q${(totalEfectivo + totalFiado).toFixed(2)}`, 14, posY + 12);
+
+        doc.save(`Reporte_Cierre_${fechaStr}.pdf`);
+    }
 
     async function cerrarTurno() {
-        const claveIngresada = prompt("Para CERRAR el turno e imprimir el PDF, ingresa tu clave secreta:");
+        const claveIngresada = prompt("Para CERRAR el turno e imprimir el PDF, ingresa tu clave:");
 
         if (claveIngresada === firmaActivaEnNube || claveIngresada === "admin123") {
-            if (confirm("Se generará el reporte PDF y se reiniciará el sistema. ¿Deseas continuar?")) {
+            if (confirm("Se generará el reporte PDF y se reiniciará el inventario. ¿Deseas continuar?")) {
                 try {
                     generarPDFCierre();
-                    
+                    alert("El reporte PDF se está descargando. Ahora limpiaremos la base de datos.");
+
                     const snapInv = await db.collection("inventario").get();
                     const batch1 = db.batch();
                     snapInv.docs.forEach(doc => batch1.delete(doc.ref));
@@ -432,10 +506,13 @@
                     snapVentas.docs.forEach(doc => batch2.delete(doc.ref));
                     await batch2.commit();
 
-                    await db.collection("configuracion").doc("estado_turno").set({ activo: false, vendedor: "", firma: "" });
+                    await db.collection("configuracion").doc("estado_turno").set({
+                        activo: false, vendedor: "", firma: ""
+                    });
 
                 } catch (error) {
-                    alert("Hubo un error al cerrar el turno.");
+                    console.error("Error al cerrar el turno:", error);
+                    alert("Hubo un error. Revisa la consola.");
                 }
             }
         } else if (claveIngresada !== null) {
@@ -444,15 +521,13 @@
     }
 
     function cambiarPestaña(evt, nombrePestaña) {
-        document.querySelectorAll('.tab-content').forEach(tab => tab.style.display = 'none');
-        document.querySelectorAll('.tab').forEach(btn => {
-            btn.classList.remove('active', 'bg-orange-500', 'text-white', 'shadow-md');
-            btn.classList.add('bg-white', 'text-slate-500');
-        });
-        
+        let i, tabcontent, tablinks;
+        tabcontent = document.getElementsByClassName("tab-content");
+        for (i = 0; i < tabcontent.length; i++) tabcontent[i].style.display = "none";
+        tablinks = document.getElementsByClassName("tab");
+        for (i = 0; i < tablinks.length; i++) tablinks[i].className = tablinks[i].className.replace(" active", "");
         document.getElementById(nombrePestaña).style.display = "block";
-        evt.currentTarget.classList.remove('bg-white', 'text-slate-500');
-        evt.currentTarget.classList.add('active', 'bg-orange-500', 'text-white', 'shadow-md');
+        evt.currentTarget.className += " active";
     }
 
     function iniciarEscuchasEnTiempoReal() {
@@ -469,30 +544,28 @@
                 prod.id = doc.id;
                 inventarioFirebase.push(prod);
 
-                // Tabla de Inventario
                 tablaInventario.innerHTML += `
-                    <tr class="hover:bg-slate-50 transition-colors">
-                        <td class="py-3 px-4 font-medium text-slate-700">${prod.nombre}</td>
-                        <td class="py-3 px-4 text-slate-500">Q${prod.precio.toFixed(2)}</td>
-                        <td class="py-3 px-4 text-slate-500">${prod.stockInicial || prod.stock}</td>
-                        <td class="py-3 px-4 text-lg font-black ${prod.stock <= 5 ? 'text-red-500' : 'text-green-600'}">${prod.stock}</td>
+                    <tr>
+                        <td>${prod.nombre}</td>
+                        <td>Q${prod.precio.toFixed(2)}</td>
+                        <td>${prod.stockInicial || prod.stock}</td>
+                        <td><strong>${prod.stock}</strong></td>
                     </tr>
                 `;
 
-                // Tarjetas del Grid
                 const sinStock = prod.stock <= 0;
                 const card = document.createElement('div');
-                card.className = `bg-white border-2 rounded-2xl p-4 text-center cursor-pointer transition-all flex flex-col justify-center shadow-sm hover:shadow-md producto-card ${sinStock ? 'opacity-50 bg-slate-100 border-slate-200 cursor-not-allowed' : 'border-slate-100 hover:border-orange-400'}`;
-                
+                card.className = `producto-card ${sinStock ? 'sin-stock' : ''}`;
                 card.innerHTML = `
-                    <h4 class="font-bold text-slate-700 text-sm mb-1 line-clamp-2">${prod.nombre}</h4>
-                    <p class="text-xs text-slate-500 font-semibold mb-2">Q${prod.precio.toFixed(2)}</p>
-                    <div class="mt-auto bg-orange-50 rounded-lg py-1.5 border border-orange-100">
-                        <span class="text-orange-600 font-black text-sm">Stock: <span class="text-lg">${prod.stock}</span></span>
-                    </div>
+                    <h4>${prod.nombre}</h4>
+                    <p>Q${prod.precio.toFixed(2)}</p>
+                    <small>Disponible: ${prod.stock}</small>
                 `;
 
-                if (!sinStock) card.onclick = () => seleccionarParaVenta(prod.id, prod.nombre, card);
+                if (!sinStock) {
+                    card.onclick = () => seleccionarParaVenta(prod.id, prod.nombre, card);
+                }
+
                 grid.appendChild(card);
             });
         });
@@ -505,14 +578,21 @@
             querySnapshot.forEach((doc) => {
                 const venta = doc.data();
                 ventasGlobales.push(venta);
-                const fecha = venta.timestamp ? new Date(venta.timestamp.toDate()).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'Reciente...';
-                let resumenProductos = venta.productos.map(p => `<span class="bg-slate-100 text-slate-600 px-2 py-1 rounded text-xs font-bold mr-1 inline-block mb-1">${p.cantidad}x ${p.nombre}</span>`).join('');
+
+                const fecha = venta.timestamp ? new Date(venta.timestamp.toDate()).toLocaleTimeString() : 'Reciente...';
+                let resumenProductos = venta.productos.map(p => `${p.cantidad}x ${p.nombre}`).join(', ');
+                
+                let tipoVenta = venta.tipo || "efectivo";
+                let badgeMetodo = tipoVenta === 'fiar' 
+                    ? `<span class="text-rojo">Fiado: ${venta.cliente}</span>` 
+                    : '<span style="color: #27ae60; font-weight:bold;">Efectivo</span>';
 
                 tablaHistorial.innerHTML += `
-                    <tr class="hover:bg-slate-50 transition-colors">
-                        <td class="py-3 px-4 text-slate-500 text-sm">${fecha}</td>
-                        <td class="py-3 px-4">${resumenProductos}</td>
-                        <td class="py-3 px-4 text-lg font-black text-slate-800">Q${venta.total.toFixed(2)}</td>
+                    <tr>
+                        <td>${fecha}</td>
+                        <td>${resumenProductos}</td>
+                        <td><strong>Q${venta.total.toFixed(2)}</strong></td>
+                        <td>${badgeMetodo}</td>
                     </tr>
                 `;
             });
@@ -523,32 +603,44 @@
     function seleccionarParaVenta(id, nombre, elemento) {
         productoSeleccionadoId = id;
         document.getElementById('nombre-prod-sel').innerText = nombre;
+
         document.querySelectorAll('.producto-card').forEach(c => c.classList.remove('selected'));
         elemento.classList.add('selected');
-        
-        const inputCant = document.getElementById('cantidad-venta');
-        inputCant.focus();
-        inputCant.select();
+
+        document.getElementById('cantidad-venta').focus();
+        document.getElementById('cantidad-venta').select();
     }
 
     function agregarAlCarrito() {
-        if (!productoSeleccionadoId) return alert("Selecciona un pan primero.");
+        if (!productoSeleccionadoId) {
+            return alert("Por favor, selecciona un pan de la lista primero.");
+        }
 
         const productoEnBD = inventarioFirebase.find(p => p.id === productoSeleccionadoId);
         const cantidadInput = document.getElementById('cantidad-venta');
         const cantidad = parseInt(cantidadInput.value);
 
-        if (isNaN(cantidad) || cantidad <= 0) return alert("Ingresa una cantidad válida.");
+        if (isNaN(cantidad) || cantidad <= 0) {
+            return alert("Ingresa una cantidad válida (mayor a 0).");
+        }
 
         const existeEnCarrito = carrito.find(item => item.id === productoSeleccionadoId);
         const cantidadPrevia = existeEnCarrito ? existeEnCarrito.cantidad : 0;
 
         if ((cantidad + cantidadPrevia) > productoEnBD.stock) {
-            return alert(`¡Stock insuficiente! Solo quedan ${productoEnBD.stock - cantidadPrevia} unidades.`);
+            return alert(`¡Stock insuficiente! Solo quedan ${productoEnBD.stock - cantidadPrevia} unidades de ${productoEnBD.nombre}.`);
         }
 
-        if (existeEnCarrito) existeEnCarrito.cantidad += cantidad;
-        else carrito.push({ id: productoSeleccionadoId, nombre: productoEnBD.nombre, precio: productoEnBD.precio, cantidad });
+        if (existeEnCarrito) {
+            existeEnCarrito.cantidad += cantidad;
+        } else {
+            carrito.push({ 
+                id: productoSeleccionadoId, 
+                nombre: productoEnBD.nombre, 
+                precio: productoEnBD.precio, 
+                cantidad 
+            });
+        }
 
         actualizarCarrito();
         cantidadInput.value = 1; 
@@ -559,71 +651,65 @@
         let total = 0;
         lista.innerHTML = '';
 
-        if(carrito.length === 0) {
-            lista.innerHTML = '<li class="text-center text-slate-400 text-sm mt-4">El carrito está vacío</li>';
-        } else {
-            carrito.forEach((item, index) => {
-                const subtotal = item.precio * item.cantidad;
-                total += subtotal;
-                lista.innerHTML += `
-                    <li class="flex justify-between items-center bg-slate-50 p-3 rounded-xl border border-slate-100">
-                        <div class="flex items-center gap-3">
-                            <span class="bg-orange-100 text-orange-600 font-black px-2 py-1 rounded-lg text-sm">${item.cantidad}x</span>
-                            <span class="font-bold text-slate-700 text-sm">${item.nombre}</span>
-                        </div>
-                        <div class="flex items-center gap-4">
-                            <span class="font-bold text-slate-500 text-sm">Q${subtotal.toFixed(2)}</span>
-                            <button onclick="quitarDelCarrito(${index})" class="text-red-400 hover:text-red-600 hover:bg-red-50 p-1.5 rounded-lg transition-colors"><i class="fa-solid fa-trash"></i></button>
-                        </div>
-                    </li>`;
-            });
-        }
+        carrito.forEach((item, index) => {
+            const subtotal = item.precio * item.cantidad;
+            total += subtotal;
+            lista.innerHTML += `<li>${item.cantidad}x ${item.nombre} - Q${subtotal.toFixed(2)} 
+                <button class="btn-danger" style="padding:2px 5px; font-size:12px; float: right;" onclick="carrito.splice(${index}, 1); actualizarCarrito();">X</button>
+            </li><div style="clear:both; margin-bottom: 5px;"></div>`;
+        });
 
         document.getElementById('carrito-total').innerText = total.toFixed(2);
     }
 
-    function quitarDelCarrito(index) {
-        carrito.splice(index, 1);
-        actualizarCarrito();
+    async function completarVenta(tipoDePago) {
+        if (carrito.length === 0) return alert("El carrito está vacío.");
+        
+        let nombreCliente = "";
+        if (tipoDePago === 'fiar') {
+            nombreCliente = prompt("Ingrese el nombre de la persona a la que se le fía:");
+            if (!nombreCliente || nombreCliente.trim() === "") {
+                return alert("Venta cancelada: Debe ingresar el nombre del cliente para poder fiar.");
+            }
+        }
+
+        let totalVenta = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
+
+        try {
+            await db.collection("ventas").add({
+                vendedor: document.getElementById('display-vendedor').innerText,
+                productos: carrito,
+                total: totalVenta,
+                tipo: tipoDePago,          // Guarda si es 'efectivo' o 'fiar'
+                cliente: nombreCliente,    // Guarda el nombre si se fio
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            });
+
+            const batch = db.batch();
+            carrito.forEach(item => {
+                const docRef = db.collection("inventario").doc(item.id);
+                batch.update(docRef, { stock: firebase.firestore.FieldValue.increment(-item.cantidad) });
+            });
+            await batch.commit();
+
+            if (tipoDePago === 'fiar') {
+                alert(`¡Venta FIADA a ${nombreCliente} registrada con éxito!`);
+            } else {
+                alert("¡Venta en EFECTIVO registrada con éxito!");
+            }
+
+            carrito = [];
+            actualizarCarrito();
+            document.getElementById('cantidad-venta').value = 1;
+            productoSeleccionadoId = null;
+            document.getElementById('nombre-prod-sel').innerText = 'Ninguno';
+            document.querySelectorAll('.producto-card').forEach(c => c.classList.remove('selected'));
+
+        } catch (error) {
+            console.error(error);
+            alert("Error al procesar la venta.");
+        }
     }
-
-    async function completarVenta(esFiado = false) {
-    if (carrito.length === 0) return alert("El carrito está vacío.");
-    
-    let clienteNombre = "";
-    if (esFiado) {
-        clienteNombre = prompt("¿A quién se le fía?");
-        if (!clienteNombre) return; // Cancela si no hay nombre
-    }
-
-    let totalVenta = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
-
-    try {
-        await db.collection("ventas").add({
-            vendedor: document.getElementById('display-vendedor').innerText,
-            productos: carrito,
-            total: totalVenta,
-            metodo: esFiado ? "Fiado" : "Efectivo",
-            cliente: clienteNombre, // Guardamos el nombre por separado
-            timestamp: firebase.firestore.FieldValue.serverTimestamp()
-        });
-
-        const batch = db.batch();
-        carrito.forEach(item => {
-            const docRef = db.collection("inventario").doc(item.id);
-            batch.update(docRef, { stock: firebase.firestore.FieldValue.increment(-item.cantidad) });
-        });
-        await batch.commit();
-
-        carrito = [];
-        actualizarCarrito();
-        alert(esFiado ? `Venta registrada a nombre de: ${clienteNombre}` : "Venta completada.");
-    } catch (error) {
-        alert("Error al procesar la venta.");
-    }
-}
-
-
 </script>
 
 </body>
