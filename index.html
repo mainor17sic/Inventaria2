@@ -141,10 +141,14 @@
                             <span class="text-slate-400 font-bold uppercase text-xs">Total a Cobrar</span>
                             <span class="text-3xl font-black text-slate-800">Q<span id="carrito-total">0.00</span></span>
                         </div>
-                        <button onclick="completarVenta()" class="w-full bg-green-500 hover:bg-green-600 text-white font-black text-lg py-4 rounded-2xl shadow-lg shadow-green-500/30 transition-transform active:scale-95">
-                            ✅ Finalizar Venta
-                        </button>
-                    </div>
+                        <div class="flex flex-col gap-2">
+    <button onclick="completarVenta(false)" class="w-full bg-green-500 hover:bg-green-600 text-white font-black text-lg py-4 rounded-2xl shadow-lg shadow-green-500/30 transition-transform active:scale-95">
+        ✅ Finalizar Venta (Efectivo)
+    </button>
+    <button onclick="completarVenta(true)" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-black text-lg py-4 rounded-2xl shadow-lg shadow-blue-500/30 transition-transform active:scale-95">
+        📝 Venta al Fiado
+    </button>
+</div>
                 </div>
 
             </div>
@@ -337,51 +341,71 @@
     }
 
     function generarPDFCierre() {
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
-        const fechaActual = new Date();
-        const fechaStr = fechaActual.toISOString().split('T')[0];
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    const hoy = new Date();
+    const fechaStr = hoy.toLocaleDateString(); // Fecha actual formateada
 
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(16);
-        doc.text("REPORTE DE CIERRE - PANADERIA MARVIN", 14, 20);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(18);
+    doc.text("REPORTE DE CIERRE - PANADERIA MARVIN", 14, 20);
 
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(10);
-        doc.text(`Fecha: ${fechaStr} | Turno: ${turnoActivo}`, 14, 30);
-        doc.text(`Encargado: ${vendedorActivo} | Caja Inicial: Q0.00`, 14, 36);
+    doc.setFontSize(10);
+    doc.text(`Fecha del Reporte: ${fechaStr} | Turno: ${turnoActivo}`, 14, 30);
+    doc.text(`Responsable: ${vendedorActivo}`, 14, 36);
 
-        const ventasParaPDF = ventasGlobales.map((venta, index) => {
-            const hora = venta.timestamp ? new Date(venta.timestamp.toDate()).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'N/A';
-            const detalle = venta.productos.map(p => `${p.cantidad}x ${p.nombre}`).join(', ');
-            return [index + 1, hora, detalle, `Q${venta.total.toFixed(2)}`, "Efectivo"];
-        });
+    // Separar Ventas
+    const ventasEfectivo = ventasGlobales.filter(v => v.metodo !== "Fiado");
+    const ventasFiado = ventasGlobales.filter(v => v.metodo === "Fiado");
 
-        doc.autoTable({
-            startY: 45, head: [['ID', 'Hora', 'Detalle Productos', 'Total', 'Método']], body: ventasParaPDF,
-            headStyles: { fillColor: [249, 115, 22] }, styles: { fontSize: 9 }, theme: 'grid'
-        });
+    // TABLA 1: VENTAS EFECTIVO
+    doc.setTextColor(249, 115, 22); // Naranja
+    doc.text("DETALLE DE VENTAS (EFECTIVO)", 14, 45);
+    
+    const bodyEfectivo = ventasEfectivo.map((v, i) => [
+        i + 1, 
+        v.productos.map(p => `${p.cantidad}x ${p.nombre}`).join(', '), 
+        `Q${v.total.toFixed(2)}`
+    ]);
 
-        const inventarioParaPDF = inventarioFirebase.map(item => {
-            const inicial = item.stockInicial || item.stock;
-            const final = item.stock;
-            return [item.nombre, inicial, final, inicial - final];
-        });
+    doc.autoTable({
+        startY: 48, head: [['#', 'Productos', 'Total']], body: bodyEfectivo,
+        headStyles: { fillColor: [249, 115, 22] }, theme: 'grid'
+    });
 
-        let posY = doc.lastAutoTable.finalY + 10; 
+    // TABLA 2: CUENTAS POR COBRAR (FIADOS) - Remarcado
+    let posY = doc.lastAutoTable.finalY + 15;
+    doc.setTextColor(59, 130, 246); // Azul
+    doc.text("CUENTAS POR COBRAR (FIADOS)", 14, posY);
 
-        doc.autoTable({
-            startY: posY, head: [['Producto', 'Stock Inicial', 'Stock Final', 'Vendidos']], body: inventarioParaPDF,
-            headStyles: { fillColor: [71, 85, 105] }, styles: { fontSize: 9 }, theme: 'grid'
-        });
+    const bodyFiados = ventasFiado.map((v, i) => [
+        v.cliente, 
+        v.productos.map(p => `${p.cantidad}x ${p.nombre}`).join(', '), 
+        `Q${v.total.toFixed(2)}`
+    ]);
 
-        posY = doc.lastAutoTable.finalY + 15;
-        const totalDinero = ventasGlobales.reduce((acc, venta) => acc + venta.total, 0);
+    doc.autoTable({
+        startY: posY + 3, 
+        head: [['Cliente', 'Detalle', 'Deuda']], 
+        body: bodyFiados,
+        headStyles: { fillColor: [59, 130, 246] }, // Azul para diferenciar
+        styles: { lineColor: [59, 130, 246], lineWidth: 0.5 }, // Borde azul
+        theme: 'grid'
+    });
 
-        doc.setFont("helvetica", "bold");
-        doc.text(`TOTAL EFECTIVO: Q${totalDinero.toFixed(2)}`, 14, posY);
-        doc.save(`Cierre_${vendedorActivo}_${fechaStr}.pdf`);
-    }
+    // Totales finales
+    posY = doc.lastAutoTable.finalY + 15;
+    const totalEfectivo = ventasEfectivo.reduce((acc, v) => acc + v.total, 0);
+    const totalFiado = ventasFiado.reduce((acc, v) => acc + v.total, 0);
+
+    doc.setFontSize(12);
+    doc.setTextColor(0, 0, 0);
+    doc.text(`TOTAL EN CAJA (EFECTIVO): Q${totalEfectivo.toFixed(2)}`, 14, posY);
+    doc.text(`TOTAL PENDIENTE (FIADO): Q${totalFiado.toFixed(2)}`, 14, posY + 7);
+    
+    doc.save(`Cierre_Turno_${fechaStr.replace(/\//g, '-')}.pdf`);
+}
+
 
     async function cerrarTurno() {
         const claveIngresada = prompt("Para CERRAR el turno e imprimir el PDF, ingresa tu clave secreta:");
@@ -556,36 +580,44 @@
         actualizarCarrito();
     }
 
-    async function completarVenta() {
-        if (carrito.length === 0) return alert("El carrito está vacío.");
-        let totalVenta = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
-
-        try {
-            await db.collection("ventas").add({
-                vendedor: document.getElementById('display-vendedor').innerText,
-                productos: carrito,
-                total: totalVenta,
-                timestamp: firebase.firestore.FieldValue.serverTimestamp()
-            });
-
-            const batch = db.batch();
-            carrito.forEach(item => {
-                const docRef = db.collection("inventario").doc(item.id);
-                batch.update(docRef, { stock: firebase.firestore.FieldValue.increment(-item.cantidad) });
-            });
-            await batch.commit();
-
-            carrito = [];
-            actualizarCarrito();
-            document.getElementById('cantidad-venta').value = 1;
-            productoSeleccionadoId = null;
-            document.getElementById('nombre-prod-sel').innerText = 'Ninguno';
-            document.querySelectorAll('.producto-card').forEach(c => c.classList.remove('selected'));
-
-        } catch (error) {
-            alert("Error al procesar la venta.");
-        }
+    async function completarVenta(esFiado = false) {
+    if (carrito.length === 0) return alert("El carrito está vacío.");
+    
+    let clienteNombre = "Venta Contado";
+    if (esFiado) {
+        clienteNombre = prompt("Ingrese el nombre del cliente (Fiado):");
+        if (!clienteNombre) return alert("Debe ingresar un nombre para registrar el fiado.");
     }
+
+    let totalVenta = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
+
+    try {
+        await db.collection("ventas").add({
+            vendedor: document.getElementById('display-vendedor').innerText,
+            productos: carrito,
+            total: totalVenta,
+            metodo: esFiado ? "Fiado" : "Efectivo",
+            cliente: clienteNombre,
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        // ... resto de la lógica de actualización de stock (el batch que ya tienes)
+        const batch = db.batch();
+        carrito.forEach(item => {
+            const docRef = db.collection("inventario").doc(item.id);
+            batch.update(docRef, { stock: firebase.firestore.FieldValue.increment(-item.cantidad) });
+        });
+        await batch.commit();
+
+        carrito = [];
+        actualizarCarrito();
+        alert(esFiado ? `Venta fiada a ${clienteNombre} guardada.` : "Venta completada.");
+        // ... limpiar selección
+    } catch (error) {
+        alert("Error al procesar la venta.");
+    }
+}
+
 </script>
 
 </body>
