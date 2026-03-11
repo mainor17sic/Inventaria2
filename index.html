@@ -4,10 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Panadería Marvin - Control de Turno</title>
-    
+
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-    
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
 
@@ -15,35 +15,38 @@
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; }
         h1, h2, h3 { color: #333; margin-top: 0; }
         .container { max-width: 900px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        
-        input, select, button { padding: 10px; margin: 5px 0; border: 1px solid #ccc; border-radius: 4px; font-size: 16px; }
+
+        input, select, button { padding: 10px; margin: 5px 0; border: 1px solid #ccc; border-radius: 4px; font-size: 16px; box-sizing: border-box; }
         button { background-color: #d35400; color: white; border: none; cursor: pointer; transition: background 0.3s; }
         button:hover { background-color: #e67e22; }
         .btn-danger { background-color: #c0392b; }
         .btn-danger:hover { background-color: #e74c3c; }
+        .btn-success { background-color: #27ae60; }
+        .btn-success:hover { background-color: #2ecc71; }
 
-        .tabs { display: flex; border-bottom: 2px solid #ddd; margin-bottom: 20px; }
-        .tab { padding: 10px 20px; cursor: pointer; background: #eee; border: none; margin-right: 5px; border-radius: 5px 5px 0 0; }
+        .tabs { display: flex; border-bottom: 2px solid #ddd; margin-bottom: 20px; flex-wrap: wrap; }
+        .tab { padding: 10px 20px; cursor: pointer; background: #eee; border: none; margin-right: 5px; border-radius: 5px 5px 0 0; flex-grow: 1; text-align: center; }
         .tab.active { background: #d35400; color: white; font-weight: bold; }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
 
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        .table-responsive { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; min-width: 500px; }
         th, td { padding: 12px; border: 1px solid #ddd; text-align: left; }
         th { background-color: #f8f9fa; }
 
         #dashboard { display: none; }
         #pantalla-carga { text-align: center; padding: 50px; font-size: 20px; color: #666; }
         #inicio-turno-section { display: none; }
-        
+
         .form-row { display: flex; gap: 10px; align-items: center; margin-bottom: 15px; flex-wrap: wrap; }
         .cart-section { margin-top: 20px; padding: 15px; border: 1px dashed #d35400; border-radius: 5px; }
-        .header-dashboard { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 20px; }
+        .header-dashboard { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
 
-        /* === NUEVOS ESTILOS DE LA REJILLA === */
+        /* === ESTILOS DE LA REJILLA === */
         #productos-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
             gap: 15px;
             margin-bottom: 20px;
         }
@@ -73,7 +76,7 @@
             box-shadow: 0 0 10px rgba(39, 174, 96, 0.3);
         }
 
-        .producto-card h4 { margin: 5px 0; color: #333; }
+        .producto-card h4 { margin: 5px 0; color: #333; font-size: 15px; }
         .producto-card p { margin: 0; color: #d35400; font-weight: bold; }
         .producto-card small { color: #888; }
 
@@ -81,6 +84,22 @@
             opacity: 0.5;
             cursor: not-allowed;
             background: #f0f0f0;
+        }
+
+        .text-rojo { color: #c0392b; font-weight: bold; }
+
+        /* === MEDIA QUERIES PARA MÓVILES === */
+        @media (max-width: 600px) {
+            body { padding: 10px; }
+            .container { padding: 15px; }
+            .form-row { flex-direction: column; align-items: stretch; }
+            .form-row input, .form-row select, .form-row button { width: 100%; }
+            .tab { margin-bottom: 5px; border-radius: 5px; }
+            .header-dashboard { flex-direction: column; text-align: center; }
+            #productos-grid { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; }
+            .producto-card { padding: 10px; }
+            .cart-botones { flex-direction: column; }
+            .cart-botones button { width: 100%; margin-bottom: 5px; }
         }
     </style>
 </head>
@@ -93,31 +112,33 @@
 <div class="container" id="inicio-turno-section">
     <h1>🥐 Iniciar Turno de Venta</h1>
     <p>Agrega los productos disponibles y registra tus datos para comenzar.</p>
-    
-    <div style="background: #f9f9f9; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
-    <h3>1. Inventario del Día</h3>
-    <table style="width: 100%; background: white; margin-bottom: 15px;">
-        <thead>
-            <tr style="background: #eee;">
-                <th>Pan</th>
-                <th>Precio</th>
-                <th>Cantidad</th>
-            </tr>
-        </thead>
-        <tbody id="tabla-automatica">
-            </tbody>
-    </table>
 
-    <hr>
-    <h4>¿Agregar otro producto extra?</h4>
-    <div class="form-row">
-        <input type="text" id="nuevo-pan" placeholder="Nombre">
-        <input type="number" id="nuevo-precio" placeholder="Q" style="width: 70px;">
-        <input type="number" id="nueva-cantidad" placeholder="Cant" style="width: 70px;">
-        <button onclick="agregarAInventarioLocal()">+ Agregar</button>
+    <div style="background: #f9f9f9; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
+        <h3>1. Inventario del Día</h3>
+        <div class="table-responsive">
+            <table style="width: 100%; background: white; margin-bottom: 15px;">
+                <thead>
+                    <tr style="background: #eee;">
+                        <th>Pan</th>
+                        <th>Precio</th>
+                        <th>Cantidad</th>
+                    </tr>
+                </thead>
+                <tbody id="tabla-automatica">
+                </tbody>
+            </table>
+        </div>
+
+        <hr>
+        <h4>¿Agregar otro producto extra?</h4>
+        <div class="form-row">
+            <input type="text" id="nuevo-pan" placeholder="Nombre">
+            <input type="number" id="nuevo-precio" placeholder="Q" style="width: 80px;">
+            <input type="number" id="nueva-cantidad" placeholder="Cant" style="width: 80px;">
+            <button onclick="agregarAInventarioLocal()">+ Agregar</button>
+        </div>
+        <ul id="lista-inventario-local"></ul>
     </div>
-    <ul id="lista-inventario-local"></ul>
-</div>
 
     <div style="background: #f9f9f9; padding: 15px; border-radius: 5px;">
         <h3>2. Datos del Vendedor</h3>
@@ -128,7 +149,7 @@
                 <option value="Diurno">☀️ Turno Diurno</option>
                 <option value="Tarde">🌙 Turno Tarde</option>
             </select>
-            <button onclick="iniciarTurno()" style="background-color: #27ae60;">🚀 Iniciar Turno Global</button>
+            <button onclick="iniciarTurno()" class="btn-success">🚀 Iniciar Turno Global</button>
         </div>
     </div>
 </div>
@@ -150,7 +171,7 @@
 
     <div id="punto-venta" class="tab-content active">
         <h2>Punto de Venta</h2>
-        
+
         <div id="productos-grid">
             <p>Cargando productos...</p>
         </div>
@@ -167,37 +188,46 @@
             <h3>🛒 Carrito Actual</h3>
             <ul id="carrito-lista"></ul>
             <h4>Total: Q<span id="carrito-total">0.00</span></h4>
-            <button onclick="completarVenta()" style="background-color: #27ae60; width: 100%; font-size: 18px;">✅ Finalizar Venta</button>
+            
+            <div class="form-row cart-botones" style="margin-top: 15px;">
+                <button onclick="completarVenta('efectivo')" class="btn-success" style="flex: 1; font-size: 18px;">✅ Cobrar Efectivo</button>
+                <button onclick="completarVenta('fiar')" class="btn-danger" style="flex: 1; font-size: 18px;">📒 Fiar (Crédito)</button>
+            </div>
         </div>
     </div>
 
     <div id="inventario-vivo" class="tab-content">
         <h2>Inventario en Tiempo Real</h2>
-        <table>
-            <thead>
-                <tr>
-                    <th>Producto</th>
-                    <th>Precio</th>
-                    <th>Stock Inicial</th>
-                    <th>Stock Disponible</th>
-                </tr>
-            </thead>
-            <tbody id="tabla-inventario"></tbody>
-        </table>
+        <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Producto</th>
+                        <th>Precio</th>
+                        <th>Stock Inicial</th>
+                        <th>Stock Disponible</th>
+                    </tr>
+                </thead>
+                <tbody id="tabla-inventario"></tbody>
+            </table>
+        </div>
     </div>
 
     <div id="historial-ventas" class="tab-content">
         <h2>Historial de Ventas</h2>
-        <table>
-            <thead>
-                <tr>
-                    <th>Hora</th>
-                    <th>Productos</th>
-                    <th>Total</th>
-                </tr>
-            </thead>
-            <tbody id="tabla-historial"></tbody>
-        </table>
+        <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Hora</th>
+                        <th>Productos</th>
+                        <th>Total</th>
+                        <th>Método</th>
+                    </tr>
+                </thead>
+                <tbody id="tabla-historial"></tbody>
+            </table>
+        </div>
     </div>
 </div>
 
@@ -224,7 +254,7 @@
     let vendedorActivo = "";
     let turnoActivo = "";
     let escuchasIniciadas = false;
-    let productoSeleccionadoId = null; // <--- Nueva variable global
+    let productoSeleccionadoId = null;
 
    // Escucha el estado del turno global
     db.collection("configuracion").doc("estado_turno").onSnapshot((doc) => {
@@ -233,13 +263,13 @@
         if (doc.exists && doc.data().activo === true) {
             document.getElementById('inicio-turno-section').style.display = 'none';
             document.getElementById('dashboard').style.display = 'block';
-            
+
             vendedorActivo = doc.data().vendedor;
             turnoActivo = doc.data().turno || "General"; 
             firmaActivaEnNube = doc.data().firma; 
 
             document.getElementById('display-vendedor').innerText = `${vendedorActivo} (${turnoActivo})`;
-            
+
             if (!escuchasIniciadas) {
                 iniciarEscuchasEnTiempoReal();
                 escuchasIniciadas = true;
@@ -254,127 +284,177 @@
         }
     });
 
-    // 1. Define aquí tus panes de siempre
-const CATALOGO_PREDETERMINADO = [
-    { nombre: "Tira Frances", precio: 3.00 },
-    { nombre: "Pan Dulce Grande", precio: 1.00 },
-    { nombre: "Pan Dulce Pequeño", precio: 0.50 },
-    { nombre: "Pirujos Pequeñas", precio: 0.50 },
-    { nombre: "Pirujos Grande", precio: 1.00 },
-    { nombre: "Pan chatas", precio: 0.50 },
-    { nombre: "Pan Galleta", precio: 1.00 },
-    { nombre: "Bollos", precio: 0.50 },
-    { nombre: "Cemitas", precio: 1.00 },
-    { nombre: "Gallinas", precio: 1.00 },
-    { nombre: "Campechana Grande", precio: 1.00 },
-    { nombre: "Campechana pequeña", precio: 0.50 },
-    { nombre: "Croassant", precio: 1.50 },
-    { nombre: "Donas", precio: 2.00 },
-    { nombre: "Roles de Canela", precio: 2.00 },
-    { nombre: "Salporas", precio: 1.00 },
-    { nombre: "Bolsas de galletas", precio: 3.00 },
-    { nombre: "Conos de manjar", precio: 3.00 }
-];
+    const CATALOGO_PREDETERMINADO = [
+        { nombre: "Tira Frances", precio: 3.00 },
+        { nombre: "Pan Dulce Grande", precio: 1.00 },
+        { nombre: "Pan Dulce Pequeño", precio: 0.50 },
+        { nombre: "Pirujos Pequeñas", precio: 0.50 },
+        { nombre: "Pirujos Grande", precio: 1.00 },
+        { nombre: "Pan chatas", precio: 0.50 },
+        { nombre: "Pan Galleta", precio: 1.00 },
+        { nombre: "Bollos", precio: 0.50 },
+        { nombre: "Cemitas", precio: 1.00 },
+        { nombre: "Gallinas", precio: 1.00 },
+        { nombre: "Campechana Grande", precio: 1.00 },
+        { nombre: "Campechana pequeña", precio: 0.50 },
+        { nombre: "Croassant", precio: 1.50 },
+        { nombre: "Donas", precio: 2.00 },
+        { nombre: "Roles de Canela", precio: 2.00 },
+        { nombre: "Salporas", precio: 1.00 },
+        { nombre: "Bolsas de galletas", precio: 3.00 },
+        { nombre: "Conos de manjar", precio: 3.00 }
+    ];
 
-// 2. Función para mostrar los panes automáticamente al cargar
-function cargarCatalogo() {
-    const tabla = document.getElementById('tabla-automatica');
-    tabla.innerHTML = "";
-    CATALOGO_PREDETERMINADO.forEach((item, index) => {
-        tabla.innerHTML += `
-            <tr>
-                <td>${item.nombre}</td>
-                <td>Q${item.precio.toFixed(2)}</td>
-                <td>
-                    <input type="number" class="cant-auto" 
-                           data-nombre="${item.nombre}" 
-                           data-precio="${item.precio}" 
-                           placeholder="0" style="width: 60px;">
-                </td>
-            </tr>`;
-    });
-}
-
-// Ejecutar al abrir la página
-window.onload = cargarCatalogo;
-
-// 3. Modificar la función iniciarTurno para que lea ambos (tabla y extras)
-async function iniciarTurno() {
-    const nombreVendedor = document.getElementById('nombre-vendedor').value.trim();
-    const firmaVendedor = document.getElementById('firma-vendedor').value.trim();
-    const tipoTurno = document.getElementById('tipo-turno').value;
-
-    if(!nombreVendedor || !firmaVendedor) return alert("Faltan datos del vendedor");
-
-    let inventarioFinal = [];
-
-    // Leer cantidades de la tabla automática
-    document.querySelectorAll('.cant-auto').forEach(input => {
-        const cant = parseInt(input.value);
-        if(cant > 0) {
-            inventarioFinal.push({
-                nombre: input.dataset.nombre,
-                precio: parseFloat(input.dataset.precio),
-                stock: cant,
-                stockInicial: cant
-            });
-        }
-    });
-
-    // Sumar los productos extras agregados manualmente
-    inventarioFinal = inventarioFinal.concat(inventarioLocal);
-
-    if(inventarioFinal.length === 0) return alert("Debes ingresar al menos un producto.");
-
-    try {
-        const batch = db.batch();
-        inventarioFinal.forEach(item => {
-            const docRef = db.collection("inventario").doc(item.nombre.toLowerCase().replace(/\s+/g, '-'));
-            batch.set(docRef, item);
+    function cargarCatalogo() {
+        const tabla = document.getElementById('tabla-automatica');
+        tabla.innerHTML = "";
+        CATALOGO_PREDETERMINADO.forEach((item, index) => {
+            tabla.innerHTML += `
+                <tr>
+                    <td>${item.nombre}</td>
+                    <td>Q${item.precio.toFixed(2)}</td>
+                    <td>
+                        <input type="number" class="cant-auto" 
+                               data-nombre="${item.nombre}" 
+                               data-precio="${item.precio}" 
+                               placeholder="0" style="width: 100%; max-width: 80px;">
+                    </td>
+                </tr>`;
         });
-        await batch.commit();
-
-        await db.collection("configuracion").doc("estado_turno").set({
-            activo: true,
-            vendedor: nombreVendedor,
-            firma: firmaVendedor,
-            turno: tipoTurno 
-        });
-    } catch (error) {
-        alert("Error al conectar con la base de datos.");
     }
-}
+
+    window.onload = cargarCatalogo;
+
+    function agregarAInventarioLocal() {
+        const nombre = document.getElementById('nuevo-pan').value;
+        const precio = parseFloat(document.getElementById('nuevo-precio').value);
+        const cantidad = parseInt(document.getElementById('nueva-cantidad').value);
+
+        if (nombre && !isNaN(precio) && !isNaN(cantidad)) {
+            inventarioLocal.push({
+                nombre: nombre,
+                precio: precio,
+                stock: cantidad,
+                stockInicial: cantidad
+            });
+            actualizarListaLocal();
+            document.getElementById('nuevo-pan').value = '';
+            document.getElementById('nuevo-precio').value = '';
+            document.getElementById('nueva-cantidad').value = '';
+        } else {
+            alert("Completa todos los campos correctamente.");
+        }
+    }
+
+    function actualizarListaLocal() {
+        const lista = document.getElementById('lista-inventario-local');
+        lista.innerHTML = "";
+        inventarioLocal.forEach((item, index) => {
+            lista.innerHTML += `<li>${item.nombre} - Q${item.precio} (Cant: ${item.stock}) <button class="btn-danger" style="padding: 2px 5px;" onclick="eliminarLocal(${index})">X</button></li>`;
+        });
+    }
+
+    function eliminarLocal(index) {
+        inventarioLocal.splice(index, 1);
+        actualizarListaLocal();
+    }
+
+    async function iniciarTurno() {
+        const nombreVendedor = document.getElementById('nombre-vendedor').value.trim();
+        const firmaVendedor = document.getElementById('firma-vendedor').value.trim();
+        const tipoTurno = document.getElementById('tipo-turno').value;
+
+        if(!nombreVendedor || !firmaVendedor) return alert("Faltan datos del vendedor");
+
+        let inventarioFinal = [];
+
+        document.querySelectorAll('.cant-auto').forEach(input => {
+            const cant = parseInt(input.value);
+            if(cant > 0) {
+                inventarioFinal.push({
+                    nombre: input.dataset.nombre,
+                    precio: parseFloat(input.dataset.precio),
+                    stock: cant,
+                    stockInicial: cant
+                });
+            }
+        });
+
+        inventarioFinal = inventarioFinal.concat(inventarioLocal);
+
+        if(inventarioFinal.length === 0) return alert("Debes ingresar al menos un producto.");
+
+        try {
+            const batch = db.batch();
+            inventarioFinal.forEach(item => {
+                const docRef = db.collection("inventario").doc(item.nombre.toLowerCase().replace(/\s+/g, '-'));
+                batch.set(docRef, item);
+            });
+            await batch.commit();
+
+            await db.collection("configuracion").doc("estado_turno").set({
+                activo: true,
+                vendedor: nombreVendedor,
+                firma: firmaVendedor,
+                turno: tipoTurno 
+            });
+        } catch (error) {
+            alert("Error al conectar con la base de datos.");
+        }
+    }
 
     // --- FUNCIÓN PARA GENERAR EL REPORTE PDF ---
     function generarPDFCierre() {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
-        
+
         const fechaActual = new Date();
         const fechaStr = fechaActual.toISOString().split('T')[0];
-        
+
         doc.setFont("helvetica", "bold");
         doc.setFontSize(16);
         doc.text("REPORTE DE CIERRE - PANADERÍA", 14, 20);
-        
+
         doc.setFont("helvetica", "normal");
         doc.setFontSize(10);
         doc.text(`Fecha: ${fechaStr} | Turno: ${turnoActivo}`, 14, 30);
-        doc.text(`Encargado: ${vendedorActivo} | Caja Inicial: Q0.00`, 14, 36);
+        doc.text(`Encargado: ${vendedorActivo}`, 14, 36);
+
+        let totalEfectivo = 0;
+        let totalFiado = 0;
 
         const ventasParaPDF = ventasGlobales.map((venta, index) => {
             const hora = venta.timestamp ? new Date(venta.timestamp.toDate()).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'}) : 'N/A';
             const detalle = venta.productos.map(p => `${p.nombre}(${p.cantidad})`).join(', ');
-            return [index + 1, hora, detalle, `Q${venta.total.toFixed(2)}`, "Efectivo"];
+            
+            let metodoVenta = "Efectivo";
+            let tipo = venta.tipo || "efectivo"; // Por si hay ventas antiguas sin tipo
+
+            if (tipo === 'fiar') {
+                metodoVenta = `Fiado: ${venta.cliente}`;
+                totalFiado += venta.total;
+            } else {
+                totalEfectivo += venta.total;
+            }
+
+            return [index + 1, hora, detalle, `Q${venta.total.toFixed(2)}`, metodoVenta];
         });
 
+        // Configuración de la tabla de ventas para pintar en rojo los fiados
         doc.autoTable({
             startY: 45,
             head: [['ID', 'Hora', 'Detalle Productos', 'Total', 'Método']],
             body: ventasParaPDF,
             headStyles: { fillColor: [139, 69, 19] },
             styles: { fontSize: 9 },
-            theme: 'grid'
+            theme: 'grid',
+            didParseCell: function(data) {
+                // Columna 4 es "Método". Si contiene la palabra "Fiado", se pinta de rojo.
+                if (data.column.index === 4 && data.cell.raw && data.cell.raw.toString().includes('Fiado')) {
+                    data.cell.styles.textColor = [192, 57, 43]; // Rojo
+                    data.cell.styles.fontStyle = 'bold';
+                }
+            }
         });
 
         const inventarioParaPDF = inventarioFirebase.map(item => {
@@ -396,18 +476,20 @@ async function iniciarTurno() {
         });
 
         posY = doc.lastAutoTable.finalY + 15;
-        const totalDinero = ventasGlobales.reduce((acc, venta) => acc + venta.total, 0);
 
         doc.setFont("helvetica", "bold");
-        doc.text(`TOTAL EFECTIVO: Q${totalDinero.toFixed(2)}`, 14, posY);
-        doc.text(`TOTAL EN CAJA (INICIAL + EFEC): Q${totalDinero.toFixed(2)}`, 14, posY + 6);
+        doc.text(`TOTAL EFECTIVO (Caja): Q${totalEfectivo.toFixed(2)}`, 14, posY);
+        doc.setTextColor(192, 57, 43); // Texto Rojo para Fiado
+        doc.text(`TOTAL FIADO (Cuentas por cobrar): Q${totalFiado.toFixed(2)}`, 14, posY + 6);
+        doc.setTextColor(0, 0, 0); // Regresar a Negro
+        doc.text(`TOTAL GENERAL DE VENTAS: Q${(totalEfectivo + totalFiado).toFixed(2)}`, 14, posY + 12);
 
         doc.save(`Reporte_Cierre_${fechaStr}.pdf`);
     }
 
     async function cerrarTurno() {
         const claveIngresada = prompt("Para CERRAR el turno e imprimir el PDF, ingresa tu clave:");
-        
+
         if (claveIngresada === firmaActivaEnNube || claveIngresada === "admin123") {
             if (confirm("Se generará el reporte PDF y se reiniciará el inventario. ¿Deseas continuar?")) {
                 try {
@@ -448,13 +530,11 @@ async function iniciarTurno() {
         evt.currentTarget.className += " active";
     }
 
-    // === ESCUCHAS ACTUALIZADAS CON LA CUADRÍCULA ===
     function iniciarEscuchasEnTiempoReal() {
-        // 1. Escuchar Inventario y generar la Cuadrícula Visual
         db.collection("inventario").onSnapshot((querySnapshot) => {
             const grid = document.getElementById('productos-grid');
             const tablaInventario = document.getElementById('tabla-inventario');
-            
+
             grid.innerHTML = ''; 
             tablaInventario.innerHTML = ''; 
             inventarioFirebase = [];
@@ -481,16 +561,15 @@ async function iniciarTurno() {
                     <p>Q${prod.precio.toFixed(2)}</p>
                     <small>Disponible: ${prod.stock}</small>
                 `;
-                
+
                 if (!sinStock) {
                     card.onclick = () => seleccionarParaVenta(prod.id, prod.nombre, card);
                 }
-                
+
                 grid.appendChild(card);
             });
         });
 
-        // 2. Escuchar Ventas
         db.collection("ventas").orderBy("timestamp", "desc").onSnapshot((querySnapshot) => {
             const tablaHistorial = document.getElementById('tabla-historial');
             tablaHistorial.innerHTML = '';
@@ -502,12 +581,18 @@ async function iniciarTurno() {
 
                 const fecha = venta.timestamp ? new Date(venta.timestamp.toDate()).toLocaleTimeString() : 'Reciente...';
                 let resumenProductos = venta.productos.map(p => `${p.cantidad}x ${p.nombre}`).join(', ');
+                
+                let tipoVenta = venta.tipo || "efectivo";
+                let badgeMetodo = tipoVenta === 'fiar' 
+                    ? `<span class="text-rojo">Fiado: ${venta.cliente}</span>` 
+                    : '<span style="color: #27ae60; font-weight:bold;">Efectivo</span>';
 
                 tablaHistorial.innerHTML += `
                     <tr>
                         <td>${fecha}</td>
                         <td>${resumenProductos}</td>
                         <td><strong>Q${venta.total.toFixed(2)}</strong></td>
+                        <td>${badgeMetodo}</td>
                     </tr>
                 `;
             });
@@ -518,20 +603,19 @@ async function iniciarTurno() {
     function seleccionarParaVenta(id, nombre, elemento) {
         productoSeleccionadoId = id;
         document.getElementById('nombre-prod-sel').innerText = nombre;
-        
+
         document.querySelectorAll('.producto-card').forEach(c => c.classList.remove('selected'));
         elemento.classList.add('selected');
-        
+
         document.getElementById('cantidad-venta').focus();
         document.getElementById('cantidad-venta').select();
     }
 
-    // === AGREGAR AL CARRITO ACTUALIZADO ===
     function agregarAlCarrito() {
         if (!productoSeleccionadoId) {
             return alert("Por favor, selecciona un pan de la lista primero.");
         }
-        
+
         const productoEnBD = inventarioFirebase.find(p => p.id === productoSeleccionadoId);
         const cantidadInput = document.getElementById('cantidad-venta');
         const cantidad = parseInt(cantidadInput.value);
@@ -571,15 +655,24 @@ async function iniciarTurno() {
             const subtotal = item.precio * item.cantidad;
             total += subtotal;
             lista.innerHTML += `<li>${item.cantidad}x ${item.nombre} - Q${subtotal.toFixed(2)} 
-                <button class="btn-danger" style="padding:2px 5px; font-size:12px;" onclick="carrito.splice(${index}, 1); actualizarCarrito();">X</button>
-            </li>`;
+                <button class="btn-danger" style="padding:2px 5px; font-size:12px; float: right;" onclick="carrito.splice(${index}, 1); actualizarCarrito();">X</button>
+            </li><div style="clear:both; margin-bottom: 5px;"></div>`;
         });
 
         document.getElementById('carrito-total').innerText = total.toFixed(2);
     }
 
-    async function completarVenta() {
+    async function completarVenta(tipoDePago) {
         if (carrito.length === 0) return alert("El carrito está vacío.");
+        
+        let nombreCliente = "";
+        if (tipoDePago === 'fiar') {
+            nombreCliente = prompt("Ingrese el nombre de la persona a la que se le fía:");
+            if (!nombreCliente || nombreCliente.trim() === "") {
+                return alert("Venta cancelada: Debe ingresar el nombre del cliente para poder fiar.");
+            }
+        }
+
         let totalVenta = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
 
         try {
@@ -587,6 +680,8 @@ async function iniciarTurno() {
                 vendedor: document.getElementById('display-vendedor').innerText,
                 productos: carrito,
                 total: totalVenta,
+                tipo: tipoDePago,          // Guarda si es 'efectivo' o 'fiar'
+                cliente: nombreCliente,    // Guarda el nombre si se fio
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
             });
 
@@ -597,16 +692,19 @@ async function iniciarTurno() {
             });
             await batch.commit();
 
-            alert("Venta registrada con éxito!");
+            if (tipoDePago === 'fiar') {
+                alert(`¡Venta FIADA a ${nombreCliente} registrada con éxito!`);
+            } else {
+                alert("¡Venta en EFECTIVO registrada con éxito!");
+            }
+
             carrito = [];
             actualizarCarrito();
             document.getElementById('cantidad-venta').value = 1;
-            
-            // Opcional: Limpiar la selección actual
             productoSeleccionadoId = null;
             document.getElementById('nombre-prod-sel').innerText = 'Ninguno';
             document.querySelectorAll('.producto-card').forEach(c => c.classList.remove('selected'));
-            
+
         } catch (error) {
             console.error(error);
             alert("Error al procesar la venta.");
