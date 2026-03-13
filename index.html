@@ -233,132 +233,92 @@
 </head>
 <body>
 
-<div id="pantalla-carga" class="loading-wrapper">
-    <div class="loader-box">
-        <div class="bread-icon">
-            <svg viewBox="0 0 512 512" width="80" height="80">
-                <path fill="#D97706" d="M394.2,171.1c-15.6-26.6-43.6-43.9-74.6-43.9c-10.4,0-20.5,1.9-29.8,5.4c-14.4-32.9-47.5-55.8-86-55.8 c-34.9,0-65.4,18.8-81.6,46.8c-12.8-5.3-26.8-8.2-41.5-8.2c-56.1,0-101.5,45.4-101.5,101.5c0,4.8,0.3,9.5,1,14.1 C32.1,248.8,0,296.8,0,352.4c0,82.4,66.8,149.3,149.3,149.3h213.3c82.4,0,149.3-66.8,149.3-149.3 C512,258.9,461.3,184.7,394.2,171.1z M362.7,438.4H149.3C101.8,438.4,63.2,399.8,63.2,352.4c0-36.2,22.4-67.2,54.1-80.1l15.1-6.1 l-1.9-16.1c-0.6-5.1-0.9-10.2-0.9-15.4c0-34,27.6-61.6,61.6-61.6c11.3,0,22.4,3.1,32.2,9.1l14.1,8.6l7.4-14.7 c10.9-21.7,33-35.8,57.1-35.8c26.9,0,50.1,17.4,57.7,43.3l4.6,15.6l16.2-1.9c4.9-0.6,9.8-0.9,14.8-0.9c25.2,0,48.2,14.3,59.8,37.3 l7.6,15l16.5,2.4c40.5,5.9,71.1,41,71.1,82C448.8,399.8,410.2,438.4,362.7,438.4z"/>
-            </svg>
-        </div>
-
+<div id="pantalla-carga" class="loading-overlay">
+    <div class="loading-content">
+        <div class="spinner"></div>
+        
         <h1>Panadería Marvin</h1>
-        
-        <div class="progress-container">
-            <div id="progress-bar" class="progress-fill"></div>
-        </div>
-        
-        <p id="status-text">Cargando delicias...</p>
+        <p class="loading-text">Sincronizando inventario...</p>
     </div>
 </div>
 
 <style>
-    :root {
-        --color-pan: #d97706;
-        --color-texto: #451a03;
-        --fondo: #fffdf5;
-    }
-
-    .loading-wrapper {
+    /* Contenedor Principal: Ocupa toda la pantalla */
+    .loading-overlay {
         position: fixed;
-        inset: 0;
-        background: var(--fondo);
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: #ffffff; /* Fondo limpio */
         display: flex;
         justify-content: center;
         align-items: center;
-        z-index: 10000;
-        font-family: 'Segoe UI', system-ui, sans-serif;
+        z-index: 9999;
+        transition: opacity 0.5s ease;
     }
 
-    .loader-box {
+    .loading-content {
         text-align: center;
-        width: 80%;
-        max-width: 300px;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
 
-    /* Animación de "Levantado" del pan */
-    .bread-icon {
-        margin-bottom: 20px;
-        animation: floating 2s ease-in-out infinite;
+    /* Spinner con colores de panadería (Ámbar/Dorado) */
+    .spinner {
+        width: 50px;
+        height: 50px;
+        border: 5px solid #f3f3f3;
+        border-top: 5px solid #d97706; /* Color miel/pan tostado */
+        border-radius: 50%;
+        margin: 0 auto 20px;
+        animation: spin 1s linear infinite;
     }
 
     h1 {
-        color: var(--color-texto);
-        font-size: 1.4rem;
-        margin-bottom: 20px;
-        font-weight: 700;
+        color: #451a03; /* Marrón oscuro profesional */
+        font-size: 1.5rem;
+        margin-bottom: 8px;
+        letter-spacing: 1px;
     }
 
-    /* Estilo de la Barra de Progreso */
-    .progress-container {
-        width: 100%;
-        height: 8px;
-        background: #e5e7eb;
-        border-radius: 10px;
-        overflow: hidden;
-        margin-bottom: 10px;
-    }
-
-    .progress-fill {
-        width: 0%; /* Empieza en cero */
-        height: 100%;
-        background: var(--color-pan);
-        border-radius: 10px;
-        transition: width 0.3s ease;
-    }
-
-    #status-text {
+    .loading-text {
         color: #92400e;
-        font-size: 0.85rem;
+        font-size: 0.9rem;
         font-weight: 500;
+        animation: pulse 1.5s infinite;
     }
 
-    @keyframes floating {
-        0%, 100% { transform: translateY(0); }
-        50% { transform: translateY(-15px); }
+    /* Animaciones */
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+    }
+
+    /* Responsivo para móviles */
+    @media (max-width: 600px) {
+        h1 { font-size: 1.2rem; }
+        .spinner { width: 40px; height: 40px; }
     }
 </style>
 
 <script>
-    function iniciarCarga() {
-        const bar = document.getElementById('progress-bar');
-        const text = document.getElementById('status-text');
-        const wrapper = document.getElementById('pantalla-carga');
-        
-        let progreso = 0;
-        const frases = [
-            "Encendiendo hornos...",
-            "Preparando la masa...",
-            "Horneando reportes...",
-            "¡Listo para vender!"
-        ];
-
-        const intervalo = setInterval(() => {
-            progreso += Math.random() * 15; // Incremento aleatorio para realismo
-            
-            if (progreso >= 100) {
-                progreso = 100;
-                clearInterval(intervalo);
-                text.innerText = frases[3];
-                
-                // Desvanecer y quitar
-                setTimeout(() => {
-                    wrapper.style.transition = "opacity 0.6s ease";
-                    wrapper.style.opacity = "0";
-                    setTimeout(() => wrapper.remove(), 600);
-                }, 500);
-            } else {
-                bar.style.width = progreso + "%";
-                // Cambiar texto según el progreso
-                if (progreso > 20) text.innerText = frases[0];
-                if (progreso > 50) text.innerText = frases[1];
-                if (progreso > 80) text.innerText = frases[2];
-            }
-        }, 200);
-    }
-
-    // Iniciar cuando el DOM esté listo
-    document.addEventListener('DOMContentLoaded', iniciarCarga);
+    // Código para ocultar la pantalla cuando todo cargue
+    window.addEventListener('load', () => {
+        const loader = document.getElementById('pantalla-carga');
+        setTimeout(() => {
+            loader.style.opacity = '0';
+            setTimeout(() => {
+                loader.style.display = 'none';
+            }, 500); // Espera a que termine la transición de opacidad
+        }, 1500); // Un pequeño delay para que se aprecie el diseño
+    });
 </script>
+
 
 <div class="container" id="inicio-turno-section">
     <div style="text-align: center; margin-bottom: 25px;">
