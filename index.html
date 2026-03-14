@@ -233,146 +233,132 @@
 </head>
 <body>
 
-<div id="pantalla-carga" class="escena-3d">
-    <div class="contenedor-3d">
-        
-        <div class="bread-3d">
-            <div class="cara frontal"></div>
-            <div class="cara trasera"></div>
-            <div class="cara derecha"></div>
-            <div class="cara izquierda"></div>
-            <div class="cara superior"></div>
-            <div class="cara inferior"></div>
-        </div>
-
-        <h1 class="texto-3d">Panadería Marvin</h1>
-
-        <div class="loader-3d-wrap">
-            <div class="barra-3d">
-                <div id="fill-3d" class="progreso-3d"></div>
-            </div>
-            <p id="porcentaje">0%</p>
+<div id="pantalla-carga" class="bakery-loader">
+    <div class="oven-container">
+        <div class="steam-wrap">
+            <span class="steam s1"></span>
+            <span class="steam s2"></span>
+            <span class="steam s3"></span>
         </div>
         
+        <div class="bread-glow">
+            <svg viewBox="0 0 512 512" class="main-bread">
+                <path fill="#D97706" d="M394,171c-15-26-43-43-74-43c-10,0-20,2-29,5c-14-32-47-55-86-55c-35,0-65,19-81,47c-13-5-27-8-41-8 c-56,0-101,45-101,101c0,5,0,10,1,14c-31,17-63,65-63,121c0,82,67,149,149,149h213c82,0,149-67,149-149C512,259,461,185,394,171z"/>
+            </svg>
+        </div>
+
+        <h2 class="bakery-title">Panadería Marvin</h2>
+        
+        <div class="dough-track">
+            <div id="progress-fill" class="dough-fill"></div>
+        </div>
+        
+        <p class="loading-msg">Preparando algo delicioso...</p>
     </div>
 </div>
 
 <style>
-    :root {
-        --oro: #d97706;
-        --oro-light: #fbbf24;
-        --cafe: #451a03;
-        --fondo: #120a05; /* Fondo oscuro para resaltar el 3D */
-    }
-
-    .escena-3d {
+    /* Configuración de Colores y Fondo */
+    .bakery-loader {
         position: fixed;
         inset: 0;
-        background: var(--fondo);
+        background: radial-gradient(circle, #fff9f0 0%, #f7e6d2 100%);
         display: flex;
         justify-content: center;
         align-items: center;
-        perspective: 1200px; /* Profundidad de cámara */
         z-index: 10000;
-        font-family: 'Poppins', sans-serif;
-        overflow: hidden;
+        font-family: 'Comic Sans MS', 'Segoe UI', cursive, sans-serif;
     }
 
-    .contenedor-3d {
-        transform-style: preserve-3d;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        animation: entradaEscena 1.5s ease-out;
-    }
-
-    /* --- PAN 3D --- */
-    .bread-3d {
-        width: 100px;
-        height: 60px;
-        position: relative;
-        transform-style: preserve-3d;
-        animation: rotarPan 6s infinite linear;
-        margin-bottom: 50px;
-    }
-
-    .cara {
-        position: absolute;
-        width: 100px;
-        height: 60px;
-        background: var(--oro);
-        border: 2px solid var(--cafe);
-        box-shadow: inset 0 0 20px rgba(0,0,0,0.2);
-    }
-
-    .frontal  { transform: translateZ(30px); background: var(--oro-light); }
-    .trasera  { transform: rotateY(180deg) translateZ(30px); }
-    .derecha  { width: 60px; transform: rotateY(90deg) translateZ(70px); }
-    .izquierda { width: 60px; transform: rotateY(-90deg) translateZ(30px); }
-    .superior { height: 60px; transform: rotateX(90deg) translateZ(30px); background: #fcd34d; }
-    .inferior { height: 60px; transform: rotateX(-90deg) translateZ(30px); background: var(--cafe); }
-
-    /* --- TEXTO 3D --- */
-    .texto-3d {
-        color: white;
-        font-size: 2.5rem;
-        font-weight: 900;
-        text-transform: uppercase;
-        letter-spacing: 5px;
-        margin-bottom: 30px;
-        transform: translateZ(50px);
-        text-shadow: 
-            0 1px 0 #ccc, 0 2px 0 #c9c9c9, 0 3px 0 #bbb,
-            0 4px 0 #b9b9b9, 0 5px 0 #aaa, 0 6px 1px rgba(0,0,0,.1),
-            0 0 5px rgba(0,0,0,.1), 0 1px 3px rgba(0,0,0,.3),
-            0 3px 5px rgba(0,0,0,.2), 0 5px 10px rgba(0,0,0,.25);
-    }
-
-    /* --- BARRA 3D --- */
-    .loader-3d-wrap {
-        width: 300px;
+    .oven-container {
         text-align: center;
-    }
-
-    .barra-3d {
-        height: 10px;
-        background: rgba(255,255,255,0.1);
-        border-radius: 20px;
         position: relative;
-        transform: rotateX(20deg);
-        box-shadow: 0 10px 20px rgba(0,0,0,0.5);
     }
 
-    .progreso-3d {
+    /* Efecto de Vapor */
+    .steam-wrap {
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+        margin-bottom: -15px;
+    }
+
+    .steam {
+        width: 4px;
+        height: 20px;
+        background: rgba(217, 119, 6, 0.3);
+        border-radius: 10px;
+        animation: steamRise 2s infinite ease-out;
+    }
+
+    .s1 { animation-delay: 0.2s; }
+    .s2 { animation-delay: 0.8s; }
+    .s3 { animation-delay: 0.5s; }
+
+    /* Brillo y Pan */
+    .bread-glow {
+        position: relative;
+        width: 120px;
+        height: 120px;
+        margin: 0 auto 20px;
+        filter: drop-shadow(0 0 20px rgba(217, 119, 6, 0.4));
+        animation: breadPulse 2s infinite ease-in-out;
+    }
+
+    .main-bread {
+        width: 100%;
+        height: 100%;
+    }
+
+    .bakery-title {
+        color: #451a03;
+        font-size: 1.8rem;
+        margin: 10px 0;
+        text-shadow: 2px 2px 0px rgba(217, 119, 6, 0.1);
+    }
+
+    /* Barra de Progreso Estilo Masa */
+    .dough-track {
+        width: 250px;
+        height: 12px;
+        background: #e2d1c3;
+        border-radius: 20px;
+        margin: 15px auto;
+        overflow: hidden;
+        border: 2px solid #d4bda9;
+    }
+
+    .dough-fill {
         width: 0%;
         height: 100%;
-        background: var(--oro);
-        border-radius: 20px;
-        box-shadow: 0 0 20px var(--oro);
-        transition: width 0.4s ease;
+        background: linear-gradient(90deg, #d97706, #f59e0b);
+        box-shadow: 0 0 10px rgba(217, 119, 6, 0.5);
+        transition: width 0.4s cubic-bezier(0.1, 0.7, 1.0, 0.1);
     }
 
-    #porcentaje {
-        color: var(--oro-light);
-        margin-top: 15px;
-        font-weight: bold;
-        font-size: 1.2rem;
+    .loading-msg {
+        color: #92400e;
+        font-style: italic;
+        font-size: 0.95rem;
     }
 
-    /* --- ANIMACIONES --- */
-    @keyframes rotarPan {
-        from { transform: rotateY(0deg) rotateX(15deg); }
-        to { transform: rotateY(360deg) rotateX(15deg); }
+    /* Animaciones */
+    @keyframes steamRise {
+        0% { transform: translateY(0) scaleX(1); opacity: 0; }
+        50% { opacity: 0.8; }
+        100% { transform: translateY(-40px) scaleX(2); opacity: 0; }
     }
 
-    @keyframes entradaEscena {
-        from { opacity: 0; transform: translateZ(-500px) rotateX(-20deg); }
-        to { opacity: 1; transform: translateZ(0) rotateX(0deg); }
+    @keyframes breadPulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.08); }
     }
 
-    @media (max-width: 600px) {
-        .texto-3d { font-size: 1.5rem; }
-        .loader-3d-wrap { width: 220px; }
+    /* Ajuste para móviles */
+    @media (max-width: 480px) {
+        .bakery-title { font-size: 1.4rem; }
+        .bread-glow { width: 90px; height: 90px; }
+        .dough-track { width: 200px; }
     }
 </style>
 
