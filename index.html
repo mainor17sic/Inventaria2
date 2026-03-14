@@ -363,42 +363,30 @@
 </style>
 
 <script>
-    function iniciarCargaPro3D() {
-        const fill = document.getElementById('fill-3d');
-        const percentText = document.getElementById('porcentaje');
+    function simulateLoading() {
+        const fill = document.getElementById('progress-fill');
         const loader = document.getElementById('pantalla-carga');
-        let progreso = 0;
+        let width = 0;
 
-        // 1. Aumentamos el intervalo a 300ms para que el avance sea más tranquilo
-        const timer = setInterval(() => {
-            // 2. Reducimos el incremento aleatorio para que dure más (incrementos de 1 a 4)
-            progreso += Math.floor(Math.random() * 4) + 1;
-            
-            if (progreso >= 100) {
-                progreso = 100;
-                clearInterval(timer);
-                
-                // 3. CAMBIO CLAVE: Agregamos una pausa de 2.5 segundos cuando llega al 100%
-                // Esto permite que el usuario vea el pan rotando y el logo terminado.
+        const interval = setInterval(() => {
+            if (width >= 100) {
+                clearInterval(interval);
                 setTimeout(() => {
-                    // Efecto de salida "Hyperdrive" mejorado
-                    loader.style.transition = "all 1.2s cubic-bezier(0.9, 0, 0.1, 1)";
-                    loader.style.transform = "translateZ(1200px) rotateX(20deg)"; 
+                    loader.style.transition = "all 0.8s cubic-bezier(0.4, 0, 0.2, 1)";
                     loader.style.opacity = "0";
-                    loader.style.filter = "blur(10px)"; // Añadimos un desenfoque al salir
-                    
-                    setTimeout(() => loader.remove(), 1200);
-                }, 2500); // <-- Aquí ajustas los milisegundos de espera al final
+                    loader.style.transform = "scale(1.2)";
+                    setTimeout(() => loader.remove(), 800);
+                }, 500);
+            } else {
+                width += Math.random() * 20;
+                if (width > 100) width = 100;
+                fill.style.width = width + "%";
             }
-            
-            fill.style.width = progreso + "%";
-            percentText.innerText = progreso + "%";
-        }, 300); 
+        }, 300);
     }
 
-    document.addEventListener('DOMContentLoaded', iniciarCargaPro3D);
+    document.addEventListener('DOMContentLoaded', simulateLoading);
 </script>
-
 
 
 
