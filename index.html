@@ -92,7 +92,7 @@
         .productos-section { flex: 2; }
         .cart-section { flex: 1; padding: 15px; border: 2px dashed #d35400; border-radius: 8px; background-color: #fffaf5; height: fit-content; }
 
-        /* === NUEVOS ESTILOS PARA IMÁGENES Y TARJETAS === */
+        /* === ESTILOS PARA IMÁGENES Y TARJETAS === */
         #productos-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); 
@@ -104,14 +104,14 @@
             background: #fff;
             border: 2px solid #e1e1e1;
             border-radius: 10px;
-            padding: 0 0 10px 0; /* Padding ajustado para la imagen */
+            padding: 0 0 10px 0;
             text-align: center;
             cursor: pointer;
             transition: all 0.2s ease-in-out;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            min-height: 180px; /* Más alto para dar espacio a la foto */
+            min-height: 180px; 
             position: relative;
         }
 
@@ -125,7 +125,7 @@
         }
 
         .producto-card h4, .producto-card p, .producto-card small {
-            padding: 0 10px; /* Margen interior para los textos */
+            padding: 0 10px; 
         }
 
         .producto-card:hover { border-color: #d35400; transform: translateY(-3px); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
@@ -139,7 +139,7 @@
         .producto-card small { color: #7f8c8d; font-size: 12px; }
 
         .producto-card.sin-stock { opacity: 0.5; cursor: not-allowed; background: #f4f4f4; }
-        .producto-card.sin-stock .producto-img { filter: grayscale(100%); } /* Imagen en gris si no hay stock */
+        .producto-card.sin-stock .producto-img { filter: grayscale(100%); } 
 
         /* === CARRITO Y TABLAS === */
         #carrito-lista { list-style: none; padding: 0; margin: 0 0 15px 0; max-height: 250px; overflow-y: auto; }
@@ -150,9 +150,42 @@
         .cart-botones button { width: 100%; font-size: 16px; padding: 12px; }
 
         .text-rojo { color: #c0392b; font-weight: bold; }
-        .barra-accion-venta { background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #eee; margin-top: 15px; display: flex; flex-direction: column; gap: 10px; }
 
-        /* === MEDIA QUERIES PARA PC === */
+        /* === NUEVOS ESTILOS PARA EL FLOTANTE === */
+        .overlay-vendedor {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.4);
+            z-index: 999;
+        }
+
+        .barra-accion-venta {
+            display: none; 
+            position: fixed;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100%;
+            max-width: 500px;
+            background: #fff;
+            padding: 20px;
+            border-radius: 20px 20px 0 0;
+            box-shadow: 0 -10px 25px rgba(0,0,0,0.15);
+            z-index: 1000;
+            border-top: 4px solid #d35400;
+            flex-direction: column;
+            gap: 15px;
+            animation: slideUp 0.3s ease-out;
+            box-sizing: border-box;
+        }
+
+        @keyframes slideUp {
+            from { transform: translate(-50%, 100%); opacity: 0; }
+            to { transform: translate(-50%, 0); opacity: 1; }
+        }
+
+        /* === MEDIA QUERIES === */
         @media (min-width: 850px) {
             body { padding: 20px; }
             .container { padding: 30px; margin-top: 0; }
@@ -166,10 +199,15 @@
             .producto-card { min-height: 200px; }
             .producto-img { height: 120px; }
             .producto-card h4 { font-size: 16px; }
-            .barra-accion-venta { flex-direction: row; justify-content: space-between; align-items: center; }
-            .barra-accion-venta input { width: 100px; text-align: center; }
             .tab { flex-grow: 0; padding: 15px 25px; }
             th, td { padding: 15px; }
+            
+            /* Ajuste del flotante en versión Escritorio */
+            .barra-accion-venta {
+                bottom: 20px;
+                border-radius: 12px;
+                border: 2px solid #d35400;
+            }
         }
 
         @media (max-width: 480px) {
@@ -202,7 +240,6 @@
 </div>
 
 <style>
-    /* Estilos del loader original */
     .bakery-loader { position: fixed; inset: 0; background: radial-gradient(circle, #fff9f0 0%, #f7e6d2 100%); display: flex; justify-content: center; align-items: center; z-index: 10000; font-family: 'Comic Sans MS', 'Segoe UI', cursive, sans-serif; }
     .oven-container { text-align: center; position: relative; }
     .steam-wrap { display: flex; justify-content: center; gap: 10px; margin-bottom: -15px; }
@@ -315,16 +352,6 @@
                 <div id="productos-grid">
                     <p>Cargando productos...</p>
                 </div>
-
-                <div class="barra-accion-venta">
-                    <div id="info-seleccion" style="flex-grow: 1;">
-                        <strong>Pan:</strong> <span id="nombre-prod-sel" style="color: #d35400; font-weight: bold;">Ninguno</span>
-                    </div>
-                    <div style="display: flex; gap: 10px; align-items: center; justify-content: space-between;">
-                        <input type="number" id="cantidad-venta" placeholder="Cant." min="1" value="1" autocomplete="off">
-                        <button onclick="agregarAlCarrito()" style="background-color: #333; flex-shrink: 0;">Añadir 🛒</button>
-                    </div>
-                </div>
             </div>
 
             <div class="cart-section">
@@ -367,6 +394,20 @@
     </div>
 </div>
 
+<div id="overlay-pos" class="overlay-vendedor" onclick="cerrarFlotante()"></div>
+<div class="barra-accion-venta" id="barra-flotante">
+    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 10px;">
+        <div id="info-seleccion" style="font-size: 1.1em;">
+            <strong>Pan:</strong> <span id="nombre-prod-sel" style="color: #d35400; font-weight: bold; font-size: 1.3em;">Ninguno</span>
+        </div>
+        <button onclick="cerrarFlotante()" style="background:none; color:#999; padding:0; border:none; font-size:28px; cursor: pointer; width: auto; line-height: 1;">&times;</button>
+    </div>
+    <div style="display: flex; gap: 15px; align-items: center; justify-content: space-between; margin-top: 5px;">
+        <input type="number" id="cantidad-venta" placeholder="Cant." min="1" value="1" autocomplete="off" style="width: 100px; text-align: center; font-size: 1.2em;">
+        <button onclick="agregarAlCarrito()" style="background-color: #333; flex-grow: 1; font-size: 1.1em; padding: 12px; margin: 0;">Añadir al Carrito 🛒</button>
+    </div>
+</div>
+
 <script>
     // ============================================================
     // === CONFIGURACIÓN FIREBASE Y VARIABLES GLOBALES ===
@@ -393,9 +434,6 @@
     let escuchasIniciadas = false;
     let productoSeleccionadoId = null;
 
-    // ============================================================
-    // === DICCIONARIO DE IMÁGENES (Pega aquí tus URLs) ===
-    // ============================================================
     const IMAGENES_PRODUCTOS = {
         "tira-frances": "https://i.postimg.cc/KYCgF76d/20260314-170824.jpg",
         "unidad-frances": "https://i.postimg.cc/Sxvn77x4/20260314-170912.jpg", 
@@ -416,13 +454,9 @@
         "salporas": "",
         "bolsas-de-galletas": "https://i.postimg.cc/65BcDwL0/20260314-174254.jpg",
         "conos-de-manjar": "https://i.postimg.cc/767XyZWn/20260314-174225.jpg",
-        // Imagen por defecto si un producto no tiene enlace
         "default": "https://via.placeholder.com/300x200?text=Panaderia+Marvin" 
     };
 
-    // ============================================================
-    // === LOGICA DE INICIO Y ESTADO DE TURNO ===
-    // ============================================================
     db.collection("configuracion").doc("estado_turno").onSnapshot((doc) => {
         document.getElementById('pantalla-carga').style.display = 'none';
 
@@ -547,7 +581,6 @@
         try {
             const batch = db.batch();
             inventarioFinal.forEach(item => {
-                // Genera el ID convirtiendo el nombre a minúsculas y reemplazando espacios por guiones
                 const docRef = db.collection("inventario").doc(item.nombre.toLowerCase().replace(/\s+/g, '-'));
                 batch.set(docRef, item);
             });
@@ -561,9 +594,6 @@
         }
     }
 
-    // ============================================================
-    // === LÓGICA DE ESCUCHA (CON IMÁGENES INTEGRADAS) ===
-    // ============================================================
     function iniciarEscuchasEnTiempoReal() {
         db.collection("inventario").onSnapshot((querySnapshot) => {
             const grid = document.getElementById('productos-grid');
@@ -592,8 +622,6 @@
                 card.className = `producto-card ${sinStock ? 'sin-stock' : ''}`;
                 if (productoSeleccionadoId === prod.id) card.classList.add('selected');
 
-                // --- INTEGRACIÓN DE IMAGEN ---
-                // Busca la URL en el diccionario usando el ID. Si no hay, usa la imagen por defecto.
                 const imgUrl = IMAGENES_PRODUCTOS[prod.id] || IMAGENES_PRODUCTOS["default"];
 
                 card.innerHTML = `
@@ -636,15 +664,32 @@
     }
 
     // ============================================================
-    // === LÓGICA DE VENTAS Y CARRITO ===
+    // === LÓGICA DE INTERACCIÓN DEL FLOTANTE ===
     // ============================================================
     function seleccionarParaVenta(id, nombre, elemento) {
         productoSeleccionadoId = id;
         document.getElementById('nombre-prod-sel').innerText = nombre;
+        
+        // Mostrar modal flotante
+        document.getElementById('barra-flotante').style.display = 'flex';
+        document.getElementById('overlay-pos').style.display = 'block';
+
         document.querySelectorAll('.producto-card').forEach(c => c.classList.remove('selected'));
         elemento.classList.add('selected');
-        document.getElementById('cantidad-venta').focus();
-        document.getElementById('cantidad-venta').select();
+        
+        // Enfocar automáticamente para que el usuario pueda escribir rápido
+        setTimeout(() => {
+            const inputCantidad = document.getElementById('cantidad-venta');
+            inputCantidad.focus();
+            inputCantidad.select();
+        }, 100);
+    }
+
+    function cerrarFlotante() {
+        document.getElementById('barra-flotante').style.display = 'none';
+        document.getElementById('overlay-pos').style.display = 'none';
+        productoSeleccionadoId = null;
+        document.querySelectorAll('.producto-card').forEach(c => c.classList.remove('selected'));
     }
 
     function agregarAlCarrito() {
@@ -671,6 +716,9 @@
 
         actualizarCarrito();
         cantidadInput.value = 1; 
+        
+        // Ocultar modal una vez que se añade el producto con éxito
+        cerrarFlotante();
     }
 
     function actualizarCarrito() {
@@ -723,9 +771,7 @@
             carrito = [];
             actualizarCarrito();
             document.getElementById('cantidad-venta').value = 1;
-            productoSeleccionadoId = null;
-            document.getElementById('nombre-prod-sel').innerText = 'Ninguno';
-            document.querySelectorAll('.producto-card').forEach(c => c.classList.remove('selected'));
+            cerrarFlotante();
 
         } catch (error) {
             console.error(error);
@@ -733,9 +779,6 @@
         }
     }
 
-    // ============================================================
-    // === REPORTE PDF Y CIERRE DE TURNO ===
-    // ============================================================
     function generarPDFCierre() {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
