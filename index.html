@@ -201,7 +201,7 @@
             .producto-card h4 { font-size: 16px; }
             .tab { flex-grow: 0; padding: 15px 25px; }
             th, td { padding: 15px; }
-            
+
             /* Ajuste del flotante en versión Escritorio */
             .barra-accion-venta {
                 bottom: 20px;
@@ -403,7 +403,7 @@
         <button onclick="cerrarFlotante()" style="background:none; color:#999; padding:0; border:none; font-size:28px; cursor: pointer; width: auto; line-height: 1;">&times;</button>
     </div>
     <div style="display: flex; gap: 15px; align-items: center; justify-content: space-between; margin-top: 5px;">
-        <input type="number" id="cantidad-venta" placeholder="Cant." min="1" value="1" autocomplete="off" style="width: 100px; text-align: center; font-size: 1.2em;">
+        <input type="number" id="cantidad-venta" placeholder="Cant." min="1" value="1" autocomplete="off" autocorrect="off" spellcheck="false" style="width: 100px; text-align: center; font-size: 1.2em;">
         <button onclick="agregarAlCarrito()" style="background-color: #333; flex-grow: 1; font-size: 1.1em; padding: 12px; margin: 0;">Añadir al Carrito 🛒</button>
     </div>
 </div>
@@ -669,14 +669,14 @@
     function seleccionarParaVenta(id, nombre, elemento) {
         productoSeleccionadoId = id;
         document.getElementById('nombre-prod-sel').innerText = nombre;
-        
+
         // Mostrar modal flotante
         document.getElementById('barra-flotante').style.display = 'flex';
         document.getElementById('overlay-pos').style.display = 'block';
 
         document.querySelectorAll('.producto-card').forEach(c => c.classList.remove('selected'));
         elemento.classList.add('selected');
-        
+
         // Enfocar automáticamente para que el usuario pueda escribir rápido
         setTimeout(() => {
             const inputCantidad = document.getElementById('cantidad-venta');
@@ -716,7 +716,7 @@
 
         actualizarCarrito();
         cantidadInput.value = 1; 
-        
+
         // Ocultar modal una vez que se añade el producto con éxito
         cerrarFlotante();
     }
