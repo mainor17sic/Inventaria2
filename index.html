@@ -305,9 +305,9 @@
             <div style="margin-top: 20px; padding-top: 15px; border-top: 2px dashed #ccc;">
                 <h4>¿Agregar otro producto extra?</h4>
                 <div class="form-row">
-                    <input type="text" id="nuevo-pan" placeholder="Nombre" style="flex: 2; min-width: 150px;" autocomplete="off">
-                    <input type="number" id="nuevo-precio" placeholder="Q" style="width: 80px;" step="0.50" autocomplete="off">
-                    <input type="number" id="nueva-cantidad" placeholder="Cant" style="width: 80px;" autocomplete="off">
+                    <input type="text" id="nuevo-pan" placeholder="Nombre" style="flex: 2; min-width: 150px;" autocomplete="off" autocorrect="off" spellcheck="false">
+                    <input type="number" id="nuevo-precio" placeholder="Q" style="width: 80px;" step="0.50" autocomplete="off" autocorrect="off" spellcheck="false">
+                    <input type="number" id="nueva-cantidad" placeholder="Cant" style="width: 80px;" autocomplete="off" autocorrect="off" spellcheck="false">
                     <button onclick="agregarAInventarioLocal()" style="background-color: #333; width: auto; flex-grow: 0;">+ Agregar</button>
                 </div>
                 <ul id="lista-inventario-local" style="font-size: 14px; color: #555; padding-left: 20px;"></ul>
@@ -317,8 +317,8 @@
         <div class="inicio-vendedor" style="background: #f9f9f9; padding: 15px; border-radius: 8px; border: 1px solid #eee;">
             <h3>2. Datos del Vendedor</h3>
             <div style="display: flex; flex-direction: column; gap: 10px;">
-                <input type="text" id="nombre-vendedor" placeholder="Tu Nombre" autocomplete="off">
-                <input type="password" id="firma-vendedor" placeholder="Clave secreta para cerrar" autocomplete="off">
+                <input type="text" id="nombre-vendedor" placeholder="Tu Nombre" autocomplete="off" autocorrect="off" spellcheck="false">
+                <input type="password" id="firma-vendedor" placeholder="Clave secreta para cerrar" autocomplete="off" autocorrect="off" spellcheck="false">
                 <select id="tipo-turno">
                     <option value="Diurno">☀️ Turno Diurno</option>
                     <option value="Tarde">🌙 Turno Tarde</option>
