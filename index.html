@@ -919,32 +919,6 @@ if (SpeechRecognition) {
     }
 
     recognition.onresult = (event) => {
-        const frase = event.results[0][0].transcript.toLowerCase();
-        procesarComandoVoz(frase);
-    };
-
-    recognition.onend = () => {
-        const btn = document.getElementById('btn-voz');
-        btn.innerText = "🎤 Ordenar por Voz";
-        btn.style.backgroundColor = "#2980b9";
-    };
-
-    // Función para que la App hable
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-
-if (SpeechRecognition) {
-    const recognition = new SpeechRecognition();
-    recognition.lang = 'es-GT'; 
-    recognition.interimResults = false;
-
-    function activarVoz() {
-        const btn = document.getElementById('btn-voz');
-        btn.innerText = "👂 Escuchando...";
-        btn.style.backgroundColor = "#e74c3c";
-        recognition.start();
-    }
-
-    recognition.onresult = (event) => {
         const fraseCompleta = event.results[0][0].transcript.toLowerCase();
         // Separamos la frase si el usuario dijo "y" o "con" para procesar varios productos
         const comandos = fraseCompleta.split(/\s+y\s+|\s+con\s+/);
