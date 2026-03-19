@@ -437,7 +437,7 @@
 
     const IMAGENES_PRODUCTOS = {
         "tira-frances": "https://i.postimg.cc/KYCgF76d/20260314-170824.jpg",
-        "frances": "https://i.postimg.cc/Sxvn77x4/20260314-170912.jpg", 
+        "unidad-frances": "https://i.postimg.cc/Sxvn77x4/20260314-170912.jpg", 
         "pan-dulce-grande": "https://i.postimg.cc/vBWDsJLZ/20260314-170934.jpg",
         "pan-dulce-pequeño": "https://i.postimg.cc/Rh4hVgg5/20260314-171043.jpg",
         "pirujos-pequeñas": "https://i.postimg.cc/VL7vmBMh/20260314-171021.jpg",
@@ -487,7 +487,7 @@
 
     const CATALOGO_PREDETERMINADO = [
         { nombre: "Tira Frances", precio: 3.00 },
-        { nombre: "Frances", precio: 0.50 },
+        { nombre: "Unidad Frances", precio: 0.50 },
         { nombre: "Pan Dulce Grande", precio: 1.00 },
         { nombre: "Pan Dulce Pequeño", precio: 0.50 },
         { nombre: "Pirujos Pequeñas", precio: 0.50 },
@@ -903,12 +903,12 @@
         evt.currentTarget.className += " active";
     }
     
-    // === MÓDULO DE RECONOCIMIENTO DE VOZ (IA) ===
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    // === MÓDULO DE RECONOCIMIENTO Y RESPUESTA POR VOZ ===
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
 if (SpeechRecognition) {
     const recognition = new SpeechRecognition();
-    recognition.lang = 'es-GT'; // Configurado para Guatemala
+    recognition.lang = 'es-GT'; 
     recognition.interimResults = false;
 
     function activarVoz() {
@@ -920,7 +920,6 @@ if (SpeechRecognition) {
 
     recognition.onresult = (event) => {
         const frase = event.results[0][0].transcript.toLowerCase();
-        console.log("Escuché:", frase);
         procesarComandoVoz(frase);
     };
 
@@ -930,29 +929,32 @@ if (SpeechRecognition) {
         btn.style.backgroundColor = "#2980b9";
     };
 
+    // Función para que la App hable
+    function responderConVoz(mensaje) {
+        const msn = new SpeechSynthesisUtterance(mensaje);
+        msn.lang = 'es-GT';
+        msn.rate = 1.1; // Velocidad un poco más rápida para agilizar la venta
+        window.speechSynthesis.speak(msn);
+    }
+
     function procesarComandoVoz(frase) {
-        // Diccionario para convertir números hablados
         const numerosLetras = { "un": 1, "una": 1, "dos": 2, "tres": 3, "cuatro": 4, "cinco": 5, "seis": 6, "siete": 7, "ocho": 8, "nueve": 9, "diez": 10 };
-        
         let valor = 1;
-        let esPorDinero = frase.includes("quetzal") || frase.includes("quetzales");
+        let esPorDinero = frase.includes("quetzal");
         let palabras = frase.split(" ");
 
-        // Extraer cantidad numérica o en letras
         palabras.forEach(p => {
             if (!isNaN(p)) valor = parseFloat(p);
             if (numerosLetras[p]) valor = numerosLetras[p];
         });
 
-        // Buscar el producto en tu inventarioFirebase
+        // Buscar producto en tu inventarioFirebase
         let producto = inventarioFirebase.find(p => frase.includes(p.nombre.toLowerCase()));
 
         if (producto) {
-            // Lógica: Si dice "quetzales" divide el monto entre el precio, si no, usa la cantidad directa
             let cantidadFinal = esPorDinero ? Math.floor(valor / producto.precio) : valor;
 
             if (cantidadFinal > 0) {
-                // Agregar al carrito usando tu lógica actual
                 const itemExistente = carrito.find(item => item.id === producto.id);
                 if (itemExistente) {
                     itemExistente.cantidad += cantidadFinal;
@@ -960,14 +962,17 @@ if (SpeechRecognition) {
                     carrito.push({ id: producto.id, nombre: producto.nombre, precio: producto.precio, cantidad: cantidadFinal });
                 }
                 
-                actualizarCarrito(); // Refresca la vista del carrito
-                alert(`Agregado: ${cantidadFinal} de ${producto.nombre}`);
+                actualizarCarrito();
+                
+                // CONFIRMACIÓN POR VOZ (Sin ventanas emergentes)
+                responderConVoz(`Agregado, ${cantidadFinal} de ${producto.nombre}`);
             }
         } else {
-            alert("No reconocí el producto. Intenta decir el nombre como aparece en el catálogo.");
+            responderConVoz("No entendí el producto, intenta de nuevo");
         }
     }
 }
+
 </script>
 
 </body>
