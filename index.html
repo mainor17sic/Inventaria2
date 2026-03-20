@@ -937,6 +937,7 @@ if (SpeechRecognition) {
     recognition.onresult = (event) => {
         const frase = event.results[0][0].transcript.toLowerCase();
         console.log("Comando recibido:", frase);
+     };
  
     function responderConVoz(mensaje) {
         const msn = new SpeechSynthesisUtterance(mensaje);
