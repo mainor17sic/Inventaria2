@@ -1073,15 +1073,15 @@ if (SpeechRecognition) {
                 }
                 actualizarCarrito(); 
 
-                // === NUEVO: Pegar esto aquí para que baje el scroll ===
-                const listaVoz = document.getElementById('carrito-lista'); 
-if (listaVoz) {
-    listaVoz.scrollTop = listaVoz.scrollHeight;
+                // === NUEVO: Bajar el scroll ===
+                const listaVoz = document.getElementById('carrito-lista');
+                if (listaVoz) {
+                    listaVoz.scrollTop = listaVoz.scrollHeight;
                 }
-        }
-    }
-}
-
+            } // Cierra el if (cantidadFinal > 0)
+        } // Cierra el if (producto)
+    } // Cierra la función procesarComandoVoz (Línea 1083 aprox)
+} // Cierra el if (SpeechRecognition) inicial (Línea 1084 aprox)
 </script>
 
 </body>
