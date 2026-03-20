@@ -1024,6 +1024,11 @@ if (SpeechRecognition) {
     };
 
     function procesarComandoVoz(frase) {
+        if (frase.includes("limpiar") || frase.includes("vaciar") || frase.includes("borrar todo")) {
+        carrito = []; // Vacía la variable del carrito
+        actualizarCarrito(); // Refresca la interfaz
+        return; // Detiene el proceso para que no busque productos
+    }
         let valor = 1;
         let esPorDinero = frase.includes("quetzal") || frase.includes("quetzales");
         
