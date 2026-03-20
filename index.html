@@ -910,51 +910,33 @@ if (SpeechRecognition) {
     const recognition = new SpeechRecognition();
     recognition.lang = 'es-GT';
     recognition.interimResults = false;
-    recognition.continuous = false; // El navegador gestiona mejor ciclos cortos
-
     let modoSiempreActivo = false;
 
     function activarVoz() {
-        if (!modoSiempreActivo) {
-            modoSiempreActivo = true;
-            iniciarEscucha();
-        } else {
-            modoSiempreActivo = false;
+        modoSiempreActivo = !modoSiempreActivo;
+        if (modoSiempreActivo) iniciarEscucha();
+        else {
             recognition.stop();
-            const btn = document.getElementById('btn-voz');
-            btn.innerText = "🎤 Ordenar por Voz";
-            btn.style.backgroundColor = "#2980b9";
+            document.getElementById('btn-voz').innerText = "🎤 Ordenar por Voz";
+            document.getElementById('btn-voz').style.backgroundColor = "#2980b9";
         }
     }
 
     function iniciarEscucha() {
         if (modoSiempreActivo) {
-            try {
-                recognition.start();
-                const btn = document.getElementById('btn-voz');
-                btn.innerText = "👂 Escuchando...";
-                btn.style.backgroundColor = "#27ae60"; // Verde: indica que está activo
-            } catch (e) {
-                // Evita errores si ya está encendido
-            }
+            try { recognition.start(); 
+                  const btn = document.getElementById('btn-voz');
+                  btn.innerText = "👂 Asistente Activo...";
+                  btn.style.backgroundColor = "#27ae60";
+            } catch (e) {}
         }
     }
 
-    // Se reactiva automáticamente al terminar de procesar o al haber silencio
-    recognition.onend = () => {
-        if (modoSiempreActivo) {
-            iniciarEscucha();
-        }
-    };
+    recognition.onend = () => { if (modoSiempreActivo) iniciarEscucha(); };
 
     recognition.onresult = (event) => {
-        const fraseCompleta = event.results[0][0].transcript.toLowerCase();
-        const comandos = fraseCompleta.split(/\s+y\s+|\s+con\s+/);
-        
-        comandos.forEach(comando => {
-            procesarComandoVoz(comando.trim());
-        });
-    };
+        const frase = event.results[0][0].transcript.toLowerCase();
+        console.log("Comando recibido:", frase);
  
     function responderConVoz(mensaje) {
         const msn = new SpeechSynthesisUtterance(mensaje);
