@@ -910,7 +910,9 @@ if (SpeechRecognition) {
     const recognition = new SpeechRecognition();
     recognition.lang = 'es-GT';
     recognition.interimResults = false;
-    let modoAsistente = false;
+    recognition.continuous = false; // El navegador gestiona mejor ciclos cortos
+
+    let modoSiempreActivo = false;
 
     // Diccionario de Precios Coloquiales
     const preciosGT = {
