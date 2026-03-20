@@ -942,40 +942,30 @@ if (SpeechRecognition) {
     function responderConVoz(mensaje) {
         const msn = new SpeechSynthesisUtterance(mensaje);
         msn.lang = 'es-GT';
-        msn.rate = 1.2; 
+        msn.rate = 1.1;
         window.speechSynthesis.speak(msn);
     }
 
-    function procesarComandoVoz(frase) {
+    function procesarPedido(frase) {
         const numerosLetras = { "un": 1, "una": 1, "dos": 2, "tres": 3, "cuatro": 4, "cinco": 5, "seis": 6, "siete": 7, "ocho": 8, "nueve": 9, "diez": 10 };
         let valor = 1;
-        let esPorDinero = frase.includes("quetzal") || frase.includes("quetzales");
-        let palabras = frase.split(" ");
-
-        palabras.forEach(p => {
+        let esPorDinero = frase.includes("quetzal");
+        
+        frase.split(" ").forEach(p => {
             if (!isNaN(p)) valor = parseFloat(p);
             if (numerosLetras[p]) valor = numerosLetras[p];
         });
 
-        // Buscamos el producto en tu inventarioFirebase
         let producto = inventarioFirebase.find(p => frase.includes(p.nombre.toLowerCase()));
 
         if (producto) {
-            let cantidadFinal = esPorDinero ? Math.floor(valor / producto.precio) : valor;
-
-            if (cantidadFinal > 0) {
-                // Lógica de carrito existente
-                const itemExistente = carrito.find(item => item.id === producto.id);
-                if (itemExistente) {
-                    itemExistente.cantidad += cantidadFinal;
-                } else {
-                    carrito.push({ id: producto.id, nombre: producto.nombre, precio: producto.precio, cantidad: cantidadFinal });
-                }
-                actualizarCarrito();
-                responderConVoz(`Listo, ${cantidadFinal} de ${producto.nombre}`);
-            }
-        } else {
-            console.log("No se reconoció parte del comando: " + frase);
+            let cant = esPorDinero ? Math.floor(valor / producto.precio) : valor;
+            const item = carrito.find(i => i.id === producto.id);
+            if (item) item.cantidad += cant;
+            else carrito.push({ id: producto.id, nombre: producto.nombre, precio: producto.precio, cantidad: cant });
+            
+            actualizarCarrito();
+            responderConVoz(`${cant} de ${producto.nombre}`);
         }
     }
 }
