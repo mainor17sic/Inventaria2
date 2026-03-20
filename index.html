@@ -904,62 +904,78 @@
     }
     
     // === MÓDULO DE RECONOCIMIENTO MULTI-PRODUCTO ===
+// === MÓDULO DE RECONOCIMIENTO MULTI-PRODUCTO ===
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
 if (SpeechRecognition) {
     const recognition = new SpeechRecognition();
-    recognition.lang = 'es-GT';
+    recognition.lang = 'es-GT'; 
     recognition.interimResults = false;
-    let modoSiempreActivo = false;
 
     function activarVoz() {
-        modoSiempreActivo = !modoSiempreActivo;
-        if (modoSiempreActivo) iniciarEscucha();
-        else {
-            recognition.stop();
-            document.getElementById('btn-voz').innerText = "🎤 Ordenar por Voz";
-            document.getElementById('btn-voz').style.backgroundColor = "#2980b9";
-        }
+        const btn = document.getElementById('btn-voz');
+        btn.innerText = "👂 Escuchando...";
+        btn.style.backgroundColor = "#e74c3c";
+        recognition.start();
     }
-
-    function iniciarEscucha() {
-        if (modoSiempreActivo) {
-            try { recognition.start(); 
-                  const btn = document.getElementById('btn-voz');
-                  btn.innerText = "👂 Asistente Activo...";
-                  btn.style.backgroundColor = "#27ae60";
-            } catch (e) {}
-        }
-    }
-
-    recognition.onend = () => { if (modoSiempreActivo) iniciarEscucha(); };
 
     recognition.onresult = (event) => {
-        const frase = event.results[0][0].transcript.toLowerCase();
-        console.log("Comando recibido:", frase);
-     }; 
+        const fraseCompleta = event.results[0][0].transcript.toLowerCase();
+        // Separamos la frase si el usuario dijo "y" o "con" para procesar varios productos
+        const comandos = fraseCompleta.split(/\s+y\s+|\s+con\s+/);
+        
+        comandos.forEach(comando => {
+            procesarComandoVoz(comando.trim());
+        });
+    };
 
-    function procesarPedido(frase) {
+    recognition.onend = () => {
+        const btn = document.getElementById('btn-voz');
+        btn.innerText = "🎤 Ordenar por Voz";
+        btn.style.backgroundColor = "#2980b9";
+    };
+
+    function responderConVoz(mensaje) {
+        const msn = new SpeechSynthesisUtterance(mensaje);
+        msn.lang = 'es-GT';
+        msn.rate = 1.2; 
+        window.speechSynthesis.speak(msn);
+    }
+
+    function procesarComandoVoz(frase) {
         const numerosLetras = { "un": 1, "una": 1, "dos": 2, "tres": 3, "cuatro": 4, "cinco": 5, "seis": 6, "siete": 7, "ocho": 8, "nueve": 9, "diez": 10 };
         let valor = 1;
-        let esPorDinero = frase.includes("quetzal");
-        
-        frase.split(" ").forEach(p => {
+        let esPorDinero = frase.includes("quetzal") || frase.includes("quetzales");
+        let palabras = frase.split(" ");
+
+        palabras.forEach(p => {
             if (!isNaN(p)) valor = parseFloat(p);
             if (numerosLetras[p]) valor = numerosLetras[p];
         });
 
+        // Buscamos el producto en tu inventarioFirebase
         let producto = inventarioFirebase.find(p => frase.includes(p.nombre.toLowerCase()));
 
         if (producto) {
-            let cant = esPorDinero ? Math.floor(valor / producto.precio) : valor;
-            const item = carrito.find(i => i.id === producto.id);
-            if (item) item.cantidad += cant;
-            else carrito.push({ id: producto.id, nombre: producto.nombre, precio: producto.precio, cantidad: cant });
-            
-            actualizarCarrito();
+            let cantidadFinal = esPorDinero ? Math.floor(valor / producto.precio) : valor;
+
+            if (cantidadFinal > 0) {
+                // Lógica de carrito existente
+                const itemExistente = carrito.find(item => item.id === producto.id);
+                if (itemExistente) {
+                    itemExistente.cantidad += cantidadFinal;
+                } else {
+                    carrito.push({ id: producto.id, nombre: producto.nombre, precio: producto.precio, cantidad: cantidadFinal });
+                }
+                actualizarCarrito();
+                responderConVoz(`Listo, ${cantidadFinal} de ${producto.nombre}`);
+            }
+        } else {
+            console.log("No se reconoció parte del comando: " + frase);
+        }
     }
 }
+
 
 
 </script>
