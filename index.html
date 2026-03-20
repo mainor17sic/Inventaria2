@@ -915,6 +915,19 @@ if (SpeechRecognition) {
 
     let modoSiempreActivo = false;
 
+    // Diccionarios de conversión
+    const preciosGT = {
+        "unocincuenta": 1.50, "unosincuenta": 1.50, "doscincuenta": 2.50,
+        "trescincuenta": 3.50, "cuatrocincuenta": 4.50, "cincocincuenta": 5.50,
+        "seiscincuenta": 6.50, "sietecincuenta": 7.50, "ochocincuenta": 8.50,
+        "nuevecincuenta": 9.50, "diezcincuenta": 10.50
+    };
+
+    const letrasANumeros = { 
+        "un": 1, "una": 1, "dos": 2, "tres": 3, "cuatro": 4, "cinco": 5, 
+        "seis": 6, "siete": 7, "ocho": 8, "nueve": 9, "diez": 10 
+    };
+
     function activarVoz() {
         if (!modoSiempreActivo) {
             modoSiempreActivo = true;
@@ -935,20 +948,15 @@ if (SpeechRecognition) {
                 const btn = document.getElementById('btn-voz');
                 btn.innerText = "👂 Escuchando...";
                 btn.style.backgroundColor = "#27ae60"; 
-            } catch (e) {
-                // Evita errores de re-inicio
-            }
+            } catch (e) { /* Evita errores por re-inicio */ }
         }
     }
 
-    recognition.onend = () => {
-        if (modoSiempreActivo) {
-            iniciarEscucha();
-        }
-    };
+    recognition.onend = () => { if (modoSiempreActivo) iniciarEscucha(); };
 
     recognition.onresult = (event) => {
         const fraseCompleta = event.results[0][0].transcript.toLowerCase();
+        // Divide por conectores comunes para pedidos múltiples
         const comandos = fraseCompleta.split(/\s+y\s+|\s+con\s+/);
         
         comandos.forEach(comando => {
@@ -956,22 +964,35 @@ if (SpeechRecognition) {
         });
     };
 
-    // --- Se eliminó la función responderConVoz ---
-
     function procesarComandoVoz(frase) {
-        const numerosLetras = { "un": 1, "una": 1, "dos": 2, "tres": 3, "cuatro": 4, "cinco": 5, "seis": 6, "siete": 7, "ocho": 8, "nueve": 9, "diez": 10 };
         let valor = 1;
-        let esPorDinero = frase.includes("quetzal");
-        let palabras = frase.split(" ");
+        let esPorDinero = frase.includes("quetzal") || frase.includes("quetzales");
+        
+        // 1. Verificar primero precios coloquiales (ej. "unocincuenta")
+        let detectadoColoquial = false;
+        for (let clave in preciosGT) {
+            if (frase.includes(clave)) {
+                valor = preciosGT[clave];
+                detectadoColoquial = true;
+                esPorDinero = true; // Si usa estos términos, usualmente habla de dinero
+                break;
+            }
+        }
 
-        palabras.forEach(p => {
-            if (!isNaN(p)) valor = parseFloat(p);
-            if (numerosLetras[p]) valor = numerosLetras[p];
-        });
+        // 2. Si no es coloquial, buscar números normales o en letras
+        if (!detectadoColoquial) {
+            let palabras = frase.split(" ");
+            palabras.forEach(p => {
+                if (!isNaN(p) && p.trim() !== "") valor = parseFloat(p);
+                if (letrasANumeros[p]) valor = letrasANumeros[p];
+            });
+        }
 
+        // 3. Buscar el producto en el inventario
         let producto = inventarioFirebase.find(p => frase.includes(p.nombre.toLowerCase()));
 
         if (producto) {
+            // Si es por dinero (Q5 de pan), divide; si no, usa el valor directo (5 panes)
             let cantidadFinal = esPorDinero ? Math.floor(valor / producto.precio) : valor;
 
             if (cantidadFinal > 0) {
@@ -979,16 +1000,18 @@ if (SpeechRecognition) {
                 if (itemExistente) {
                     itemExistente.cantidad += cantidadFinal;
                 } else {
-                    carrito.push({ id: producto.id, nombre: producto.nombre, precio: producto.precio, cantidad: cantidadFinal });
+                    carrito.push({ 
+                        id: producto.id, 
+                        nombre: producto.nombre, 
+                        precio: producto.precio, 
+                        cantidad: cantidadFinal 
+                    });
                 }
                 actualizarCarrito(); 
-                // Se eliminó el llamado a responderConVoz aquí
             }
         }
     }
 }
-
-
 
 </script>
 
