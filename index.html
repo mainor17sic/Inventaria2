@@ -908,32 +908,54 @@ const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecogni
 
 if (SpeechRecognition) {
     const recognition = new SpeechRecognition();
-    recognition.lang = 'es-GT'; 
+    recognition.lang = 'es-GT';
     recognition.interimResults = false;
+    recognition.continuous = false; // El navegador gestiona mejor ciclos cortos
+
+    let modoSiempreActivo = false;
 
     function activarVoz() {
-        const btn = document.getElementById('btn-voz');
-        btn.innerText = "👂 Escuchando...";
-        btn.style.backgroundColor = "#e74c3c";
-        recognition.start();
+        if (!modoSiempreActivo) {
+            modoSiempreActivo = true;
+            iniciarEscucha();
+        } else {
+            modoSiempreActivo = false;
+            recognition.stop();
+            const btn = document.getElementById('btn-voz');
+            btn.innerText = "🎤 Ordenar por Voz";
+            btn.style.backgroundColor = "#2980b9";
+        }
     }
+
+    function iniciarEscucha() {
+        if (modoSiempreActivo) {
+            try {
+                recognition.start();
+                const btn = document.getElementById('btn-voz');
+                btn.innerText = "👂 Escuchando...";
+                btn.style.backgroundColor = "#27ae60"; // Verde: indica que está activo
+            } catch (e) {
+                // Evita errores si ya está encendido
+            }
+        }
+    }
+
+    // Se reactiva automáticamente al terminar de procesar o al haber silencio
+    recognition.onend = () => {
+        if (modoSiempreActivo) {
+            iniciarEscucha();
+        }
+    };
 
     recognition.onresult = (event) => {
         const fraseCompleta = event.results[0][0].transcript.toLowerCase();
-        // Separamos la frase si el usuario dijo "y" o "con" para procesar varios productos
         const comandos = fraseCompleta.split(/\s+y\s+|\s+con\s+/);
         
         comandos.forEach(comando => {
             procesarComandoVoz(comando.trim());
         });
     };
-
-    recognition.onend = () => {
-        const btn = document.getElementById('btn-voz');
-        btn.innerText = "🎤 Ordenar por Voz";
-        btn.style.backgroundColor = "#2980b9";
-    };
-
+ 
     function responderConVoz(mensaje) {
         const msn = new SpeechSynthesisUtterance(mensaje);
         msn.lang = 'es-GT';
