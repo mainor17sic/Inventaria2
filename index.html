@@ -903,237 +903,78 @@
         evt.currentTarget.className += " active";
     }
     
-    // === ESTADOS DEL ASISTENTE ADMINISTRATIVO ===
-let estadoAsistente = "escuchando_comando"; 
-let datosPendientes = null;
-
-// === CONFIGURACIÓN DE VOZ ===
+    // === MÓDULO DE RECONOCIMIENTO MULTI-PRODUCTO ===
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-const recognition = SpeechRecognition ? new SpeechRecognition() : null;
 
-if (recognition) {
-    recognition.lang = 'es-GT'; // Configurado para modismos guatemaltecos
-    recognition.continuous = false;
+if (SpeechRecognition) {
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'es-GT'; 
     recognition.interimResults = false;
 
-    recognition.onresult = (e) => {
-        const frase = e.results[0][0].transcript.toLowerCase();
-        console.log("Comando escuchado:", frase);
-        procesarComandoVozAvanzado(frase);
+    function activarVoz() {
+        const btn = document.getElementById('btn-voz');
+        btn.innerText = "👂 Escuchando...";
+        btn.style.backgroundColor = "#e74c3c";
+        recognition.start();
+    }
+
+    recognition.onresult = (event) => {
+        const fraseCompleta = event.results[0][0].transcript.toLowerCase();
+        // Separamos la frase si el usuario dijo "y" o "con" para procesar varios productos
+        const comandos = fraseCompleta.split(/\s+y\s+|\s+con\s+/);
+        
+        comandos.forEach(comando => {
+            procesarComandoVoz(comando.trim());
+        });
     };
 
     recognition.onend = () => {
-        // El micrófono se apaga automáticamente, la IA decide si lo vuelve a encender
-        console.log("Micrófono en pausa.");
+        const btn = document.getElementById('btn-voz');
+        btn.innerText = "🎤 Ordenar por Voz";
+        btn.style.backgroundColor = "#2980b9";
     };
-}
 
-// Función para iniciar la escucha (llámala desde tu botón de micrófono)
-function activarVoz() {
-    if (!recognition) return console.error("Tu navegador no soporta voz.");
-    estadoAsistente = "escuchando_comando";
-    recognition.start();
-}
-
-// Función para que la IA hable y, si es necesario, espere respuesta sin usar 'alert' ni 'prompt'
-function responderConVoz(texto, encadenarEscucha = false) {
-    console.log("IA dice:", texto);
-    const msn = new SpeechSynthesisUtterance(texto);
-    msn.lang = 'es-GT';
-    msn.rate = 1.05; // Velocidad un poco más rápida para agilidad en ventas
-    
-    msn.onend = () => {
-        if (encadenarEscucha && recognition) {
-            recognition.start(); // Vuelve a abrir el micrófono automáticamente
-        }
-    };
-    
-    window.speechSynthesis.speak(msn);
-}
-
-// === CEREBRO DE LA IA: LAS 4 FUNCIONES INTEGRADAS ===
-function procesarComandoVozAvanzado(frase) {
-
-    // --- Lógica de Confirmaciones Encadenadas ---
-    if (estadoAsistente === "esperando_confirmacion_pago") {
-        if (frase.includes("sí") || frase.includes("cobrar") || frase.includes("efectivo") || frase.includes("ya")) {
-            completarVentaVoz("efectivo");
-        } else if (frase.includes("fiar") || frase.includes("crédito")) {
-            estadoAsistente = "esperando_cliente_fiar";
-            responderConVoz("¿A qué nombre lo anoto?", true); // Encadena
-        } else {
-            estadoAsistente = "escuchando_comando";
-            responderConVoz("De acuerdo. Dime, ¿qué más agregamos?", true); // Encadena
-        }
-        return;
+    function responderConVoz(mensaje) {
+        const msn = new SpeechSynthesisUtterance(mensaje);
+        msn.lang = 'es-GT';
+        msn.rate = 1.2; 
+        window.speechSynthesis.speak(msn);
     }
 
-    if (estadoAsistente === "esperando_cliente_fiar") {
-        // Toma todo lo que escuchó como el nombre del cliente
-        completarVentaVoz("fiar", frase);
-        return;
-    }
+    function procesarComandoVoz(frase) {
+        const numerosLetras = { "un": 1, "una": 1, "dos": 2, "tres": 3, "cuatro": 4, "cinco": 5, "seis": 6, "siete": 7, "ocho": 8, "nueve": 9, "diez": 10 };
+        let valor = 1;
+        let esPorDinero = frase.includes("quetzal") || frase.includes("quetzales");
+        let palabras = frase.split(" ");
 
-    if (estadoAsistente === "esperando_confirmacion_sugerencia") {
-        if (frase.includes("sí") || frase.includes("agrega") || frase.includes("bueno") || frase.includes("dale")) {
-            agregarAlCarritoVoz(datosPendientes, 1);
-            estadoAsistente = "esperando_confirmacion_pago";
-            responderConVoz("Agregado. ¿Cobramos o anoto algo más?", true); // Encadena
-        } else {
-            estadoAsistente = "escuchando_comando";
-            responderConVoz("Entendido. ¿En qué más te ayudo?");
-        }
-        return;
-    }
+        palabras.forEach(p => {
+            if (!isNaN(p)) valor = parseFloat(p);
+            if (numerosLetras[p]) valor = numerosLetras[p];
+        });
 
-    // --- FUNCIÓN 1: REPORTES ---
-    if (frase.includes("reporte") || frase.includes("cerrar turno")) {
-        responderConVoz("Iniciando cierre de turno. Por favor, revisa la pantalla para generar el PDF.");
-        // Aquí llamas a tu función existente: generarPDFCierre() o similar
-        return;
-    }
+        // Buscamos el producto en tu inventarioFirebase
+        let producto = inventarioFirebase.find(p => frase.includes(p.nombre.toLowerCase()));
 
-    // --- FUNCIÓN 2: INVENTARIO ---
-    if (frase.includes("inventario") || frase.includes("cuánto hay") || frase.includes("stock")) {
-        const bajoStock = inventarioFirebase.filter(p => p.stock < 15);
-        if (bajoStock.length > 0) {
-            const nombres = bajoStock.map(p => p.nombre).join(", ");
-            responderConVoz(`Atención, tienes poco pan de: ${nombres}. El resto del inventario está bien.`);
-        } else {
-            responderConVoz("Revisé el sistema. Todo el inventario está en niveles óptimos.");
-        }
-        return;
-    }
+        if (producto) {
+            let cantidadFinal = esPorDinero ? Math.floor(valor / producto.precio) : valor;
 
-    // --- FUNCIÓN 3: PREDICCIÓN / SUGERENCIA ---
-    if (frase.includes("sugiere") || frase.includes("predicción") || frase.includes("qué recomiendas")) {
-        // Sugiere el pan con más stock o el que quieras empujar
-        if (inventarioFirebase.length > 0) {
-            // Ejemplo: Toma el primer pan (puedes cambiar la lógica para ordenar por mayor ganancia)
-            const productoEstrella = inventarioFirebase[0]; 
-            estadoAsistente = "esperando_confirmacion_sugerencia";
-            datosPendientes = productoEstrella;
-            responderConVoz(`El sistema sugiere ofrecer ${productoEstrella.nombre}. ¿Agrego uno a la venta actual?`, true); // Encadena
-        }
-        return;
-    }
-
-    // --- LÓGICA DE PEDIDOS Y VENTA (FUNCIÓN 4: FIAR Y CONVERSIÓN) ---
-    procesarVentaVoz(frase);
-}
-
-function procesarVentaVoz(frase) {
-    // Diccionarios lógicos
-    const slangMoneda = { 
-        "unocincuenta": 1.5, "uno cincuenta": 1.5, 
-        "doscincuenta": 2.5, "dos cincuenta": 2.5, 
-        "trescincuenta": 3.5, "tres cincuenta": 3.5,
-        "cuatrocincuenta": 4.5, "cuatro cincuenta": 4.5
-    };
-    const numerosLetras = { "un": 1, "una": 1, "dos": 2, "tres": 3, "cuatro": 4, "cinco": 5, "seis": 6, "siete": 7, "ocho": 8, "nueve": 9, "diez": 10, "docena": 12 };
-
-    let valor = 0;
-    let esDinero = frase.includes("quetzal") || frase.includes("quetzales");
-    let esFiarDirecto = frase.includes("fiar") || frase.includes("crédito");
-
-    // 1. Detección de modismos de dinero ("unocincuenta")
-    for (const [key, val] of Object.entries(slangMoneda)) {
-        if (frase.includes(key)) {
-            valor = val;
-            esDinero = true; 
-            break;
-        }
-    }
-
-    // 2. Detección de números estándar
-    if (valor === 0) {
-        const palabras = frase.split(" ");
-        for (let p of palabras) {
-            if (!isNaN(p)) { valor = parseFloat(p); break; }
-            if (numerosLetras[p]) { valor = numerosLetras[p]; break; }
-        }
-    }
-
-    if (valor === 0) valor = 1; // Por defecto si no dice número, es 1 unidad
-
-    // 3. Forzar a Cantidad si dice "Bolsa", "Tira", "Unidad"
-    if (frase.includes("tira") || frase.includes("tiras") || frase.includes("bolsa") || frase.includes("bolsas") || frase.includes("unidades")) {
-        esDinero = false;
-    }
-
-    // 4. Buscar el producto en inventarioFirebase
-    let producto = inventarioFirebase.find(p => frase.includes(p.nombre.toLowerCase()));
-
-    if (producto) {
-        let cantidadFinal = 0;
-
-        if (esDinero) {
-            // Lógica Monetaria a Cantidad (Ej: Q5.00 / Q0.50 = 10 panes)
-            cantidadFinal = Math.floor(valor / producto.precio);
-            if (cantidadFinal <= 0) {
-                responderConVoz(`Lo siento, ${valor} quetzales no alcanzan para ${producto.nombre}. Cuesta ${producto.precio} cada uno.`);
-                return;
+            if (cantidadFinal > 0) {
+                // Lógica de carrito existente
+                const itemExistente = carrito.find(item => item.id === producto.id);
+                if (itemExistente) {
+                    itemExistente.cantidad += cantidadFinal;
+                } else {
+                    carrito.push({ id: producto.id, nombre: producto.nombre, precio: producto.precio, cantidad: cantidadFinal });
+                }
+                actualizarCarrito();
+                responderConVoz(`Listo, ${cantidadFinal} de ${producto.nombre}`);
             }
         } else {
-            // Lógica de Cantidad Directa (Ej: 6 tiras, 5 bolsas)
-            cantidadFinal = valor;
+            console.log("No se reconoció parte del comando: " + frase);
         }
-
-        // Ejecución
-        agregarAlCarritoVoz(producto, cantidadFinal);
-
-        // Si desde un inicio dijo "fiar 5 quetzales de frances"
-        if (esFiarDirecto) {
-            estadoAsistente = "esperando_cliente_fiar";
-            responderConVoz(`Agregué ${cantidadFinal} de ${producto.nombre}. ¿A quién se lo voy a fiar?`, true); // Encadena
-        } else {
-            estadoAsistente = "esperando_confirmacion_pago";
-            const textoConfirmacion = esDinero ? 
-                `Convertí ${valor} quetzales a ${cantidadFinal} ${producto.nombre} y los agregué. ¿Cobramos, fiamos o agregas más?` :
-                `Agregué ${cantidadFinal} de ${producto.nombre}. ¿Cobrar, fiar o algo más?`;
-            
-            responderConVoz(textoConfirmacion, true); // Encadena
-        }
-
-    } else {
-        estadoAsistente = "escuchando_comando";
-        responderConVoz("No reconocí el pan. Por favor, repítelo.", true); // Encadena
     }
 }
 
-// === AUXILIARES DE PROCESAMIENTO ===
-function agregarAlCarritoVoz(producto, cantidad) {
-    const itemExistente = carrito.find(item => item.id === producto.id);
-    if (itemExistente) {
-        itemExistente.cantidad += cantidad;
-    } else {
-        carrito.push({ id: producto.id, nombre: producto.nombre, precio: producto.precio, cantidad: cantidad });
-    }
-    if (typeof actualizarCarrito === "function") actualizarCarrito(); // Conecta con tu UI
-}
-
-function completarVentaVoz(metodo, cliente = "N/A") {
-    if (carrito.length === 0) {
-        estadoAsistente = "escuchando_comando";
-        responderConVoz("No puedo cobrar, el carrito está vacío.");
-        return;
-    }
-
-    // NOTA: Aquí debes llamar a la función que ya tienes para guardar la venta en Firebase
-    // Ejemplo: guardarVenta(metodo, cliente);
-
-    // Simulamos la limpieza del carrito
-    carrito = [];
-    if (typeof actualizarCarrito === "function") actualizarCarrito();
-
-    estadoAsistente = "escuchando_comando";
-    if (metodo === "fiar") {
-        responderConVoz(`Venta guardada como fiado a ${cliente}. Listo para el siguiente cliente.`);
-    } else {
-        responderConVoz("Cobro en efectivo registrado. Listo para la siguiente venta.");
-    }
-}
-}
 
 </script>
 
