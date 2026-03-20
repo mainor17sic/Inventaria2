@@ -141,15 +141,74 @@
         .producto-card.sin-stock { opacity: 0.5; cursor: not-allowed; background: #f4f4f4; }
         .producto-card.sin-stock .producto-img { filter: grayscale(100%); } 
 
-        /* === CARRITO Y TABLAS === */
-        #carrito-lista { list-style: none; padding: 0; margin: 0 0 15px 0; max-height: 250px; overflow-y: auto; }
-        #carrito-lista li { background: #fff; padding: 8px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; font-size: 14px; }
+        /* === CARRITO Y TABLAS (ADAPTABLE PC Y MÓVIL) === */
+#carrito-lista { 
+    list-style: none; 
+    padding: 0; 
+    margin: 0 0 15px 0; 
+    overflow-y: auto;  
+    border: 1px dashed #e67e22;
+    border-radius: 5px;
+    background-color: #fffaf5;
+    
+    /* Altura para MÓVIL por defecto */
+    max-height: 280px; 
+}
 
-        .cart-total-area { border-top: 2px solid #ddd; padding-top: 10px; text-align: right; }
-        .cart-botones { display: flex; flex-direction: column; gap: 8px; margin-top: 15px; }
-        .cart-botones button { width: 100%; font-size: 16px; padding: 12px; }
+/* Ajuste específico para PANTALLAS GRANDES (PC/Escritorio) */
+@media (min-width: 768px) {
+    #carrito-lista {
+        max-height: 500px; /* En PC tenemos más espacio vertical */
+    }
+}
 
-        .text-rojo { color: #c0392b; font-weight: bold; }
+/* Estilo para la barra de scroll (Naranja Panadería) */
+#carrito-lista::-webkit-scrollbar {
+    width: 8px;
+}
+#carrito-lista::-webkit-scrollbar-thumb {
+    background: #e67e22; 
+    border-radius: 10px;
+}
+#carrito-lista::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+#carrito-lista li { 
+    background: #fff; 
+    padding: 10px; 
+    border-bottom: 1px solid #eee; 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    font-size: 15px;
+}
+
+/* Área de total y botones siempre visibles */
+.cart-total-area { 
+    border-top: 2px solid #ddd; 
+    padding-top: 10px; 
+    text-align: right; 
+    background: white;
+}
+
+.cart-botones { 
+    display: flex; 
+    flex-direction: column; 
+    gap: 8px; 
+    margin-top: 15px; 
+}
+
+.cart-botones button { 
+    width: 100%; 
+    font-size: 16px; 
+    padding: 12px; 
+    font-weight: bold;
+    cursor: pointer; /* Indica que se puede cliquear en PC */
+}
+
+.text-rojo { color: #c0392b; font-weight: bold; }
+
 
         /* === NUEVOS ESTILOS PARA EL FLOTANTE === */
         .overlay-vendedor {
