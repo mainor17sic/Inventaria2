@@ -11,7 +11,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
 
     <style>
-        /* === ESTILOS BASE Y RESET === */
+        /* === ESTILOS BASE Y RESET === */ 
         body { 
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
             background-color: #f0f2f5; 
@@ -1067,7 +1067,12 @@ if (SpeechRecognition) {
                     });
                 }
                 actualizarCarrito(); 
-            }
+
+                // === NUEVO: Pegar esto aquí para que baje el scroll ===
+                const listaVoz = document.getElementById('carrito-lista');
+                if (listaVoz) {
+                    listaVoz.scrollTop = listaVoz.scrollHeight;
+                }
         }
     }
 }
