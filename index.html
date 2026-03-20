@@ -1029,6 +1029,16 @@ if (SpeechRecognition) {
         actualizarCarrito(); // Refresca la interfaz
         return; // Detiene el proceso para que no busque productos
     }
+        if (frase.includes("cobrar") || frase.includes("terminar")) {
+    completarVenta('efectivo');
+    return;
+}
+
+if (frase.includes("fiar")) {
+    completarVenta('fiar');
+    return;
+}
+
         let valor = 1;
         let esPorDinero = frase.includes("quetzal") || frase.includes("quetzales");
         
