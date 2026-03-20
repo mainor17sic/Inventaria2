@@ -908,21 +908,8 @@ const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecogni
 
 if (SpeechRecognition) {
     const recognition = new SpeechRecognition();
-    recognition.lang = 'es-GT';
+    recognition.lang = 'es-GT'; 
     recognition.interimResults = false;
-    recognition.continuous = false; // El navegador gestiona mejor ciclos cortos
-
-    let modoSiempreActivo = false;
-
-    // Diccionario de Precios Coloquiales
-    const preciosGT = {
-        "unocincuenta": 1.50, "unosincuenta": 1.50, "doscincuenta": 2.50,
-        "trescincuenta": 3.50, "cuatrocincuenta": 4.50, "cincocincuenta": 5.50,
-        "seiscincuenta": 6.50, "sietecincuenta": 7.50, "ochocincuenta": 8.50,
-        "nuevecincuenta": 9.50, "diezcincuenta": 10.50
-    };
-
-    const letrasANumeros = { "un": 1, "una": 1, "dos": 2, "tres": 3, "cuatro": 4, "cinco": 5, "seis": 6, "siete": 7, "ocho": 8, "nueve": 9, "diez": 10 };
 
     function activarVoz() {
         const btn = document.getElementById('btn-voz');
