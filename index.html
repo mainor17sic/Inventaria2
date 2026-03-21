@@ -962,7 +962,7 @@
         evt.currentTarget.className += " active";
     }
     
-    // === ASISTENTE ADMINISTRATIVO DEFINITIVO (4 EN 1 + PREDICCIÓN + LÓGICA FRANCÉS) ===
+    // === ASISTENTE ADMINISTRATIVO ===
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
 if (SpeechRecognition) {
@@ -1153,13 +1153,13 @@ function procesarTextoANumero(texto) {
         } else if (stockRestante <= 0) {
             respuestas.push(`Cuidado, el inventario de ${producto.nombre} se ha agotado.`);
         }
-        // --- AQUÍ EMPIEZAN LOS CIERRES CORRECTOS ---
-    } // Cierra el if (producto)
-}); // Cierra el comandos.forEach (¡Este es el que faltaba!)
+        
+    } 
+}); 
 
 if (respuestas.length > 0) {responderConVoz("Agregado"); 
 }
-} // Cierra la función procesarVentaMultiproducto
+}
 
 
     // === LÓGICA PARA ACTUALIZAR STOCK POR VOZ ===
