@@ -1064,29 +1064,73 @@ TEXTO: "${textoUsuario}"
 }
 
 async function ejecutarAccionGemini(comando) {
+    console.log("Comando recibido de Gemini:", comando);
+
     switch (comando.action) {
-        case "add":
+        case "add": 
+            // Se activa cuando dices: "Agrega...", "Pon...", "Dame..."
             for (let item of comando.items) {
-                const producto = inventarioFirebase.find(p => p.nombre.toLowerCase() === item.name.toLowerCase());
-                if (!producto) {
-                    responderConVoz(`No encontré ${item.name} en el inventario.`);
-                    continue;
-                }
-                const existente = carrito.find(i => i.id === producto.id);
-                const cantidadActual = existente ? existente.cantidad : 0;
-                if (cantidadActual + item.quantity > producto.stock) {
-                    responderConVoz(`Stock insuficiente para ${producto.nombre}.`);
-                    continue;
-                }
-                if (existente) {
-                    existente.cantidad += item.quantity;
+                const producto = inventarioFirebase.find(p => 
+                    p.nombre.toLowerCase().includes(item.name.toLowerCase())
+                );
+                if (producto) {
+                    agregarAlCarritoDesdeIA(producto, item.quantity);
                 } else {
-                    carrito.push({
-                        id: producto.id,
-                        nombre: producto.nombre,
-                        precio: producto.precio,
-                        cantidad: item.quantity
-                    });
+                    responderConVoz(`No encontré el producto ${item.name}`);
+                }
+            }
+            break;
+
+        case "cash": 
+            // Se activa cuando dices: "Cobra esto", "Pagan en efectivo", "Ya estuvo"
+            if (carrito.length === 0) {
+                responderConVoz("El carrito está vacío, no hay nada que cobrar.");
+            } else {
+                responderConVoz("Entendido, procesando cobro en efectivo.");
+                await completarVentaVoz('efectivo', '');
+            }
+            break;
+
+        case "credit": 
+            // Se activa cuando dices: "Fíaselo a Juan", "Ponlo a la cuenta de María"
+            if (carrito.length === 0) {
+                responderConVoz("No hay productos para fiar.");
+            } else {
+                let cliente = comando.customer || "Cliente General";
+                responderConVoz(`Muy bien, anotado a la cuenta de ${cliente}.`);
+                await completarVentaVoz('fiar', cliente);
+            }
+            break;
+
+        case "ask_total":
+            // Se activa cuando dices: "¿Cuánto va?", "¿Cuál es el total?"
+            const total = carrito.reduce((sum, i) => sum + (i.precio * i.cantidad), 0);
+            responderConVoz(`El total de la venta es de ${total.toFixed(2)} quetzales.`);
+            break;
+
+        case "report":
+            // Se activa cuando dices: "¿Cuánto llevamos vendido?", "Dame el reporte"
+            let totalVendido = ventasGlobales.reduce((sum, v) => sum + v.total, 0);
+            responderConVoz(`Hasta ahora se han vendido Q${totalVendido.toFixed(2)} en este turno.`);
+            break;
+
+        default:
+            responderConVoz("Entiendo lo que quieres, pero no puedo realizar esa acción todavía.");
+    }
+}
+
+// Función auxiliar para asegurar que el carrito se actualice bien
+function agregarAlCarritoDesdeIA(producto, cantidad) {
+    const existente = carrito.find(i => i.id === producto.id);
+    if (existente) {
+        existente.cantidad += cantidad;
+    } else {
+        carrito.push({
+            id: producto.id,
+            nombre: producto.nombre,
+            precio: producto.precio,
+            cantidad: cantidad
+        });
                 }
                 actualizarCarrito(); // Asegúrate de tener esta función en tu código principal
             }
