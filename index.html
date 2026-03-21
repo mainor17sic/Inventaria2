@@ -905,11 +905,12 @@ const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemi
     }
 
     // ============================================================
-    // === ASISTENTE CON GEMINI (VOZ + IA) MEJORADO CON CHAT ===
-    // ============================================================
-    let modoAsistenteActivo = false;
+// === ASISTENTE CON GEMINI (VOZ + IA) CORREGIDO ===
+// ============================================================
+let modoAsistenteActivo = false;
 let recognition = null;
-let procesandoComando = false; // Evita que el micrófono escuche mientras la IA habla o piensa
+let procesandoComando = false;
+let hablando = false;
 
 function activarVoz() {
     modoAsistenteActivo = !modoAsistenteActivo;
@@ -921,7 +922,11 @@ function activarVoz() {
     } else {
         btn.innerText = "🎤 Asistente IA (Gemini)";
         btn.style.backgroundColor = "#2980b9";
-        if (recognition) recognition.stop();
+        if (recognition) {
+            recognition.stop();
+            recognition = null;
+        }
+        window.speechSynthesis.cancel(); // Detener cualquier voz en curso
     }
 }
 
@@ -930,53 +935,97 @@ function iniciarReconocimientoVoz() {
         alert("Tu navegador no soporta reconocimiento de voz. Usa Google Chrome.");
         return;
     }
+    if (recognition) {
+        recognition.stop();
+        recognition = null;
+    }
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     recognition = new SpeechRecognition();
     recognition.lang = 'es-GT';
     recognition.interimResults = false;
-    recognition.continuous = false; // Mejor en false para controlarlo nosotros
+    recognition.continuous = true;  // Continuo, pero controlaremos el reinicio manualmente
 
     recognition.onstart = () => {
-        console.log("🎤 Escuchando...");
+        console.log("🎤 Micrófono activo. Escuchando...");
     };
 
     recognition.onresult = async (event) => {
-        const texto = event.results[0][0].transcript;
-        console.log("🗣️ Usuario dijo:", texto);
-        
-        // Pausamos la escucha para que no se escuche a sí mismo ni se trabe
-        procesandoComando = true;
-        recognition.stop();
-        
-        await procesarConGemini(texto);
-        
-        procesandoComando = false;
-        
-        // Reiniciar escucha si el modo sigue activo
-        if (modoAsistenteActivo) {
-            try { recognition.start(); } catch(e){}
+        if (procesandoComando || hablando) {
+            console.log("Ignorando entrada mientras se procesa o habla...");
+            return;
         }
+        const texto = event.results[event.results.length - 1][0].transcript;
+        console.log("🗣️ Usuario dijo:", texto);
+
+        // Detener la escucha mientras procesamos y respondemos
+        recognition.stop();
+        procesandoComando = true;
+
+        await procesarConGemini(texto);
+
+        // Esperar a que termine de hablar antes de reactivar el micrófono
+        esperarFinVoz().then(() => {
+            procesandoComando = false;
+            if (modoAsistenteActivo && !hablando) {
+                // Reactivar el micrófono solo si el modo sigue activo y no estamos hablando
+                try {
+                    recognition.start();
+                } catch(e) {
+                    console.warn("No se pudo reiniciar el reconocimiento:", e);
+                }
+            }
+        });
     };
 
     recognition.onerror = (err) => {
         console.warn("⚠️ Error reconocimiento:", err.error);
-        // NO forzamos el reinicio aquí para evitar el "bugeo". Se lo dejamos a onend.
         if (err.error === 'not-allowed') {
             modoAsistenteActivo = false;
-            document.getElementById('btn-voz').innerText = "🎤 Asistente IA (Gemini)";
-            document.getElementById('btn-voz').style.backgroundColor = "#2980b9";
+            const btn = document.getElementById('btn-voz');
+            btn.innerText = "🎤 Asistente IA (Gemini)";
+            btn.style.backgroundColor = "#2980b9";
             alert("Permiso de micrófono denegado.");
+        }
+        // Si hay error, reiniciamos después de un breve tiempo si el modo está activo
+        if (modoAsistenteActivo && !hablando && !procesandoComando) {
+            setTimeout(() => {
+                try { recognition.start(); } catch(e) {}
+            }, 1000);
         }
     };
 
     recognition.onend = () => {
-        // Solo reinicia si el botón está encendido y la IA no está pensando/hablando
-        if (modoAsistenteActivo && !procesandoComando) {
-            try { recognition.start(); } catch(e){}
+        console.log("Micrófono detenido.");
+        // Si el modo está activo, no estamos procesando ni hablando, y no hay un reinicio manual pendiente,
+        // volvemos a iniciar (esto sucede si se detuvo por silencio o por pausa accidental)
+        if (modoAsistenteActivo && !procesandoComando && !hablando) {
+            setTimeout(() => {
+                try { recognition.start(); } catch(e) {}
+            }, 300);
         }
     };
 
-    try { recognition.start(); } catch(e){}
+    try {
+        recognition.start();
+    } catch(e) {
+        console.error("Error al iniciar reconocimiento:", e);
+    }
+}
+
+// Función que devuelve una promesa que se resuelve cuando termina de hablar el sintetizador
+function esperarFinVoz() {
+    return new Promise((resolve) => {
+        if (!window.speechSynthesis || !window.speechSynthesis.speaking) {
+            resolve();
+            return;
+        }
+        const checkInterval = setInterval(() => {
+            if (!window.speechSynthesis.speaking) {
+                clearInterval(checkInterval);
+                resolve();
+            }
+        }, 100);
+    });
 }
 
 async function procesarConGemini(textoUsuario) {
@@ -1026,15 +1075,15 @@ Responde solo con el JSON, sin texto adicional ni bloques de código markdown.
                 generationConfig: { temperature: 0.1, responseMimeType: "application/json" }
             })
         });
-        
+
         const data = await respuesta.json();
-        
+
         if (!data.candidates) throw new Error("Error en la respuesta de la API");
-        
+
         let textoRespuesta = data.candidates[0].content.parts[0].text;
-        
-        // LIMPIEZA CRÍTICA: Quita etiquetas markdown que Gemini a veces añade
-        textoRespuesta = textoRespuesta.replace(/```json|```/g, "").trim();
+
+        // LIMPIEZA CRÍTICA: Quita cualquier bloque markdown o código
+        textoRespuesta = textoRespuesta.replace(/^```json\s*|```$/g, '').trim();
         const resultado = JSON.parse(textoRespuesta);
 
         if (resultado.type === "command") {
@@ -1055,7 +1104,6 @@ async function ejecutarAccionGemini(comando) {
     switch (comando.action) {
         case "add":
             for (let item of comando.items) {
-                // Buscamos ignorando mayúsculas y minúsculas
                 const producto = inventarioFirebase.find(p => p.nombre.toLowerCase().includes(item.name.toLowerCase()));
                 if (!producto) {
                     responderConVoz(`No encontré ${item.name} en el inventario.`);
@@ -1063,12 +1111,12 @@ async function ejecutarAccionGemini(comando) {
                 }
                 const existente = carrito.find(i => i.id === producto.id);
                 const cantidadActual = existente ? existente.cantidad : 0;
-                
+
                 if (cantidadActual + item.quantity > producto.stock) {
                     responderConVoz(`Stock insuficiente para ${producto.nombre}. Solo quedan ${producto.stock - cantidadActual} unidades.`);
                     continue;
                 }
-                
+
                 if (existente) {
                     existente.cantidad += item.quantity;
                 } else {
@@ -1079,15 +1127,15 @@ async function ejecutarAccionGemini(comando) {
                         cantidad: item.quantity
                     });
                 }
-                actualizarCarrito(); // Función de tu código principal
+                actualizarCarrito();
             }
             break;
-            
+
         case "ask_total":
             const total = carrito.reduce((sum, i) => sum + (i.precio * i.cantidad), 0);
             responderConVoz(`El total del carrito es de Q${total.toFixed(2)}.`);
             break;
-            
+
         case "cash":
             if (carrito.length === 0) {
                 responderConVoz("El carrito está vacío. No puedo cobrar.");
@@ -1095,7 +1143,7 @@ async function ejecutarAccionGemini(comando) {
             }
             await completarVentaVoz('efectivo', '');
             break;
-            
+
         case "credit":
             if (carrito.length === 0) {
                 responderConVoz("El carrito está vacío. No puedo fiar.");
@@ -1104,12 +1152,12 @@ async function ejecutarAccionGemini(comando) {
             let cliente = comando.customer || "Cliente general";
             await completarVentaVoz('fiar', cliente);
             break;
-            
+
         case "report":
-            let totalVendido = (typeof ventasGlobales !== 'undefined') ? ventasGlobales.reduce((sum, v) => sum + v.total, 0) : 0;
+            let totalVendido = ventasGlobales.reduce((sum, v) => sum + v.total, 0);
             responderConVoz(`Llevamos ${totalVendido.toFixed(2)} quetzales vendidos en este turno.`);
             break;
-            
+
         case "add_stock":
             const prodStock = inventarioFirebase.find(p => p.nombre.toLowerCase().includes(comando.product.toLowerCase()));
             if (prodStock) {
@@ -1121,9 +1169,10 @@ async function ejecutarAccionGemini(comando) {
                 responderConVoz(`No encontré el producto ${comando.product}.`);
             }
             break;
-            
+
         default:
             console.warn("Acción desconocida:", comando.action);
+            responderConVoz("No puedo realizar esa acción todavía.");
     }
 }
 
@@ -1143,16 +1192,16 @@ async function completarVentaVoz(tipoDePago, clienteFiar) {
             cliente: clienteFiar,
             timestamp: firebase.firestore.FieldValue.serverTimestamp()
         });
-        
+
         const batch = db.batch();
         carrito.forEach(item => {
             const docRef = db.collection("inventario").doc(item.id);
             batch.update(docRef, { stock: firebase.firestore.FieldValue.increment(-item.cantidad) });
         });
         await batch.commit();
-        
+
         carrito = [];
-        actualizarCarrito(); // Función de tu código principal
+        actualizarCarrito();
         responderConVoz("Venta guardada exitosamente.");
     } catch (error) {
         console.error("Error al guardar la venta:", error);
@@ -1162,10 +1211,17 @@ async function completarVentaVoz(tipoDePago, clienteFiar) {
 
 function responderConVoz(mensaje) {
     if (!window.speechSynthesis) return;
+    hablando = true;
     const synth = window.speechSynthesis;
     const utterance = new SpeechSynthesisUtterance(mensaje);
     utterance.lang = 'es-GT';
     utterance.rate = 1.1;
+    utterance.onend = () => {
+        hablando = false;
+    };
+    utterance.onerror = () => {
+        hablando = false;
+    };
     synth.cancel(); // Detiene cualquier audio anterior
     synth.speak(utterance);
 }
