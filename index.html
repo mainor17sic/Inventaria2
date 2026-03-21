@@ -962,36 +962,20 @@
         evt.currentTarget.className += " active";
     }
     
-    // === MÓDULO DE RECONOCIMIENTO MULTI-PRODUCTO ===
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    // === ASISTENTE ADMINISTRATIVO DEFINITIVO (4 EN 1 + PREDICCIÓN + LÓGICA FRANCÉS) ===
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
 if (SpeechRecognition) {
     const recognition = new SpeechRecognition();
     recognition.lang = 'es-GT';
     recognition.interimResults = false;
-    let modoAsistente = false;
-
-    // Diccionario de Precios Coloquiales
-    const modismosDinero = {
-        "uno sincuenta": 1.50,
-        "uno cincuenta": 1.50,
-        "dos cincuenta": 2.50,
-        "tres cincuenta": 3.50,
-        "cuatro cincuenta": 4.50,
-        "cinco cincuenta": 5.50,
-        "seis cincuenta": 6.50
-    };
-
-    const numerosLetras = { 
-        "un": 1, "una": 1, "dos": 2, "tres": 3, "cuatro": 4, 
-        "cinco": 5, "seis": 6, "siete": 7, "ocho": 8, "nueve": 9, "diez": 10 
-    };
+    let modoSiempreActivo = false;
 
     function activarVoz() {
-        modoAsistente = !modoAsistente;
+        modoSiempreActivo = !modoSiempreActivo;
         const btn = document.getElementById('btn-voz');
-        if (modoAsistente) {
-            btn.innerText = "👂 IA Escuchando...";
+        if (modoSiempreActivo) {
+            btn.innerText = "👂 Asistente Activo...";
             btn.style.backgroundColor = "#27ae60";
             iniciarEscucha();
         } else {
@@ -1001,160 +985,198 @@ if (SpeechRecognition) {
         }
     }
 
-    function iniciarEscucha() { 
-        if (modoAsistente) {
-            try { recognition.start(); } catch(e){} 
-        } 
+    function iniciarEscucha() {
+        if (modoSiempreActivo) {
+            try { recognition.start(); } catch (e) {}
+        }
     }
-    
-    recognition.onend = () => { 
-        if (modoAsistente) iniciarEscucha(); 
-    };
 
-    // --- FUNCIÓN DE VOZ RESTAURADA ---
-    function hablar(texto) {
-        const msn = new SpeechSynthesisUtterance(texto);
+    recognition.onend = () => { if (modoSiempreActivo) iniciarEscucha(); };
+
+    function responderConVoz(mensaje) {
+        const msn = new SpeechSynthesisUtterance(mensaje);
         msn.lang = 'es-GT';
-        msn.rate = 1.1; // Velocidad ligeramente acelerada
+        msn.rate = 1.15; 
         window.speechSynthesis.speak(msn);
     }
 
+    // === CEREBRO DE LA IA ===
     recognition.onresult = (event) => {
         let frase = event.results[0][0].transcript.toLowerCase().trim();
-        console.log("IA escuchó:", frase);
-        
-        // --- ACCIÓN 1: COBRAR EFECTIVO ---
+        console.log("🗣️ Escuchado:", frase);
+
+        // 1. INTENCIÓN: REPORTES
+        if (frase.includes("cuánto llevamos") || frase.includes("reporte de ventas")) {
+            let totalTurno = ventasGlobales.reduce((sum, venta) => sum + venta.total, 0); //
+            responderConVoz(`Hasta el momento, llevamos ${totalTurno.toFixed(2)} quetzales vendidos en este turno.`);
+            return;
+        }
+
+        // 2. INTENCIÓN: COBRAR EFECTIVO
         if (frase.includes("cobrar efectivo") || frase.includes("cerrar venta")) {
-            if (carrito.length > 0) {
-                ejecutarVentaSilenciosa('efectivo', '');
-                return hablar("Venta cobrada");
-            } else {
-                return hablar("El carrito está vacío");
-            }
-        }
-
-        // --- ACCIÓN 2: REPORTE ---
-        if (frase.includes("cuánto") || frase.includes("reporte")) {
-            let totalVentas = ventasGlobales.reduce((s, v) => s + v.total, 0);
-            return hablar(`Llevamos vendido un total de ${totalVentas.toFixed(2)} quetzales.`);
-        }
-
-        // --- ACCIÓN 3: FIAR ---
-        if (frase.includes("fiar a")) {
-            let cliente = frase.split(" a ")[1] || "el cliente";
-            hablar(`Entendido, registrado para ${cliente}.`);
-            ejecutarVentaSilenciosa('fiar', cliente);
+            if (carrito.length === 0) return responderConVoz("El carrito está vacío.");
+            responderConVoz("Cobrando en efectivo. Venta registrada exitosamente.");
+            completarVentaVoz('efectivo', ''); 
             return;
         }
 
-        // --- ACCIÓN 4: INGRESO DE STOCK ---
-        if (frase.includes("entró pan") || frase.includes("agregar stock") || frase.includes("agregar")) {
-            actualizarStockVoz(frase);
+        // 3. INTENCIÓN: FIAR (CRÉDITO)
+        if (frase.includes("fiar a") || frase.includes("anotar a")) {
+            if (carrito.length === 0) return responderConVoz("Agrega productos antes de fiar.");
+            let cliente = frase.split(" a ")[1] || "Cliente sin nombre";
+            responderConVoz(`Anotado. Fiando esta venta a ${cliente}.`);
+            completarVentaVoz('fiar', cliente);
             return;
         }
 
-        // --- ACCIÓN 5: PROCESAR PEDIDO ---
-        procesarPedidoIA(frase);
+        // 4. INTENCIÓN: INVENTARIO (AGREGAR PAN)
+        if (frase.includes("entró pan") || frase.includes("agregar stock")) {
+            procesarInventario(frase);
+            return;
+        }
+
+        // 5. INTENCIÓN: VENTAS Y PREDICCIÓN
+        procesarVentaMultiproducto(frase);
     };
 
-    function procesarPedidoIA(frase) {
+    // === LÓGICA DE VENTAS MULTIPRODUCTO ===
+    function procesarVentaMultiproducto(frase) {
         const comandos = frase.split(/\s+y\s+|\s+con\s+/);
-        let huboExito = false;
-        let avisoStock = ""; // Variable para concatenar la advertencia si hay poco pan
+        let respuestas = [];
 
-        comandos.forEach(cmd => {
+        // Diccionario para precios rápidos
+        const modismosDinero = {
+            "cerocincuenta": 0.50, "unosincuenta": 1.50, "unocincuenta": 1.50,
+            "doscincuenta": 2.50, "trescincuenta": 3.50, "cuatrocincuenta": 4.50,
+            "cincocincuenta": 5.50, "seiscincuenta": 6.50, "sietecincuenta": 7.50,
+            "ochocincuenta": 8.50, "nuevecincuenta": 9.50, "diezcincuenta": 10.50
+        };
+        const numerosLetras = { "un": 1, "una": 1, "dos": 2, "tres": 3, "cuatro": 4, "cinco": 5, "seis": 6, "siete": 7, "ocho": 8, "nueve": 9, "diez": 10 };
+
+        comandos.forEach(comando => {
             let valor = 0;
-            let esPorDinero = cmd.includes("quetzal") || cmd.includes("quetzales");
-
-            // 1. Revisar si la frase contiene un modismo de precio
+            let esDinero = comando.includes("quetzal") || comando.includes("quetzales");
+            
+            // Detectar modismos de dinero
             for (let modismo in modismosDinero) {
-                if (cmd.includes(modismo)) {
+                if (comando.includes(modismo)) {
                     valor = modismosDinero[modismo];
-                    esPorDinero = true;
+                    esDinero = true;
                     break;
                 }
             }
 
-            // 2. Si no hay modismo, buscar números
+            // Si no hay modismo, buscar número normal
             if (valor === 0) {
-                cmd.split(" ").forEach(p => {
+                comando.split(" ").forEach(p => {
                     if (!isNaN(p)) valor = parseFloat(p);
                     if (numerosLetras[p]) valor = numerosLetras[p];
                 });
                 if (valor === 0) valor = 1; 
             }
 
-            // 3. Buscar producto en Firebase
-            let prod = inventarioFirebase.find(p => cmd.includes(p.nombre.toLowerCase()));
+            // Verificar si el producto es francés para aplicar la lógica especial de unidades
+            let esFrances = comando.includes("frances") || comando.includes("francés");
+            let producto = null;
 
-            if (prod) {
-                let cantFinal = esPorDinero ? Math.floor(valor / prod.precio) : valor;
+            if (esFrances) {
+                // Forzamos a que busque "Unidad Frances" en el inventario
+                producto = inventarioFirebase.find(p => p.nombre.toLowerCase().includes("unidad frances"));
+                if (!producto) producto = inventarioFirebase.find(p => p.nombre.toLowerCase().includes("frances")); // Respaldo
+            } else {
+                producto = inventarioFirebase.find(p => comando.includes(p.nombre.toLowerCase())); //
+            }
 
-                if (cantFinal > 0) {
-                    const item = carrito.find(i => i.id === prod.id);
-                    if (item) {
-                        item.cantidad += cantFinal;
+            if (producto) {
+                let cant = 0;
+
+                // === LÓGICA ESPECIAL FRANCÉS A Q0.50 ===
+                if (esFrances) {
+                    if (esDinero) {
+                        cant = Math.floor(valor / 0.50); // Divide el dinero (ej. 3.50) entre Q0.50
+                    } else if (comando.includes("tira") || comando.includes("tiras")) {
+                        cant = valor * 6; // Convierte tiras a panitos individuales
                     } else {
-                        carrito.push({ id: prod.id, nombre: prod.nombre, precio: prod.precio, cantidad: cantFinal });
+                        cant = valor; // Cantidad directa de panitos
+                    }
+                } else {
+                    // Lógica normal para el resto de productos
+                    cant = esDinero ? Math.floor(valor / producto.precio) : valor;
+                }
+
+                if (cant > 0) {
+                    const item = carrito.find(i => i.id === producto.id);
+                    if (item) item.cantidad += cant;
+                    else {
+                        // Forzamos el precio de Q0.50 si es francés para evitar errores en el carrito
+                        let precioFinal = esFrances ? 0.50 : producto.precio;
+                        carrito.push({ id: producto.id, nombre: producto.nombre, precio: precioFinal, cantidad: cant }); //
                     }
                     
-                    huboExito = true;
+                    actualizarCarrito(); //
+                    respuestas.push(`${cant} de ${producto.nombre}`);
 
-                    // Lógica de advertencia de stock bajo
-                    let stockReal = prod.stock - (item ? item.cantidad : cantFinal);
-                    if (stockReal < 15) {
-                        avisoStock = `. Atención, queda poco ${prod.nombre}`;
+                    // 💡 PREDICCIÓN / SUGERENCIA IA
+                    let stockRestante = producto.stock - (item ? item.cantidad : cant);
+                    if (stockRestante <= 12 && stockRestante > 0) {
+                        respuestas.push(`Quedan solo ${stockRestante} de ${producto.nombre}, te sugiero preparar más.`);
+                    } else if (stockRestante <= 0) {
+                        respuestas.push(`Cuidado, el inventario de ${producto.nombre} se ha agotado.`);
                     }
                 }
             }
         });
 
-        // Respuesta final agregando el aviso si es necesario
-        if (huboExito) {
-            actualizarCarrito(); 
-            hablar("Agregado" + avisoStock);
+        if (respuestas.length > 0) responderConVoz("Agregado: " + respuestas.join(". "));
+    }
+
+    // === LÓGICA PARA ACTUALIZAR STOCK POR VOZ ===
+    async function procesarInventario(frase) {
+        let producto = inventarioFirebase.find(p => frase.includes(p.nombre.toLowerCase())); //
+        if (producto) {
+            let cant = 0;
+            frase.split(" ").forEach(p => { if (!isNaN(p)) cant = parseInt(p); });
+            if (cant > 0) {
+                try {
+                    await db.collection("inventario").doc(producto.id).update({
+                        stock: firebase.firestore.FieldValue.increment(cant)
+                    }); //
+                    responderConVoz(`Inventario actualizado. Se sumaron ${cant} unidades a ${producto.nombre}.`);
+                } catch (error) {
+                    responderConVoz("Error al actualizar la base de datos.");
+                }
+            }
         }
     }
 
-    async function actualizarStockVoz(frase) {
-        let prod = inventarioFirebase.find(p => frase.includes(p.nombre.toLowerCase()));
-        let cant = 0;
-        frase.split(" ").forEach(p => { if(!isNaN(p)) cant = parseInt(p); });
-        
-        if (prod && cant > 0) {
-            await db.collection("inventario").doc(prod.id).update({ 
-                stock: firebase.firestore.FieldValue.increment(cant) 
+    // === COMPLETAR VENTA SILENCIOSA PARA LA IA ===
+    async function completarVentaVoz(tipoDePago, clienteFiar) {
+        let totalVenta = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0); //
+        try {
+            await db.collection("ventas").add({
+                vendedor: document.getElementById('display-vendedor').innerText, //
+                productos: carrito, //
+                total: totalVenta,
+                tipo: tipoDePago,          
+                cliente: clienteFiar,    
+                timestamp: firebase.firestore.FieldValue.serverTimestamp() //
             });
-            hablar(`Inventario actualizado`);
+
+            const batch = db.batch(); //
+            carrito.forEach(item => {
+                const docRef = db.collection("inventario").doc(item.id);
+                batch.update(docRef, { stock: firebase.firestore.FieldValue.increment(-item.cantidad) }); //
+            });
+            await batch.commit(); //
+
+            carrito = []; //
+            actualizarCarrito(); //
+        } catch (error) {
+            responderConVoz("Error al guardar la venta en la nube.");
         }
-    }
-
-    async function ejecutarVentaSilenciosa(tipo, cliente) {
-        if (carrito.length === 0) return;
-        
-        let total = carrito.reduce((s, i) => s + (i.precio * i.cantidad), 0);
-        
-        await db.collection("ventas").add({
-            vendedor: document.getElementById('display-vendedor').innerText || "Caja",
-            productos: carrito,
-            total: total,
-            tipo: tipo, 
-            cliente: cliente,
-            timestamp: firebase.firestore.FieldValue.serverTimestamp()
-        });
-
-        const batch = db.batch();
-        carrito.forEach(i => {
-            batch.update(db.collection("inventario").doc(i.id), { 
-                stock: firebase.firestore.FieldValue.increment(-i.cantidad) 
-            });
-        });
-        
-        await batch.commit();
-        carrito = [];
-        actualizarCarrito();
     }
 }
+
 
 
 
