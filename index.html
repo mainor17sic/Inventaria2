@@ -1119,9 +1119,23 @@ function procesarTextoANumero(texto) {
     let producto = inventarioFirebase.find(p => comando.includes(p.nombre.toLowerCase()));
 
     if (producto) {
-        // Si el valor detectado es 0 (ej: "un pan de manteca"), asumimos que es 1 unidad
-        let cant = valor === 0 ? 1 : valor;
-        
+        // === LÓGICA DE DISTINCIÓN: UNIDADES VS QUETZALES ===
+        let esDinero = comando.includes("quetzal") || comando.includes("quetzales") || 
+                       comando.includes("7.50") || comando.includes("2.50") || 
+                       Object.keys(modismosDinero).some(m => comando.includes(m));
+
+        let cant = 0;
+
+        if (esDinero) {
+            // Si mencionas dinero, dividimos el monto por el precio del pan
+            // Ejemplo: 7.50 / 0.50 = 15 unidades
+            cant = Math.floor(valor / producto.precio);
+            if (cant === 0) cant = 1; 
+        } else {
+            // Si no dices "quetzales", el número es la cantidad directa (ej: 15 campechas)
+            cant = valor === 0 ? 1 : valor;
+        }
+
         let item = carrito.find(i => i.id === producto.id);
         if (item) {
             item.cantidad += cant;
@@ -1198,3 +1212,4 @@ if (respuestas.length > 0) {responderConVoz("Agregado");
 
 </body>
 </html>
+ 
