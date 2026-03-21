@@ -1051,84 +1051,102 @@ if (SpeechRecognition) {
             "cinco cincuenta": 5.50, "seis cincuenta": 6.50, "siete cincuenta": 7.50,
             "ocho cincuenta": 8.50, "nueve cincuenta": 9.50, "diez cincuenta": 10.50
         };
-        const numerosLetras = { "un": 1, "una": 1, "dos": 2, "tres": 3, "cuatro": 4, "cinco": 5, "seis": 6, "siete": 7, "ocho": 8, "nueve": 9, "diez": 10 };
+        
+        
+        // Piezas para construir números dinámicamente
+        const unidades = { 
+    "un": 1, "uno": 1, "una": 1, "dos": 2, "tres": 3, "cuatro": 4, "cinco": 5, 
+    "seis": 6, "siete": 7, "ocho": 8, "nueve": 9, "diez": 10, "once": 11, 
+    "doce": 12, "trece": 13, "catorce": 14, "quince": 15, "dieciseis": 16, "diecisiete": 17, "dieciocho": 18, "diecinueve": 19 
+};
 
+const decenas = { 
+    "veinte": 20, "veinti": 20, "treinta": 30, "cuarenta": 40, "cincuenta": 50, 
+    "sesenta": 60, "setenta": 70, "ochenta": 80, "noventa": 90 
+};
+
+const centenas = { 
+    "cien": 100, "ciento": 100, "doscientos": 200, "trescientos": 300, 
+    "cuatrocientos": 400, "quinientos": 500, "seiscientos": 600, 
+    "setecientos": 700, "ochocientos": 800, "novecientos": 900 
+};
+
+       // === MOTOR DE CONVERSIÓN DINÁMICA ===
+function procesarTextoANumero(texto) {
+    let total = 0;
+    let acumulado = 0;
+    // Dividimos la frase por espacios, comas o la letra "y" (ej: treinta y cinco)
+    const palabras = texto.toLowerCase().split(/[ ,y]+/); 
+
+    palabras.forEach(palabra => {
+        if (unidades[palabra]) acumulado += unidades[palabra];
+        else if (decenas[palabra]) acumulado += decenas[palabra];
+        else if (centenas[palabra]) acumulado += centenas[palabra];
+        else if (palabra === "mil") {
+            total += (acumulado === 0 ? 1 : acumulado) * 1000;
+            acumulado = 0;
+        }
+    });
+
+    return total + acumulado;
+}
+
+         
         comandos.forEach(comando => {
-            let valor = 0;
-            let esDinero = comando.includes("quetzal") || comando.includes("quetzales");
-            
-            // Detectar modismos de dinero
-            for (let modismo in modismosDinero) {
-                if (comando.includes(modismo)) {
-                    valor = modismosDinero[modismo];
-                    esDinero = true;
-                    break;
-                }
-            }
+    let valor = 0;
+    
+    // 1. Limpiamos la frase de "quetzales" o "quetzal"
+    let fraseLimpia = comando.replace(/quetzales|quetzal/g, "").trim();
 
-            // Si no hay modismo, buscar número normal
-            if (valor === 0) {
-                comando.split(" ").forEach(p => {
-                    if (!isNaN(p)) valor = parseFloat(p);
-                    if (numerosLetras[p]) valor = numerosLetras[p];
-                });
-                if (valor === 0) valor = 1; 
-            }
-
-            // Verificar si el producto es francés para aplicar la lógica especial de unidades
-            let esFrances = comando.includes("frances") || comando.includes("francés");
-            let producto = null;
-
-            if (esFrances) {
-                // Forzamos a que busque "Unidad Frances" en el inventario
-                producto = inventarioFirebase.find(p => p.nombre.toLowerCase().includes("unidad frances"));
-                if (!producto) producto = inventarioFirebase.find(p => p.nombre.toLowerCase().includes("frances")); // Respaldo
-            } else {
-                producto = inventarioFirebase.find(p => comando.includes(p.nombre.toLowerCase())); //
-            }
-
-            if (producto) {
-                let cant = 0;
-
-                // === LÓGICA ESPECIAL FRANCÉS A Q0.50 ===
-                if (esFrances) {
-                    if (esDinero) {
-                        cant = Math.floor(valor / 0.50); // Divide el dinero (ej. 3.50) entre Q0.50
-                    } else if (comando.includes("tira") || comando.includes("tiras")) {
-                        cant = valor * 6; // Convierte tiras a panitos individuales
-                    } else {
-                        cant = valor; // Cantidad directa de panitos
-                    }
-                } else {
-                    // Lógica normal para el resto de productos
-                    cant = esDinero ? Math.floor(valor / producto.precio) : valor;
-                }
-
-                if (cant > 0) {
-                    const item = carrito.find(i => i.id === producto.id);
-                    if (item) item.cantidad += cant;
-                    else {
-                        // Forzamos el precio de Q0.50 si es francés para evitar errores en el carrito
-                        let precioFinal = esFrances ? 0.50 : producto.precio;
-                        carrito.push({ id: producto.id, nombre: producto.nombre, precio: precioFinal, cantidad: cant }); //
-                    }
-                    
-                    actualizarCarrito(); //
-                    respuestas.push(`${cant} de ${producto.nombre}`);
-
-                    // 💡 PREDICCIÓN / SUGERENCIA IA
-                    let stockRestante = producto.stock - (item ? item.cantidad : cant);
-                    if (stockRestante <= 12 && stockRestante > 0) {
-                        respuestas.push(`Quedan solo ${stockRestante} de ${producto.nombre}, te sugiero preparar más.`);
-                    } else if (stockRestante <= 0) {
-                        respuestas.push(`Cuidado, el inventario de ${producto.nombre} se ha agotado.`);
-                    }
-                }
-            }
-        });
-
-        if (respuestas.length > 0) responderConVoz("Agregado");
+    // 2. Verificamos si es un "modismo" de los que ya tienes (0.50, 1.50, etc.)
+    if (modismosDinero[fraseLimpia]) {
+        valor = modismosDinero[fraseLimpia];
+    } else {
+        // 3. Si no es un modismo simple, usamos la lógica dinámica
+        // Detectar si termina en "cincuenta" para los decimales
+        let tieneDecimal = fraseLimpia.includes("cincuenta") && !fraseLimpia.startsWith("cincuenta");
+        
+        if (tieneDecimal) {
+            let base = fraseLimpia.replace("cincuenta", "").trim();
+            valor = procesarTextoANumero(base) + 0.50; 
+        } else {
+            valor = procesarTextoANumero(fraseLimpia);
+        }
     }
+
+    // === NUEVA LÓGICA DE BÚSQUEDA DE PRODUCTO ===
+    // Buscamos si el comando de voz menciona algún pan de tu inventario
+    let producto = inventarioFirebase.find(p => comando.includes(p.nombre.toLowerCase()));
+
+    if (producto) {
+        // Si el valor detectado es 0 (ej: "un pan de manteca"), asumimos que es 1 unidad
+        let cant = valor === 0 ? 1 : valor;
+        
+        let item = carrito.find(i => i.id === producto.id);
+        if (item) {
+            item.cantidad += cant;
+        } else {
+            carrito.push({ ...producto, cantidad: cant });
+        }
+
+        actualizarCarrito();
+        respuestas.push(`${cant} de ${producto.nombre}`);
+
+        // 💡 PREDICCIÓN / SUGERENCIA IA
+        let stockRestante = producto.stock - (item ? item.cantidad : cant);
+        if (stockRestante <= 12 && stockRestante > 0) {
+            respuestas.push(`Quedan solo ${stockRestante} de ${producto.nombre}, te sugiero preparar más.`);
+        } else if (stockRestante <= 0) {
+            respuestas.push(`Cuidado, el inventario de ${producto.nombre} se ha agotado.`);
+        }
+        // --- AQUÍ EMPIEZAN LOS CIERRES CORRECTOS ---
+    } // Cierra el if (producto)
+}); // Cierra el comandos.forEach (¡Este es el que faltaba!)
+
+if (respuestas.length > 0) {responderConVoz("Agregado"); 
+}
+} // Cierra la función procesarVentaMultiproducto
+
 
     // === LÓGICA PARA ACTUALIZAR STOCK POR VOZ ===
     async function procesarInventario(frase) {
@@ -1149,7 +1167,6 @@ if (SpeechRecognition) {
         }
     }
 
-    // === COMPLETAR VENTA SILENCIOSA PARA LA IA ===
     async function completarVentaVoz(tipoDePago, clienteFiar) {
         let totalVenta = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0); //
         try {
@@ -1176,9 +1193,6 @@ if (SpeechRecognition) {
         }
     }
 }
-
-
-
 
 </script>
 
