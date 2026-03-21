@@ -1131,10 +1131,10 @@ function agregarAlCarritoDesdeIA(producto, cantidad) {
             precio: producto.precio,
             cantidad: cantidad
         });
-                }
-                actualizarCarrito(); // Asegúrate de tener esta función en tu código principal
-            }
-            responderConVoz("Producto agregado al carrito.");
+    }
+    actualizarCarrito(); // Renderiza la tabla en tu pantalla
+    responderConVoz(`Agregué ${cantidad} ${producto.nombre}.`);
+}
             break;
         case "ask_total":
             const total = carrito.reduce((sum, i) => sum + (i.precio * i.cantidad), 0);
