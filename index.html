@@ -971,18 +971,12 @@ if (SpeechRecognition) {
     recognition.interimResults = false;
     let modoAsistente = false;
 
-    // Diccionario robusto con y sin espacios
+    // Diccionario de Precios Coloquiales
     const preciosGT = {
-        "uno cincuenta": 1.50, "unocincuenta": 1.50,
-        "dos cincuenta": 2.50, "doscincuenta": 2.50,
-        "tres cincuenta": 3.50, "trescincuenta": 3.50,
-        "cuatro cincuenta": 4.50, "cuatrocincuenta": 4.50,
-        "cinco cincuenta": 5.50, "cincocincuenta": 5.50,
-        "seis cincuenta": 6.50, "seiscincuenta": 6.50,
-        "siete cincuenta": 7.50, "sietecincuenta": 7.50,
-        "ocho cincuenta": 8.50, "ochocincuenta": 8.50,
-        "nueve cincuenta": 9.50, "nuevecincuenta": 9.50,
-        "diez cincuenta": 10.50, "diezcincuenta": 10.50
+        "unocincuenta": 1.50, "unosincuenta": 1.50, "doscincuenta": 2.50,
+        "trescincuenta": 3.50, "cuatrocincuenta": 4.50, "cincocincuenta": 5.50,
+        "seiscincuenta": 6.50, "sietecincuenta": 7.50, "ochocincuenta": 8.50,
+        "nuevecincuenta": 9.50, "diezcincuenta": 10.50
     };
 
     const letrasANumeros = { "un": 1, "una": 1, "dos": 2, "tres": 3, "cuatro": 4, "cinco": 5, "seis": 6, "siete": 7, "ocho": 8, "nueve": 9, "diez": 10 };
@@ -1015,6 +1009,7 @@ if (SpeechRecognition) {
         let frase = event.results[0][0].transcript.toLowerCase().trim();
         console.log("IA escuchó:", frase);
         
+        // --- ACCIÓN 1: COBRAR EFECTIVO ---
         if (frase.includes("cobrar efectivo") || frase.includes("cerrar venta")) {
             if (carrito.length > 0) {
                 ejecutarVentaSilenciosa('efectivo', '');
@@ -1046,37 +1041,30 @@ if (SpeechRecognition) {
 
     function procesarPedidoIA(frase) {
         const comandos = frase.split(/\s+y\s+|\s+con\s+/);
-        let huboExito = false;
-        let avisoStock = "";
+        let confirmaciones = [];
 
         comandos.forEach(cmd => {
             let valor = 0;
             let esPrecio = cmd.includes("quetzal") || cmd.includes("quetzales");
             
-            // PRIORITY 1: Buscar en el diccionario de precios coloquiales primero
+            // Detectar precios locos como "unocincuenta"
             for (let clave in preciosGT) {
-                if (cmd.includes(clave)) { 
-                    valor = preciosGT[clave]; 
-                    esPrecio = true; 
-                    break; 
-                }
+                if (cmd.includes(clave)) { valor = preciosGT[clave]; esPrecio = true; break; }
             }
 
-            // PRIORITY 2: Si no se encontró en el diccionario, buscar números o letras
+            // Detectar números normales
             if (valor === 0) {
                 cmd.split(" ").forEach(p => {
-                    if (!isNaN(p) && p !== "") valor = parseFloat(p);
+                    if (!isNaN(p)) valor = parseFloat(p);
                     if (letrasANumeros[p]) valor = letrasANumeros[p];
                 });
             }
-            
             if (valor === 0) valor = 1;
 
             let prod = inventarioFirebase.find(p => cmd.includes(p.nombre.toLowerCase()));
             
             if (prod) {
-                // Si detectó "150" por error pero el producto cuesta menos (ej. 0.50), 
-                // es una señal de que el reconocimiento falló. Con la prioridad de arriba se arregla.
+                // LÓGICA ESTÁNDAR PARA TODOS (Se quitó la lógica especial de francés)
                 let cantFinal = esPrecio ? Math.floor(valor / prod.precio) : valor;
 
                 if (cantFinal > 0) {
@@ -1087,12 +1075,14 @@ if (SpeechRecognition) {
                     actualizarCarrito();
                     huboExito = true;
 
+                    // Mantener Predicción (Sugerencia de stock)
                     let stockReal = prod.stock - (item ? item.cantidad : cantFinal);
                     if (stockReal < 15) avisoStock = `. Atención, queda poco ${prod.nombre}`;
                 }
             }
         });
 
+        // Solo confirma "Agregado" + la predicción si aplica
         if (huboExito) hablar("Agregado" + avisoStock);
     }
 
@@ -1124,6 +1114,7 @@ if (SpeechRecognition) {
         actualizarCarrito();
     }
 }
+
 
 </script>
 
