@@ -982,7 +982,10 @@ if (SpeechRecognition) {
         "seiscincuenta": 6.50
     };
 
-    const numerosLetras = { "un": 1, "una": 1, "dos": 2, "tres": 3, "cuatro": 4, "cinco": 5, "seis": 6, "siete": 7, "ocho": 8, "nueve": 9, "diez": 10 };
+    const numerosLetras = { 
+        "un": 1, "una": 1, "dos": 2, "tres": 3, "cuatro": 4, 
+        "cinco": 5, "seis": 6, "siete": 7, "ocho": 8, "nueve": 9, "diez": 10 
+    };
 
     function activarVoz() {
         modoAsistente = !modoAsistente;
@@ -998,13 +1001,21 @@ if (SpeechRecognition) {
         }
     }
 
-    function iniciarEscucha() { if (modoAsistente) try { recognition.start(); } catch(e){} }
-    recognition.onend = () => { if (modoAsistente) iniciarEscucha(); };
+    function iniciarEscucha() { 
+        if (modoAsistente) {
+            try { recognition.start(); } catch(e){} 
+        } 
+    }
+    
+    recognition.onend = () => { 
+        if (modoAsistente) iniciarEscucha(); 
+    };
 
+    // --- FUNCIÓN DE VOZ RESTAURADA ---
     function hablar(texto) {
         const msn = new SpeechSynthesisUtterance(texto);
         msn.lang = 'es-GT';
-        msn.rate = 1.1;
+        msn.rate = 1.1; // Velocidad ligeramente acelerada
         window.speechSynthesis.speak(msn);
     }
 
@@ -1022,11 +1033,13 @@ if (SpeechRecognition) {
             }
         }
 
+        // --- ACCIÓN 2: REPORTE ---
         if (frase.includes("cuánto") || frase.includes("reporte")) {
             let totalVentas = ventasGlobales.reduce((s, v) => s + v.total, 0);
             return hablar(`Llevamos vendido un total de ${totalVentas.toFixed(2)} quetzales.`);
         }
 
+        // --- ACCIÓN 3: FIAR ---
         if (frase.includes("fiar a")) {
             let cliente = frase.split(" a ")[1] || "el cliente";
             hablar(`Entendido, registrado para ${cliente}.`);
@@ -1034,99 +1047,115 @@ if (SpeechRecognition) {
             return;
         }
 
-        if (frase.includes("entró pan") || frase.includes("agregar")) {
+        // --- ACCIÓN 4: INGRESO DE STOCK ---
+        if (frase.includes("entró pan") || frase.includes("agregar stock") || frase.includes("agregar")) {
             actualizarStockVoz(frase);
             return;
         }
 
+        // --- ACCIÓN 5: PROCESAR PEDIDO ---
         procesarPedidoIA(frase);
     };
 
     function procesarPedidoIA(frase) {
         const comandos = frase.split(/\s+y\s+|\s+con\s+/);
-        let confirmaciones = [];
+        let huboExito = false;
+        let avisoStock = ""; // Variable para concatenar la advertencia si hay poco pan
 
         comandos.forEach(cmd => {
             let valor = 0;
-    let esPorDinero = frase.includes("quetzal") || frase.includes("quetzales");
+            let esPorDinero = cmd.includes("quetzal") || cmd.includes("quetzales");
 
-    // Revisar si la frase contiene un modismo de precio (ej. "unosincuenta")
-    for (let modismo in modismosDinero) {
-        if (frase.includes(modismo)) {
-            valor = modismosDinero[modismo];
-            esPorDinero = true; // Si usa el modismo, automáticamente es una petición de dinero
-            break;
-        }
-    }
+            // 1. Revisar si la frase contiene un modismo de precio
+            for (let modismo in modismosDinero) {
+                if (cmd.includes(modismo)) {
+                    valor = modismosDinero[modismo];
+                    esPorDinero = true;
+                    break;
+                }
+            }
 
-    // Si no se encontró un modismo, buscamos números normales
-    if (valor === 0) {
-        frase.split(" ").forEach(p => {
-            if (!isNaN(p)) valor = parseFloat(p);
-            if (numerosLetras[p]) valor = numerosLetras[p];
-        });
-        if (valor === 0) valor = 1; // Si no hay número, asumimos 1
-    }
+            // 2. Si no hay modismo, buscar números
+            if (valor === 0) {
+                cmd.split(" ").forEach(p => {
+                    if (!isNaN(p)) valor = parseFloat(p);
+                    if (numerosLetras[p]) valor = numerosLetras[p];
+                });
+                if (valor === 0) valor = 1; 
+            }
 
-    // Buscar el producto en tu inventarioFirebase
-    let producto = inventarioFirebase.find(p => frase.includes(p.nombre.toLowerCase()));
-
-    if (producto) {
-        let cantidadFinal = 0;
-
+            // 3. Buscar producto en Firebase
             let prod = inventarioFirebase.find(p => cmd.includes(p.nombre.toLowerCase()));
-            
+
             if (prod) {
-                // LÓGICA ESTÁNDAR PARA TODOS (Se quitó la lógica especial de francés)
-                let cantFinal = esPrecio ? Math.floor(valor / prod.precio) : valor;
+                let cantFinal = esPorDinero ? Math.floor(valor / prod.precio) : valor;
 
                 if (cantFinal > 0) {
                     const item = carrito.find(i => i.id === prod.id);
-                    if (item) item.cantidad += cantFinal;
-                    else carrito.push({ id: prod.id, nombre: prod.nombre, precio: prod.precio, cantidad: cantFinal });
+                    if (item) {
+                        item.cantidad += cantFinal;
+                    } else {
+                        carrito.push({ id: prod.id, nombre: prod.nombre, precio: prod.precio, cantidad: cantFinal });
+                    }
                     
-                    actualizarCarrito();
                     huboExito = true;
 
-                    // Mantener Predicción (Sugerencia de stock)
+                    // Lógica de advertencia de stock bajo
                     let stockReal = prod.stock - (item ? item.cantidad : cantFinal);
-                    if (stockReal < 15) avisoStock = `. Atención, queda poco ${prod.nombre}`;
+                    if (stockReal < 15) {
+                        avisoStock = `. Atención, queda poco ${prod.nombre}`;
+                    }
                 }
             }
         });
 
-        // Solo confirma "Agregado" + la predicción si aplica
-        if (huboExito) hablar("Agregado" + avisoStock);
+        // Respuesta final agregando el aviso si es necesario
+        if (huboExito) {
+            actualizarCarrito(); 
+            hablar("Agregado" + avisoStock);
+        }
     }
 
     async function actualizarStockVoz(frase) {
         let prod = inventarioFirebase.find(p => frase.includes(p.nombre.toLowerCase()));
         let cant = 0;
         frase.split(" ").forEach(p => { if(!isNaN(p)) cant = parseInt(p); });
+        
         if (prod && cant > 0) {
-            await db.collection("inventario").doc(prod.id).update({ stock: firebase.firestore.FieldValue.increment(cant) });
+            await db.collection("inventario").doc(prod.id).update({ 
+                stock: firebase.firestore.FieldValue.increment(cant) 
+            });
             hablar(`Inventario actualizado`);
         }
     }
 
     async function ejecutarVentaSilenciosa(tipo, cliente) {
         if (carrito.length === 0) return;
+        
         let total = carrito.reduce((s, i) => s + (i.precio * i.cantidad), 0);
+        
         await db.collection("ventas").add({
-            vendedor: document.getElementById('display-vendedor').innerText,
+            vendedor: document.getElementById('display-vendedor').innerText || "Caja",
             productos: carrito,
             total: total,
-            tipo: tipo,
+            tipo: tipo, 
             cliente: cliente,
             timestamp: firebase.firestore.FieldValue.serverTimestamp()
         });
+
         const batch = db.batch();
-        carrito.forEach(i => batch.update(db.collection("inventario").doc(i.id), { stock: firebase.firestore.FieldValue.increment(-i.cantidad) }));
+        carrito.forEach(i => {
+            batch.update(db.collection("inventario").doc(i.id), { 
+                stock: firebase.firestore.FieldValue.increment(-i.cantidad) 
+            });
+        });
+        
         await batch.commit();
         carrito = [];
         actualizarCarrito();
     }
 }
+
 
 
 </script>
