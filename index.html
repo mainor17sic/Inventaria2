@@ -1007,8 +1007,8 @@ if (SpeechRecognition) {
 
     recognition.onresult = (event) => {
         let frase = event.results[0][0].transcript.toLowerCase().trim();
-        console.log("Comando recibido:", frase);
-
+        console.log("IA escuchó:", frase);
+        
         // --- ACCIÓN 1: COBRAR EFECTIVO ---
         if (frase.includes("cobrar efectivo") || frase.includes("cerrar venta")) {
             if (carrito.length > 0) {
@@ -1019,24 +1019,23 @@ if (SpeechRecognition) {
             }
         }
 
-        // --- ACCIÓN 2: FIAR AUTOMÁTICAMENTE ---
-        if (frase.includes("fiar a")) {
-            if (carrito.length > 0) {
-                let nombreCliente = frase.split(" a ")[1] || "Cliente";
-                ejecutarVentaSilenciosa('fiar', nombreCliente);
-                return hablar(`Fiado a ${nombreCliente}`);
-            } else {
-                return hablar("No hay productos para fiar");
-            }
-        }
-
-        // --- ACCIÓN 3: REPORTES ---
         if (frase.includes("cuánto") || frase.includes("reporte")) {
-            let total = ventasGlobales.reduce((s, v) => s + v.total, 0);
-            return hablar(`Llevamos ${total.toFixed(2)}`);
+            let totalVentas = ventasGlobales.reduce((s, v) => s + v.total, 0);
+            return hablar(`Llevamos vendido un total de ${totalVentas.toFixed(2)} quetzales.`);
         }
 
-        // --- ACCIÓN 4: VENTAS NORMALES ---
+        if (frase.includes("fiar a")) {
+            let cliente = frase.split(" a ")[1] || "el cliente";
+            hablar(`Entendido, registrado para ${cliente}.`);
+            ejecutarVentaSilenciosa('fiar', cliente);
+            return;
+        }
+
+        if (frase.includes("entró pan") || frase.includes("agregar")) {
+            actualizarStockVoz(frase);
+            return;
+        }
+
         procesarPedidoIA(frase);
     };
 
@@ -1047,65 +1046,71 @@ if (SpeechRecognition) {
 
         comandos.forEach(cmd => {
             let valor = 0;
-            let esPrecio = cmd.includes("quetzal");
+            let esPrecio = cmd.includes("quetzal") || cmd.includes("quetzales");
             
             for (let clave in preciosGT) {
                 if (cmd.includes(clave)) { valor = preciosGT[clave]; esPrecio = true; break; }
             }
 
             if (valor === 0) {
-                cmd.split(" ").forEach(p => { if (!isNaN(p)) valor = parseFloat(p); });
+                cmd.split(" ").forEach(p => {
+                    if (!isNaN(p)) valor = parseFloat(p);
+                    if (letrasANumeros[p]) valor = letrasANumeros[p];
+                });
             }
             if (valor === 0) valor = 1;
 
             let prod = inventarioFirebase.find(p => cmd.includes(p.nombre.toLowerCase()));
             
             if (prod) {
-                let cant = esPrecio ? Math.floor(valor / prod.precio) : valor;
-                const item = carrito.find(i => i.id === prod.id);
-                if (item) item.cantidad += cant;
-                else carrito.push({ id: prod.id, nombre: prod.nombre, precio: prod.precio, cantidad: cant });
-                
-                actualizarCarrito();
-                huboExito = true;
+                // LÓGICA ESTÁNDAR PARA TODOS (Se quitó la lógica especial de francés)
+                let cantFinal = esPrecio ? Math.floor(valor / prod.precio) : valor;
 
-                let stockReal = prod.stock - (item ? item.cantidad : cant);
-                if (stockReal < 15) avisoStock = `. Queda poco ${prod.nombre}`;
+                if (cantFinal > 0) {
+                    const item = carrito.find(i => i.id === prod.id);
+                    if (item) item.cantidad += cantFinal;
+                    else carrito.push({ id: prod.id, nombre: prod.nombre, precio: prod.precio, cantidad: cantFinal });
+                    
+                    actualizarCarrito();
+                    huboExito = true;
+
+                    // Mantener Predicción (Sugerencia de stock)
+                    let stockReal = prod.stock - (item ? item.cantidad : cantFinal);
+                    if (stockReal < 15) avisoStock = `. Atención, queda poco ${prod.nombre}`;
+                }
             }
         });
 
+        // Solo confirma "Agregado" + la predicción si aplica
         if (huboExito) hablar("Agregado" + avisoStock);
     }
 
-    // Función maestra para registrar en Firebase y limpiar todo
-    async function ejecutarVentaSilenciosa(tipo, cliente) {
-        let totalVenta = carrito.reduce((s, i) => s + (i.precio * i.cantidad), 0);
-        try {
-            // Guardar Venta
-            await db.collection("ventas").add({
-                vendedor: document.getElementById('display-vendedor').innerText,
-                productos: carrito,
-                total: totalVenta,
-                tipo: tipo,
-                cliente: cliente,
-                timestamp: firebase.firestore.FieldValue.serverTimestamp()
-            });
-
-            // Actualizar Stock en Batch
-            const batch = db.batch();
-            carrito.forEach(i => {
-                const ref = db.collection("inventario").doc(i.id);
-                batch.update(ref, { stock: firebase.firestore.FieldValue.increment(-i.cantidad) });
-            });
-            await batch.commit();
-
-            // Limpiar Interfaz
-            carrito = [];
-            actualizarCarrito();
-        } catch (e) {
-            console.error(e);
-            hablar("Error al registrar");
+    async function actualizarStockVoz(frase) {
+        let prod = inventarioFirebase.find(p => frase.includes(p.nombre.toLowerCase()));
+        let cant = 0;
+        frase.split(" ").forEach(p => { if(!isNaN(p)) cant = parseInt(p); });
+        if (prod && cant > 0) {
+            await db.collection("inventario").doc(prod.id).update({ stock: firebase.firestore.FieldValue.increment(cant) });
+            hablar(`Inventario actualizado`);
         }
+    }
+
+    async function ejecutarVentaSilenciosa(tipo, cliente) {
+        if (carrito.length === 0) return;
+        let total = carrito.reduce((s, i) => s + (i.precio * i.cantidad), 0);
+        await db.collection("ventas").add({
+            vendedor: document.getElementById('display-vendedor').innerText,
+            productos: carrito,
+            total: total,
+            tipo: tipo,
+            cliente: cliente,
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        const batch = db.batch();
+        carrito.forEach(i => batch.update(db.collection("inventario").doc(i.id), { stock: firebase.firestore.FieldValue.increment(-i.cantidad) }));
+        await batch.commit();
+        carrito = [];
+        actualizarCarrito();
     }
 }
 
