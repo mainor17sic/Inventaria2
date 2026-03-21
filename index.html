@@ -972,14 +972,17 @@ if (SpeechRecognition) {
     let modoAsistente = false;
 
     // Diccionario de Precios Coloquiales
-    const preciosGT = {
-        "unocincuenta": 1.50, "unosincuenta": 1.50, "doscincuenta": 2.50,
-        "trescincuenta": 3.50, "cuatrocincuenta": 4.50, "cincocincuenta": 5.50,
-        "seiscincuenta": 6.50, "sietecincuenta": 7.50, "ochocincuenta": 8.50,
-        "nuevecincuenta": 9.50, "diezcincuenta": 10.50
+    const modismosDinero = {
+        "unosincuenta": 1.50,
+        "unocincuenta": 1.50,
+        "doscincuenta": 2.50,
+        "trescincuenta": 3.50,
+        "cuatrocincuenta": 4.50,
+        "cincocincuenta": 5.50,
+        "seiscincuenta": 6.50
     };
 
-    const letrasANumeros = { "un": 1, "una": 1, "dos": 2, "tres": 3, "cuatro": 4, "cinco": 5, "seis": 6, "siete": 7, "ocho": 8, "nueve": 9, "diez": 10 };
+    const numerosLetras = { "un": 1, "una": 1, "dos": 2, "tres": 3, "cuatro": 4, "cinco": 5, "seis": 6, "siete": 7, "ocho": 8, "nueve": 9, "diez": 10 };
 
     function activarVoz() {
         modoAsistente = !modoAsistente;
@@ -1045,21 +1048,31 @@ if (SpeechRecognition) {
 
         comandos.forEach(cmd => {
             let valor = 0;
-            let esPrecio = cmd.includes("quetzal") || cmd.includes("quetzales");
-            
-            // Detectar precios locos como "unocincuenta"
-            for (let clave in preciosGT) {
-                if (cmd.includes(clave)) { valor = preciosGT[clave]; esPrecio = true; break; }
-            }
+    let esPorDinero = frase.includes("quetzal") || frase.includes("quetzales");
 
-            // Detectar números normales
-            if (valor === 0) {
-                cmd.split(" ").forEach(p => {
-                    if (!isNaN(p)) valor = parseFloat(p);
-                    if (letrasANumeros[p]) valor = letrasANumeros[p];
-                });
-            }
-            if (valor === 0) valor = 1;
+    // Revisar si la frase contiene un modismo de precio (ej. "unosincuenta")
+    for (let modismo in modismosDinero) {
+        if (frase.includes(modismo)) {
+            valor = modismosDinero[modismo];
+            esPorDinero = true; // Si usa el modismo, automáticamente es una petición de dinero
+            break;
+        }
+    }
+
+    // Si no se encontró un modismo, buscamos números normales
+    if (valor === 0) {
+        frase.split(" ").forEach(p => {
+            if (!isNaN(p)) valor = parseFloat(p);
+            if (numerosLetras[p]) valor = numerosLetras[p];
+        });
+        if (valor === 0) valor = 1; // Si no hay número, asumimos 1
+    }
+
+    // Buscar el producto en tu inventarioFirebase
+    let producto = inventarioFirebase.find(p => frase.includes(p.nombre.toLowerCase()));
+
+    if (producto) {
+        let cantidadFinal = 0;
 
             let prod = inventarioFirebase.find(p => cmd.includes(p.nombre.toLowerCase()));
             
