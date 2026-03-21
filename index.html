@@ -963,135 +963,183 @@
     }
     
     // === MÓDULO DE RECONOCIMIENTO MULTI-PRODUCTO ===
-// === MÓDULO DE RECONOCIMIENTO MULTI-PRODUCTO ===
-const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
-if (SpeechRecognition) {
-    const recognition = new SpeechRecognition();
-    recognition.lang = 'es-GT';
-    recognition.interimResults = false;
-    recognition.continuous = false; 
+    if (SpeechRecognition) {
+        const recognition = new SpeechRecognition();
+        recognition.lang = 'es-GT';
+        recognition.interimResults = false;
+        recognition.continuous = false; 
 
-    let modoSiempreActivo = false;
+        let modoSiempreActivo = false;
 
-    // Diccionarios de conversión
-    const preciosGT = {
-        "uno cincuenta": 1.50, "uno cincuenta": 1.50, "dos cincuenta": 2.50,
-        "tres cincuenta": 3.50, "cuatro cincuenta": 4.50, "cinco cincuenta": 5.50,
-        "seis cincuenta": 6.50, "siete cincuenta": 7.50, "ocho cincuenta": 8.50,
-        "nueve cincuenta": 9.50, "diez cincuenta": 10.50
-    };
-
-    const letrasANumeros = { 
-        "un": 1, "una": 1, "dos": 2, "tres": 3, "cuatro": 4, "cinco": 5, 
-        "seis": 6, "siete": 7, "ocho": 8, "nueve": 9, "diez": 10 
-    };
-
-    function activarVoz() {
-        if (!modoSiempreActivo) {
-            modoSiempreActivo = true;
-            iniciarEscucha();
-        } else {
-            modoSiempreActivo = false;
-            recognition.stop();
-            const btn = document.getElementById('btn-voz');
-            btn.innerText = "🎤 Ordenar por Voz";
-            btn.style.backgroundColor = "#2980b9";
-        }
-    }
-
-    function iniciarEscucha() {
-        if (modoSiempreActivo) {
-            try {
-                recognition.start();
+        function activarVoz() {
+            if (!modoSiempreActivo) {
+                modoSiempreActivo = true;
+                iniciarEscucha();
+            } else {
+                modoSiempreActivo = false;
+                recognition.stop();
                 const btn = document.getElementById('btn-voz');
-                btn.innerText = "👂 Escuchando...";
-                btn.style.backgroundColor = "#27ae60"; 
-            } catch (e) { /* Evita errores por re-inicio */ }
-        }
-    }
-
-    recognition.onend = () => { if (modoSiempreActivo) iniciarEscucha(); };
-
-    recognition.onresult = (event) => {
-        const fraseCompleta = event.results[0][0].transcript.toLowerCase();
-        // Divide por conectores comunes para pedidos múltiples
-        const comandos = fraseCompleta.split(/\s+y\s+|\s+con\s+/);
-        
-        comandos.forEach(comando => {
-            procesarComandoVoz(comando.trim());
-        });
-    };
-
-    function procesarComandoVoz(frase) {
-        if (frase.includes("limpiar") || frase.includes("vaciar") || frase.includes("borrar todo")) {
-        carrito = []; // Vacía la variable del carrito
-        actualizarCarrito(); // Refresca la interfaz
-        return; // Detiene el proceso para que no busque productos
-    }
-        if (frase.includes("cobrar") || frase.includes("terminar")) {
-    completarVenta('efectivo');
-    return;
-}
-
-if (frase.includes("fiar")) {
-    completarVenta('fiar');
-    return;
-}
-
-        let valor = 1;
-        let esPorDinero = frase.includes("quetzal") || frase.includes("quetzales");
-        
-        // 1. Verificar primero precios coloquiales (ej. "unocincuenta")
-        let detectadoColoquial = false;
-        for (let clave in preciosGT) {
-            if (frase.includes(clave)) {
-                valor = preciosGT[clave];
-                detectadoColoquial = true;
-                esPorDinero = true; // Si usa estos términos, usualmente habla de dinero
-                break;
+                btn.innerText = "🎤 Ordenar por Voz";
+                btn.style.backgroundColor = "#2980b9";
             }
         }
 
-        // 2. Si no es coloquial, buscar números normales o en letras
-        if (!detectadoColoquial) {
-            let palabras = frase.split(" ");
-            palabras.forEach(p => {
-                if (!isNaN(p) && p.trim() !== "") valor = parseFloat(p);
-                if (letrasANumeros[p]) valor = letrasANumeros[p];
-            });
+        function iniciarEscucha() {
+            if (modoSiempreActivo) {
+                try {
+                    recognition.start();
+                    const btn = document.getElementById('btn-voz');
+                    btn.innerText = "👂 Escuchando...";
+                    btn.style.backgroundColor = "#27ae60"; 
+                } catch (e) { /* Evita errores por re-inicio */ }
+            }
         }
 
-        // 3. Buscar el producto en el inventario
-        let producto = inventarioFirebase.find(p => frase.includes(p.nombre.toLowerCase()));
+        recognition.onend = () => { if (modoSiempreActivo) iniciarEscucha(); };
 
-        if (producto) {
-            // Si es por dinero (Q5 de pan), divide; si no, usa el valor directo (5 panes)
-            let cantidadFinal = esPorDinero ? Math.floor(valor / producto.precio) : valor;
+        // === 1. EL DISPARADOR (TRIGGER) ===
+        recognition.onresult = async (event) => {
+            // Capturamos toda la frase completa de una vez
+            const fraseCompleta = event.results[0][0].transcript.toLowerCase();
+            console.log("Comando recibido:", fraseCompleta);
+            
+            // Cambio visual temporal para que el usuario sepa que la IA está pensando
+            const btn = document.getElementById('btn-voz');
+            btn.innerText = "🧠 Procesando...";
+            btn.style.backgroundColor = "#f39c12";
 
-            if (cantidadFinal > 0) {
-                const itemExistente = carrito.find(item => item.id === producto.id);
-                if (itemExistente) {
-                    itemExistente.cantidad += cantidadFinal;
-                } else {
-                    carrito.push({ 
-                        id: producto.id, 
-                        nombre: producto.nombre, 
-                        precio: producto.precio, 
-                        cantidad: cantidadFinal 
+            // Detenemos la escucha temporalmente para no cruzar audios mientras Gemini procesa
+            recognition.stop(); 
+
+            // Llamamos a la función de la IA
+            await procesarComandoVoz(fraseCompleta);
+
+            // Si el modo voz sigue activo, reanudamos la escucha
+            if (modoSiempreActivo) iniciarEscucha();
+        };
+
+        // === 2. LA LÓGICA DE GEMINI ===
+        async function procesarComandoVoz(frase) {
+            const inventarioContexto = inventarioFirebase.map(p => ({
+                id: p.id,
+                nombre: p.nombre,
+                precio: p.precio,
+                stock: p.stock
+            }));
+
+            // ⚠️ IMPORTANTE: Pon tu API Key real aquí
+            const GEMINI_API_KEY = "AIzaSyD3Jdvko8i5c0js8V3cjrm5QPAL6uoT8Nw"; 
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+
+            // Le indicamos a la IA que ahora también debe generar una respuesta hablada
+            const promptTexto = `
+            Eres el asistente inteligente de ventas de Panadería Marvin.
+            Convierte el comando del usuario en acciones y genera una respuesta corta y natural para decir en voz alta.
+            
+            Inventario actual:
+            ${JSON.stringify(inventarioContexto)}
+
+            Reglas:
+            1. Interpreta términos de Guatemala (ej. "uno cincuenta" es 1.50).
+            2. Si el pedido es por valor monetario, divide el valor entre el precio para la cantidad.
+            3. Si menciona "fiar", usa "cobrar_fiar". Si dice "efectivo" o "cobrar", usa "cobrar_efectivo".
+            4. Devuelve ÚNICAMENTE un objeto JSON con dos propiedades: "acciones" (arreglo) y "mensaje_voz" (texto).
+            
+            Comando del usuario: "${frase}"
+            
+            Ejemplo de salida exacta:
+            {
+              "acciones": [{"accion": "agregar", "id": "frances", "cantidad": 5}],
+              "mensaje_voz": "Listo, agregué cinco franceses al carrito."
+            }
+            `;
+
+            try {
+                const response = await fetch(url, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: promptTexto }] }],
+                        generationConfig: { responseMimeType: "application/json" }
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.error) {
+                    console.error("Error de la API:", data.error.message);
+                    return;
+                }
+
+                // Extraemos el JSON que incluye las acciones y el mensaje
+                const respuestaGemini = data.candidates[0].content.parts[0].text;
+                const jsonIA = JSON.parse(respuestaGemini);
+
+                // === NUEVO: HACER QUE LA IA HABLE ===
+                if (jsonIA.mensaje_voz) {
+                    const mensajeHablado = new SpeechSynthesisUtterance(jsonIA.mensaje_voz);
+                    mensajeHablado.lang = 'es-GT'; // Español de Guatemala (o 'es-ES' / 'es-US')
+                    mensajeHablado.rate = 1.0; // Velocidad normal
+                    window.speechSynthesis.speak(mensajeHablado);
+                }
+
+                // === EJECUTAR LAS ACCIONES ===
+                if (jsonIA.acciones && Array.isArray(jsonIA.acciones)) {
+                    jsonIA.acciones.forEach(cmd => {
+                        switch(cmd.accion) {
+                            case 'limpiar_carrito':
+                                carrito = [];
+                                break;
+                            case 'cobrar_efectivo':
+                                completarVenta('efectivo');
+                                break;
+                            case 'cobrar_fiar':
+                                completarVenta('fiar');
+                                break;
+                            case 'agregar':
+                                if(cmd.id && cmd.cantidad > 0) {
+                                    const productoBD = inventarioFirebase.find(p => p.id === cmd.id);
+                                    if(productoBD) {
+                                        const itemExistente = carrito.find(item => item.id === productoBD.id);
+                                        const cantidadPrevia = itemExistente ? itemExistente.cantidad : 0;
+                                        
+                                        if ((cmd.cantidad + cantidadPrevia) > productoBD.stock) {
+                                            // Si no hay stock, la IA también podría decírtelo, pero aquí mantenemos la alerta visual por seguridad
+                                            alert(`Stock insuficiente de ${productoBD.nombre}. Quedan ${productoBD.stock - cantidadPrevia}.`);
+                                        } else {
+                                            if (itemExistente) {
+                                                itemExistente.cantidad += cmd.cantidad;
+                                            } else {
+                                                carrito.push({
+                                                    id: productoBD.id,
+                                                    nombre: productoBD.nombre,
+                                                    precio: productoBD.precio,
+                                                    cantidad: cmd.cantidad
+                                                });
+                                            }
+                                        }
+                                    }
+                                }
+                                break;
+                        }
                     });
                 }
-                actualizarCarrito(); 
 
-                // === NUEVO: Bajar el scroll ===
+                // Refrescar la interfaz
+                actualizarCarrito();
+                
                 const listaVoz = document.getElementById('carrito-lista');
                 if (listaVoz) {
                     listaVoz.scrollTop = listaVoz.scrollHeight;
                 }
-            } // Cierra el if (cantidadFinal > 0)
-        } // Cierra el if (producto)
-    } // Cierra la función procesarComandoVoz (Línea 1083 aprox)
-} // Cierra el if (SpeechRecognition) inicial (Línea 1084 aprox)
+
+            } catch (error) {
+                console.error("Error al procesar el comando con Gemini:", error);
+            }
+        }
+    } // Cierra el if (SpeechRecognition)
 </script>
 
 </body>
