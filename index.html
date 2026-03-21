@@ -909,12 +909,11 @@ const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemi
     // ============================================================
     let modoAsistenteActivo = false;
 let recognition = null;
-let procesandoComando = false; // Nueva variable para evitar que escuche mientras habla
+let procesandoComando = false; // Evita que el micrófono escuche mientras la IA habla o piensa
 
 function activarVoz() {
     modoAsistenteActivo = !modoAsistenteActivo;
     const btn = document.getElementById('btn-voz');
-    
     if (modoAsistenteActivo) {
         btn.innerText = "🤖 Asistente IA Activo...";
         btn.style.backgroundColor = "#27ae60";
@@ -931,14 +930,11 @@ function iniciarReconocimientoVoz() {
         alert("Tu navegador no soporta reconocimiento de voz. Usa Google Chrome.");
         return;
     }
-    
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     recognition = new SpeechRecognition();
-    
-    // Si 'es-GT' te da problemas, puedes intentar con 'es-ES' o 'es-MX'
-    recognition.lang = 'es-GT'; 
+    recognition.lang = 'es-GT';
     recognition.interimResults = false;
-    recognition.continuous = false;
+    recognition.continuous = false; // Mejor en false para controlarlo nosotros
 
     recognition.onstart = () => {
         console.log("🎤 Escuchando...");
@@ -948,52 +944,39 @@ function iniciarReconocimientoVoz() {
         const texto = event.results[0][0].transcript;
         console.log("🗣️ Usuario dijo:", texto);
         
-        // Pausar el micrófono mientras procesa y habla
+        // Pausamos la escucha para que no se escuche a sí mismo ni se trabe
         procesandoComando = true;
-        recognition.stop(); 
+        recognition.stop();
         
         await procesarConGemini(texto);
         
         procesandoComando = false;
         
-        // Volver a encender el micro si el asistente sigue activo
+        // Reiniciar escucha si el modo sigue activo
         if (modoAsistenteActivo) {
             try { recognition.start(); } catch(e){}
         }
     };
 
-    recognition.onerror = (event) => {
-        console.warn("⚠️ Error en el micrófono:", event.error);
-        // NO intentamos reiniciar aquí. Se lo dejamos a 'onend' para evitar bucles.
-        
-        // Si el usuario denegó el permiso, apagamos el botón automáticamente
-        if (event.error === 'not-allowed') {
+    recognition.onerror = (err) => {
+        console.warn("⚠️ Error reconocimiento:", err.error);
+        // NO forzamos el reinicio aquí para evitar el "bugeo". Se lo dejamos a onend.
+        if (err.error === 'not-allowed') {
             modoAsistenteActivo = false;
-            const btn = document.getElementById('btn-voz');
-            if(btn) {
-                btn.innerText = "🎤 Asistente IA (Gemini)";
-                btn.style.backgroundColor = "#2980b9";
-            }
-            alert("Debes dar permiso al micrófono en tu navegador.");
+            document.getElementById('btn-voz').innerText = "🎤 Asistente IA (Gemini)";
+            document.getElementById('btn-voz').style.backgroundColor = "#2980b9";
+            alert("Permiso de micrófono denegado.");
         }
     };
 
     recognition.onend = () => {
-        // Solo reiniciamos si el modo está activo y NO está procesando un comando
+        // Solo reinicia si el botón está encendido y la IA no está pensando/hablando
         if (modoAsistenteActivo && !procesandoComando) {
-            try {
-                recognition.start();
-            } catch (e) {
-                console.error("No se pudo reiniciar el micro:", e);
-            }
+            try { recognition.start(); } catch(e){}
         }
     };
 
-    try {
-        recognition.start();
-    } catch (e) {
-        console.error("Error al iniciar el micrófono:", e);
-    }
+    try { recognition.start(); } catch(e){}
 }
 
 async function procesarConGemini(textoUsuario) {
@@ -1001,32 +984,37 @@ async function procesarConGemini(textoUsuario) {
 Eres un asistente virtual de una panadería llamada "Panadería Marvin".
 Debes clasificar el mensaje del usuario en uno de estos dos tipos:
 
-1. **Comando de negocio**: si el usuario quiere realizar una acción de ventas (agregar productos, cobrar, fiar, preguntar por el total del carrito, reporte de ventas del turno, agregar stock a un producto, etc.). Responde ÚNICAMENTE con un objeto JSON:
+1. **Comando de negocio**: si el usuario quiere realizar una acción de ventas (agregar productos, cobrar, fiar, preguntar por el total del carrito, reporte de ventas del turno, agregar stock a un producto, etc.). En ese caso debes responder ÚNICAMENTE con un objeto JSON con la siguiente estructura:
    {
      "type": "command",
      "action": "add" | "ask_total" | "cash" | "credit" | "report" | "add_stock",
+     "response": "mensaje corto de confirmación que dirás en voz alta",
      ... (parámetros según la acción)
    }
    
-   - Para "add": "items": [{"name":"nombre_producto","quantity":cantidad}]
-   - Para "credit": "customer": "nombre_cliente"
-   - Para "add_stock": "product":"nombre_producto","quantity":cantidad
+   - Para "add": incluir "items": [{"name":"nombre_producto","quantity":cantidad}]
+   - Para "credit": incluir "customer": "nombre_cliente"
+   - Para "add_stock": incluir "product":"nombre_producto","quantity":cantidad
 
-   Si menciona dinero (ej. "un quetzal de francés"), convierte a cantidad (Q0.50 c/u, entonces 1 quetzal = 2 unidades). "Una tira" = 6 unidades.
+   REGLAS DE CANTIDAD:
+   Si el usuario menciona dinero en lugar de cantidad (ej. "un quetzal de francés"), convierte el dinero a cantidad según el precio del producto (cada francés cuesta 0.50, entonces 1 quetzal = 2 unidades. 5 quetzales = 10 unidades).
+   Si dice "una tira de francés", son 6 panes.
 
-2. **Consulta general**: si no está relacionado con operaciones. Responde ÚNICAMENTE con JSON:
+2. **Consulta general**: si el usuario hace una pregunta o comentario que NO está relacionado con las operaciones de la panadería. Responde ÚNICAMENTE con un objeto JSON:
    {
      "type": "chat",
      "response": "tu respuesta amigable aquí"
    }
 
-INVENTARIO ACTUAL:
+INVENTARIO ACTUAL (solo nombres y precios):
 ${JSON.stringify(inventarioFirebase.map(p => ({ nombre: p.nombre, precio: p.precio, stock: p.stock })))}
 
 CARRITO ACTUAL:
 ${JSON.stringify(carrito)}
 
-TEXTO: "${textoUsuario}"
+TEXTO DEL USUARIO: "${textoUsuario}"
+
+Responde solo con el JSON, sin texto adicional ni bloques de código markdown.
 `;
 
     try {
@@ -1041,105 +1029,65 @@ TEXTO: "${textoUsuario}"
         
         const data = await respuesta.json();
         
-        if (!data.candidates) throw new Error("La API no devolvió candidatos.");
+        if (!data.candidates) throw new Error("Error en la respuesta de la API");
         
         let textoRespuesta = data.candidates[0].content.parts[0].text;
         
-        // --- LIMPIEZA CRÍTICA PARA EVITAR ERRORES DE PARSEO ---
+        // LIMPIEZA CRÍTICA: Quita etiquetas markdown que Gemini a veces añade
         textoRespuesta = textoRespuesta.replace(/```json|```/g, "").trim();
         const resultado = JSON.parse(textoRespuesta);
 
         if (resultado.type === "command") {
-            await ejecutarAccionGemini(resultado);
             if (resultado.response) responderConVoz(resultado.response);
+            await ejecutarAccionGemini(resultado);
         } else if (resultado.type === "chat") {
             responderConVoz(resultado.response);
         } else {
             responderConVoz("No entendí bien. Intenta de nuevo.");
         }
     } catch (error) {
-        console.error("❌ Error con Gemini o parseando JSON:", error);
-        responderConVoz("Lo siento, hubo un problema procesando tu solicitud.");
+        console.error("❌ Error con Gemini o JSON:", error);
+        responderConVoz("Lo siento, hubo un problema al procesar tu voz.");
     }
 }
 
 async function ejecutarAccionGemini(comando) {
-    console.log("Comando recibido de Gemini:", comando);
-
     switch (comando.action) {
-        case "add": 
-            // Se activa cuando dices: "Agrega...", "Pon...", "Dame..."
+        case "add":
             for (let item of comando.items) {
-                const producto = inventarioFirebase.find(p => 
-                    p.nombre.toLowerCase().includes(item.name.toLowerCase())
-                );
-                if (producto) {
-                    agregarAlCarritoDesdeIA(producto, item.quantity);
-                } else {
-                    responderConVoz(`No encontré el producto ${item.name}`);
+                // Buscamos ignorando mayúsculas y minúsculas
+                const producto = inventarioFirebase.find(p => p.nombre.toLowerCase().includes(item.name.toLowerCase()));
+                if (!producto) {
+                    responderConVoz(`No encontré ${item.name} en el inventario.`);
+                    continue;
                 }
+                const existente = carrito.find(i => i.id === producto.id);
+                const cantidadActual = existente ? existente.cantidad : 0;
+                
+                if (cantidadActual + item.quantity > producto.stock) {
+                    responderConVoz(`Stock insuficiente para ${producto.nombre}. Solo quedan ${producto.stock - cantidadActual} unidades.`);
+                    continue;
+                }
+                
+                if (existente) {
+                    existente.cantidad += item.quantity;
+                } else {
+                    carrito.push({
+                        id: producto.id,
+                        nombre: producto.nombre,
+                        precio: producto.precio,
+                        cantidad: item.quantity
+                    });
+                }
+                actualizarCarrito(); // Función de tu código principal
             }
             break;
-
-        case "cash": 
-            // Se activa cuando dices: "Cobra esto", "Pagan en efectivo", "Ya estuvo"
-            if (carrito.length === 0) {
-                responderConVoz("El carrito está vacío, no hay nada que cobrar.");
-            } else {
-                responderConVoz("Entendido, procesando cobro en efectivo.");
-                await completarVentaVoz('efectivo', '');
-            }
-            break;
-
-        case "credit": 
-            // Se activa cuando dices: "Fíaselo a Juan", "Ponlo a la cuenta de María"
-            if (carrito.length === 0) {
-                responderConVoz("No hay productos para fiar.");
-            } else {
-                let cliente = comando.customer || "Cliente General";
-                responderConVoz(`Muy bien, anotado a la cuenta de ${cliente}.`);
-                await completarVentaVoz('fiar', cliente);
-            }
-            break;
-
-        case "ask_total":
-            // Se activa cuando dices: "¿Cuánto va?", "¿Cuál es el total?"
-            const total = carrito.reduce((sum, i) => sum + (i.precio * i.cantidad), 0);
-            responderConVoz(`El total de la venta es de ${total.toFixed(2)} quetzales.`);
-            break;
-
-        case "report":
-            // Se activa cuando dices: "¿Cuánto llevamos vendido?", "Dame el reporte"
-            let totalVendido = ventasGlobales.reduce((sum, v) => sum + v.total, 0);
-            responderConVoz(`Hasta ahora se han vendido Q${totalVendido.toFixed(2)} en este turno.`);
-            break;
-
-        default:
-            responderConVoz("Entiendo lo que quieres, pero no puedo realizar esa acción todavía.");
-    }
-}
-
-// Función auxiliar para asegurar que el carrito se actualice bien
-function agregarAlCarritoDesdeIA(producto, cantidad) {
-    const existente = carrito.find(i => i.id === producto.id);
-    if (existente) {
-        existente.cantidad += cantidad;
-    } else {
-        carrito.push({
-            id: producto.id,
-            nombre: producto.nombre,
-            precio: producto.precio,
-            cantidad: cantidad
-        });
-    }
-    actualizarCarrito(); // Renderiza la tabla en tu pantalla
-    responderConVoz(`Agregué ${cantidad} ${producto.nombre}.`);
-}
-            break;
+            
         case "ask_total":
             const total = carrito.reduce((sum, i) => sum + (i.precio * i.cantidad), 0);
-            responderConVoz(`El total del carrito es Q${total.toFixed(2)}.`);
+            responderConVoz(`El total del carrito es de Q${total.toFixed(2)}.`);
             break;
+            
         case "cash":
             if (carrito.length === 0) {
                 responderConVoz("El carrito está vacío. No puedo cobrar.");
@@ -1147,33 +1095,35 @@ function agregarAlCarritoDesdeIA(producto, cantidad) {
             }
             await completarVentaVoz('efectivo', '');
             break;
+            
         case "credit":
             if (carrito.length === 0) {
                 responderConVoz("El carrito está vacío. No puedo fiar.");
                 return;
             }
-            let cliente = comando.customer || "Cliente sin nombre";
+            let cliente = comando.customer || "Cliente general";
             await completarVentaVoz('fiar', cliente);
             break;
+            
         case "report":
-            // Asume que ventasGlobales existe en tu código principal
-            let totalVendido = ventasGlobales ? ventasGlobales.reduce((sum, v) => sum + v.total, 0) : 0;
+            let totalVendido = (typeof ventasGlobales !== 'undefined') ? ventasGlobales.reduce((sum, v) => sum + v.total, 0) : 0;
             responderConVoz(`Llevamos ${totalVendido.toFixed(2)} quetzales vendidos en este turno.`);
             break;
+            
         case "add_stock":
-            const prodStock = inventarioFirebase.find(p => p.nombre.toLowerCase() === comando.product.toLowerCase());
+            const prodStock = inventarioFirebase.find(p => p.nombre.toLowerCase().includes(comando.product.toLowerCase()));
             if (prodStock) {
                 await db.collection("inventario").doc(prodStock.id).update({
                     stock: firebase.firestore.FieldValue.increment(comando.quantity)
                 });
                 responderConVoz(`Se agregaron ${comando.quantity} unidades de ${prodStock.nombre}.`);
             } else {
-                responderConVoz(`No encontré el producto.`);
+                responderConVoz(`No encontré el producto ${comando.product}.`);
             }
             break;
+            
         default:
             console.warn("Acción desconocida:", comando.action);
-            responderConVoz("No entendí esa acción.");
     }
 }
 
@@ -1181,35 +1131,42 @@ async function completarVentaVoz(tipoDePago, clienteFiar) {
     if (carrito.length === 0) return;
     let totalVenta = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
     try {
+        let vendedorNombre = "Asistente IA";
+        const displayVendedor = document.getElementById('display-vendedor');
+        if (displayVendedor) vendedorNombre = displayVendedor.innerText;
+
         await db.collection("ventas").add({
-            vendedor: document.getElementById('display-vendedor').innerText,
+            vendedor: vendedorNombre,
             productos: carrito,
             total: totalVenta,
             tipo: tipoDePago,
             cliente: clienteFiar,
             timestamp: firebase.firestore.FieldValue.serverTimestamp()
         });
+        
         const batch = db.batch();
         carrito.forEach(item => {
             const docRef = db.collection("inventario").doc(item.id);
             batch.update(docRef, { stock: firebase.firestore.FieldValue.increment(-item.cantidad) });
         });
         await batch.commit();
+        
         carrito = [];
-        actualizarCarrito(); // Asegúrate de tener esta función en tu código principal
-        responderConVoz("Venta registrada correctamente.");
+        actualizarCarrito(); // Función de tu código principal
+        responderConVoz("Venta guardada exitosamente.");
     } catch (error) {
-        console.error(error);
-        responderConVoz("Error al guardar la venta.");
+        console.error("Error al guardar la venta:", error);
+        responderConVoz("Error al guardar la venta en la base de datos.");
     }
 }
 
 function responderConVoz(mensaje) {
+    if (!window.speechSynthesis) return;
     const synth = window.speechSynthesis;
     const utterance = new SpeechSynthesisUtterance(mensaje);
-    utterance.lang = 'es-GT'; // Voz en español
+    utterance.lang = 'es-GT';
     utterance.rate = 1.1;
-    synth.cancel(); // Cancela cualquier voz anterior
+    synth.cancel(); // Detiene cualquier audio anterior
     synth.speak(utterance);
 }
 </script>
