@@ -3,15 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Panadería Marvin - Control de Turno (Híbrido)</title>
+    <title>Panadería Marvin - Asistente IA Local (WebLLM)</title>
 
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <!-- WebLLM -->
+    <script src="https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm@0.2.46/dist/web-llm.js"></script>
 
     <style>
-        /* === ESTILOS BASE Y RESET === */ 
+        /* === ESTILOS (SIN CAMBIOS) === */
         body { 
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
             background-color: #f0f2f5; 
@@ -24,7 +26,6 @@
 
         h1, h2, h3, h4 { color: #333; margin-top: 0; }
 
-        /* === CONTENEDOR PRINCIPAL RESPONSIVO === */
         .container { 
             width: 100%;
             max-width: 1200px; 
@@ -61,7 +62,6 @@
         .btn-success { background-color: #27ae60; }
         .btn-success:hover { background-color: #2ecc71; }
 
-        /* === PESTAÑAS (TABS) === */
         .tabs { display: flex; border-bottom: 2px solid #ddd; margin-bottom: 20px; flex-wrap: wrap; }
         .tab { 
             padding: 12px 18px; cursor: pointer; background: #f8f9fa; border: 1px solid #ddd;
@@ -74,7 +74,6 @@
         .tab-content.active { display: block; animation: fadeIn 0.5s; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-        /* === TABLAS RESPONSIVAS === */
         .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; border-radius: 8px; overflow: hidden; min-width: 500px; }
         th, td { padding: 12px; border: 1px solid #eee; text-align: left; }
@@ -92,7 +91,6 @@
         .productos-section { flex: 2; }
         .cart-section { flex: 1; padding: 15px; border: 2px dashed #d35400; border-radius: 8px; background-color: #fffaf5; height: fit-content; }
 
-        /* === ESTILOS PARA IMÁGENES Y TARJETAS === */
         #productos-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); 
@@ -141,76 +139,66 @@
         .producto-card.sin-stock { opacity: 0.5; cursor: not-allowed; background: #f4f4f4; }
         .producto-card.sin-stock .producto-img { filter: grayscale(100%); } 
 
-        /* === CARRITO Y TABLAS (ADAPTABLE PC Y MÓVIL) === */
-#carrito-lista { 
-    list-style: none; 
-    padding: 0; 
-    margin: 0 0 15px 0; 
-    overflow-y: auto;  
-    border: 1px dashed #e67e22;
-    border-radius: 5px;
-    background-color: #fffaf5;
+        #carrito-lista { 
+            list-style: none; 
+            padding: 0; 
+            margin: 0 0 15px 0; 
+            overflow-y: auto;  
+            border: 1px dashed #e67e22;
+            border-radius: 5px;
+            background-color: #fffaf5;
+            max-height: 280px; 
+        }
 
-    /* Altura para MÓVIL por defecto */
-    max-height: 280px; 
-}
+        @media (min-width: 768px) {
+            #carrito-lista { max-height: 500px; }
+        }
 
-/* Ajuste específico para PANTALLAS GRANDES (PC/Escritorio) */
-@media (min-width: 768px) {
-    #carrito-lista {
-        max-height: 500px; /* En PC tenemos más espacio vertical */
-    }
-}
+        #carrito-lista::-webkit-scrollbar {
+            width: 8px;
+        }
+        #carrito-lista::-webkit-scrollbar-thumb {
+            background: #e67e22; 
+            border-radius: 10px;
+        }
+        #carrito-lista::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
 
-/* Estilo para la barra de scroll (Naranja Panadería) */
-#carrito-lista::-webkit-scrollbar {
-    width: 8px;
-}
-#carrito-lista::-webkit-scrollbar-thumb {
-    background: #e67e22; 
-    border-radius: 10px;
-}
-#carrito-lista::-webkit-scrollbar-track {
-    background: #f1f1f1;
-}
+        #carrito-lista li { 
+            background: #fff; 
+            padding: 10px; 
+            border-bottom: 1px solid #eee; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            font-size: 15px;
+        }
 
-#carrito-lista li { 
-    background: #fff; 
-    padding: 10px; 
-    border-bottom: 1px solid #eee; 
-    display: flex; 
-    justify-content: space-between; 
-    align-items: center; 
-    font-size: 15px;
-}
+        .cart-total-area { 
+            border-top: 2px solid #ddd; 
+            padding-top: 10px; 
+            text-align: right; 
+            background: white;
+        }
 
-/* Área de total y botones siempre visibles */
-.cart-total-area { 
-    border-top: 2px solid #ddd; 
-    padding-top: 10px; 
-    text-align: right; 
-    background: white;
-}
+        .cart-botones { 
+            display: flex; 
+            flex-direction: column; 
+            gap: 8px; 
+            margin-top: 15px; 
+        }
 
-.cart-botones { 
-    display: flex; 
-    flex-direction: column; 
-    gap: 8px; 
-    margin-top: 15px; 
-}
+        .cart-botones button { 
+            width: 100%; 
+            font-size: 16px; 
+            padding: 12px; 
+            font-weight: bold;
+            cursor: pointer;
+        }
 
-.cart-botones button { 
-    width: 100%; 
-    font-size: 16px; 
-    padding: 12px; 
-    font-weight: bold;
-    cursor: pointer; /* Indica que se puede cliquear en PC */
-}
+        .text-rojo { color: #c0392b; font-weight: bold; }
 
-.text-rojo { color: #c0392b; font-weight: bold; }
-
-
-        /* === NUEVOS ESTILOS PARA EL FLOTANTE === */
         .overlay-vendedor {
             display: none;
             position: fixed;
@@ -244,7 +232,6 @@
             to { transform: translate(-50%, 0); opacity: 1; }
         }
 
-        /* === MEDIA QUERIES === */
         @media (min-width: 850px) {
             body { padding: 20px; }
             .container { padding: 30px; margin-top: 0; }
@@ -260,8 +247,6 @@
             .producto-card h4 { font-size: 16px; }
             .tab { flex-grow: 0; padding: 15px 25px; }
             th, td { padding: 15px; }
-
-            /* Ajuste del flotante en versión Escritorio */
             .barra-accion-venta {
                 bottom: 20px;
                 border-radius: 12px;
@@ -276,6 +261,35 @@
             .producto-img { height: 80px; }
             .header-dashboard h1 { font-size: 1.5em; }
         }
+
+        /* Estilo para el indicador de carga del modelo */
+        .model-status {
+            background: #f0f2f5;
+            border-radius: 20px;
+            padding: 8px 12px;
+            font-size: 12px;
+            color: #555;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .model-status.loading {
+            background: #fff3e0;
+            color: #d35400;
+        }
+        .model-status.error {
+            background: #ffe6e6;
+            color: #c0392b;
+        }
+        .spinner {
+            width: 14px;
+            height: 14px;
+            border: 2px solid #ccc;
+            border-top-color: #d35400;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
@@ -351,11 +365,7 @@
             <div class="table-responsive" style="max-height: 450px; overflow-y: auto; background: white; border-radius: 4px; border: 1px solid #ddd;">
                 <table style="margin-top: 0; min-width: 400px;">
                     <thead style="position: sticky; top: 0; z-index: 1;">
-                        <tr>
-                            <th>Pan</th>
-                            <th>Precio</th>
-                            <th style="width: 100px;">Cantidad</th>
-                        </tr>
+                        <tr><th>Pan</th><th>Precio</th><th style="width: 100px;">Cantidad</th> </tr>
                     </thead>
                     <tbody id="tabla-automatica"></tbody>
                 </table>
@@ -364,9 +374,9 @@
             <div style="margin-top: 20px; padding-top: 15px; border-top: 2px dashed #ccc;">
                 <h4>¿Agregar otro producto extra?</h4>
                 <div class="form-row">
-                    <input type="text" id="nuevo-pan" placeholder="Nombre" style="flex: 2; min-width: 150px;" autocomplete="off" autocorrect="off" spellcheck="false">
-                    <input type="number" id="nuevo-precio" placeholder="Q" style="width: 80px;" step="0.50" autocomplete="off" autocorrect="off" spellcheck="false">
-                    <input type="number" id="nueva-cantidad" placeholder="Cant" style="width: 80px;" autocomplete="off" autocorrect="off" spellcheck="false">
+                    <input type="text" id="nuevo-pan" placeholder="Nombre" style="flex: 2; min-width: 150px;" autocomplete="off">
+                    <input type="number" id="nuevo-precio" placeholder="Q" style="width: 80px;" step="0.50">
+                    <input type="number" id="nueva-cantidad" placeholder="Cant" style="width: 80px;">
                     <button onclick="agregarAInventarioLocal()" style="background-color: #333; width: auto; flex-grow: 0;">+ Agregar</button>
                 </div>
                 <ul id="lista-inventario-local" style="font-size: 14px; color: #555; padding-left: 20px;"></ul>
@@ -376,8 +386,8 @@
         <div class="inicio-vendedor" style="background: #f9f9f9; padding: 15px; border-radius: 8px; border: 1px solid #eee;">
             <h3>2. Datos del Vendedor</h3>
             <div style="display: flex; flex-direction: column; gap: 10px;">
-                <input type="text" id="nombre-vendedor" placeholder="Tu Nombre" autocomplete="off" autocorrect="off" spellcheck="false">
-                <input type="password" id="firma-vendedor" placeholder="Clave secreta para cerrar" autocomplete="off" autocorrect="off" spellcheck="false">
+                <input type="text" id="nombre-vendedor" placeholder="Tu Nombre">
+                <input type="password" id="firma-vendedor" placeholder="Clave secreta para cerrar">
                 <select id="tipo-turno">
                     <option value="Diurno">☀️ Turno Diurno</option>
                     <option value="Tarde">🌙 Turno Tarde</option>
@@ -390,9 +400,14 @@
 
 <div class="container" id="dashboard">
     <div class="header-dashboard">
-        <div>
-            <h1 style="margin: 0; color: #d35400;">🍞 Panadería Marvin</h1>
-            <p style="margin: 0; color: #666;">Turno: <strong id="display-vendedor" style="color: #333;"></strong></p>
+        <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
+            <div>
+                <h1 style="margin: 0; color: #d35400;">🍞 Panadería Marvin</h1>
+                <p style="margin: 0; color: #666;">Turno: <strong id="display-vendedor" style="color: #333;"></strong></p>
+            </div>
+            <div id="model-status" class="model-status loading">
+                <div class="spinner"></div> Cargando IA local...
+            </div>
         </div>
         <button class="btn-danger" onclick="cerrarTurno()" style="font-weight: bold; gap: 8px; display: flex; align-items: center; justify-content: center;">
             📄🔒 Cerrar Turno y Reporte
@@ -421,7 +436,7 @@
                     <div style="font-size: 2em; font-weight: bold; color: #27ae60;">Q<span id="carrito-total">0.00</span></div>
                 </div>
                 <div class="cart-botones">
-                    <button id="btn-voz" onclick="activarVoz()" style="background-color: #2980b9; margin-bottom: 5px;">🎤 Ordenar por Voz</button>
+                    <button id="btn-voz" onclick="activarVoz()" style="background-color: #2980b9; margin-bottom: 5px;">🎤 Asistente IA (Local)</button>
                     <button onclick="completarVenta('efectivo')" class="btn-success">✅ Cobrar Efectivo</button>
                     <button onclick="completarVenta('fiar')" class="btn-danger" style="background-color: #e67e22;">📒 Fiar (Crédito)</button>
                 </div>
@@ -433,9 +448,7 @@
         <h2>Inventario en Tiempo Real</h2>
         <div class="table-responsive">
             <table>
-                <thead>
-                    <tr><th>Producto</th><th>Precio</th><th>Inicial</th><th>Disponible</th></tr>
-                </thead>
+                <thead><tr><th>Producto</th><th>Precio</th><th>Inicial</th><th>Disponible</th></tr></thead>
                 <tbody id="tabla-inventario"></tbody>
             </table>
         </div>
@@ -445,9 +458,7 @@
         <h2>Historial de Ventas</h2>
         <div class="table-responsive">
             <table>
-                <thead>
-                    <tr><th>Hora</th><th>Productos</th><th>Total</th><th>Método</th></tr>
-                </thead>
+                <thead><tr><th>Hora</th><th>Productos</th><th>Total</th><th>Método</th></tr></thead>
                 <tbody id="tabla-historial"></tbody>
             </table>
         </div>
@@ -463,7 +474,7 @@
         <button onclick="cerrarFlotante()" style="background:none; color:#999; padding:0; border:none; font-size:28px; cursor: pointer; width: auto; line-height: 1;">&times;</button>
     </div>
     <div style="display: flex; gap: 15px; align-items: center; justify-content: space-between; margin-top: 5px;">
-        <input type="number" id="cantidad-venta" placeholder="Cant." min="1" value="1" autocomplete="off" autocorrect="off" spellcheck="false" style="width: 100px; text-align: center; font-size: 1.2em;">
+        <input type="number" id="cantidad-venta" placeholder="Cant." min="1" value="1" style="width: 100px; text-align: center; font-size: 1.2em;">
         <button onclick="agregarAlCarrito()" style="background-color: #333; flex-grow: 1; font-size: 1.1em; padding: 12px; margin: 0;">Añadir al Carrito 🛒</button>
     </div>
 </div>
@@ -578,7 +589,7 @@
                         <input type="number" class="cant-auto" 
                                data-nombre="${item.nombre}" 
                                data-precio="${item.precio}" 
-                               placeholder="0" style="width: 100%; max-width: 80px; margin:0;" autocomplete="off">
+                               placeholder="0" style="width: 100%; max-width: 80px; margin:0;">
                     </td>
                 </tr>`;
         });
@@ -724,20 +735,15 @@
     }
 
     // ============================================================
-    // === LÓGICA DE INTERACCIÓN DEL FLOTANTE ===
+    // === LÓGICA DE INTERACCIÓN DEL FLOTANTE (sin cambios) ===
     // ============================================================
     function seleccionarParaVenta(id, nombre, elemento) {
         productoSeleccionadoId = id;
         document.getElementById('nombre-prod-sel').innerText = nombre;
-
-        // Mostrar modal flotante
         document.getElementById('barra-flotante').style.display = 'flex';
         document.getElementById('overlay-pos').style.display = 'block';
-
         document.querySelectorAll('.producto-card').forEach(c => c.classList.remove('selected'));
         elemento.classList.add('selected');
-
-        // Enfocar automáticamente para que el usuario pueda escribir rápido
         setTimeout(() => {
             const inputCantidad = document.getElementById('cantidad-venta');
             inputCantidad.focus();
@@ -754,30 +760,22 @@
 
     function agregarAlCarrito() {
         if (!productoSeleccionadoId) return alert("Por favor, selecciona un pan de la lista primero.");
-
         const productoEnBD = inventarioFirebase.find(p => p.id === productoSeleccionadoId);
         const cantidadInput = document.getElementById('cantidad-venta');
         const cantidad = parseInt(cantidadInput.value);
-
         if (isNaN(cantidad) || cantidad <= 0) return alert("Ingresa una cantidad válida (mayor a 0).");
-
         const existeEnCarrito = carrito.find(item => item.id === productoSeleccionadoId);
         const cantidadPrevia = existeEnCarrito ? existeEnCarrito.cantidad : 0;
-
         if ((cantidad + cantidadPrevia) > productoEnBD.stock) {
             return alert(`¡Stock insuficiente! Solo quedan ${productoEnBD.stock - cantidadPrevia} unidades de ${productoEnBD.nombre}.`);
         }
-
         if (existeEnCarrito) {
             existeEnCarrito.cantidad += cantidad;
         } else {
             carrito.push({ id: productoSeleccionadoId, nombre: productoEnBD.nombre, precio: productoEnBD.precio, cantidad });
         }
-
         actualizarCarrito();
         cantidadInput.value = 1; 
-
-        // Ocultar modal una vez que se añade el producto con éxito
         cerrarFlotante();
     }
 
@@ -797,17 +795,12 @@
 
     async function completarVenta(tipoDePago) {
         if (carrito.length === 0) return alert("El carrito está vacío.");
-
         let nombreCliente = "";
         if (tipoDePago === 'fiar') {
             nombreCliente = prompt("Ingrese el nombre de la persona a la que se le fía:");
-            if (!nombreCliente || nombreCliente.trim() === "") {
-                return alert("Venta cancelada: Debe ingresar el nombre del cliente para poder fiar.");
-            }
+            if (!nombreCliente || nombreCliente.trim() === "") return alert("Venta cancelada: Debe ingresar el nombre del cliente para poder fiar.");
         }
-
         let totalVenta = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
-
         try {
             await db.collection("ventas").add({
                 vendedor: document.getElementById('display-vendedor').innerText,
@@ -817,22 +810,17 @@
                 cliente: nombreCliente,    
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
             });
-
             const batch = db.batch();
             carrito.forEach(item => {
                 const docRef = db.collection("inventario").doc(item.id);
                 batch.update(docRef, { stock: firebase.firestore.FieldValue.increment(-item.cantidad) });
             });
             await batch.commit();
-
             if (tipoDePago === 'fiar') alert(`¡Venta FIADA a ${nombreCliente} registrada con éxito!`);
             else alert("¡Venta en EFECTIVO registrada con éxito!");
-
             carrito = [];
             actualizarCarrito();
-            document.getElementById('cantidad-venta').value = 1;
             cerrarFlotante();
-
         } catch (error) {
             console.error(error);
             alert("Error al procesar la venta.");
@@ -842,14 +830,11 @@
     function generarPDFCierre() {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
-
         const fechaActual = new Date();
         const fechaStr = fechaActual.toISOString().split('T')[0];
-
         doc.setFont("helvetica", "bold");
         doc.setFontSize(16);
         doc.text("REPORTE DE CIERRE - PANADERÍA", 14, 20);
-
         doc.setFont("helvetica", "normal");
         doc.setFontSize(10);
         doc.text(`Fecha: ${fechaStr} | Turno: ${turnoActivo}`, 14, 30);
@@ -857,14 +842,11 @@
 
         let totalEfectivo = 0;
         let totalFiado = 0;
-
         const ventasParaPDF = ventasGlobales.map((venta, index) => {
             const hora = venta.timestamp ? new Date(venta.timestamp.toDate()).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'}) : 'N/A';
             const detalle = venta.productos.map(p => `${p.nombre}(${p.cantidad})`).join(', ');
-
             let metodoVenta = "Efectivo";
             let tipo = venta.tipo || "efectivo"; 
-
             if (tipo === 'fiar') {
                 metodoVenta = `Fiado: ${venta.cliente}`;
                 totalFiado += venta.total;
@@ -897,7 +879,6 @@
         });
 
         let posY = doc.lastAutoTable.finalY + 10; 
-
         doc.autoTable({
             startY: posY,
             head: [['Producto', 'Stock Inicial', 'Stock Final', 'Vendidos']],
@@ -908,40 +889,33 @@
         });
 
         posY = doc.lastAutoTable.finalY + 15;
-
         doc.setFont("helvetica", "bold");
         doc.text(`TOTAL EFECTIVO (Caja): Q${totalEfectivo.toFixed(2)}`, 14, posY);
         doc.setTextColor(192, 57, 43); 
         doc.text(`TOTAL FIADO (Cuentas por cobrar): Q${totalFiado.toFixed(2)}`, 14, posY + 6);
         doc.setTextColor(0, 0, 0); 
         doc.text(`TOTAL GENERAL DE VENTAS: Q${(totalEfectivo + totalFiado).toFixed(2)}`, 14, posY + 12);
-
         doc.save(`${turnoActivo}_${fechaStr}.pdf`);
     }
 
     async function cerrarTurno() {
         const claveIngresada = prompt("Para CERRAR el turno e imprimir el PDF, ingresa tu clave:");
-
         if (claveIngresada === firmaActivaEnNube || claveIngresada === "admin123") {
             if (confirm("Se generará el reporte PDF y se reiniciará el inventario. ¿Deseas continuar?")) {
                 try {
                     generarPDFCierre();
                     alert("El reporte PDF se está descargando. Ahora limpiaremos la base de datos.");
-
                     const snapInv = await db.collection("inventario").get();
                     const batch1 = db.batch();
                     snapInv.docs.forEach(doc => batch1.delete(doc.ref));
                     await batch1.commit();
-
                     const snapVentas = await db.collection("ventas").get();
                     const batch2 = db.batch();
                     snapVentas.docs.forEach(doc => batch2.delete(doc.ref));
                     await batch2.commit();
-
                     await db.collection("configuracion").doc("estado_turno").set({
                         activo: false, vendedor: "", firma: ""
                     });
-
                 } catch (error) {
                     console.error("Error al cerrar el turno:", error);
                     alert("Hubo un error. Revisa la consola.");
@@ -962,252 +936,339 @@
         evt.currentTarget.className += " active";
     }
 
-    // === ASISTENTE ADMINISTRATIVO ===
-const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    // ============================================================
+    // === ASISTENTE CON WEBLLM (MODELO LOCAL) ===
+    // ============================================================
+    let modoAsistenteActivo = false;
+    let recognition = null;
+    let procesandoComando = false; // Evita que el micrófono escuche mientras la IA habla o piensa
 
-if (SpeechRecognition) {
-    const recognition = new SpeechRecognition();
-    recognition.lang = 'es-GT';
-    recognition.interimResults = false;
-    let modoSiempreActivo = false;
+    // Estado del modelo
+    let llmEngine = null;
+    let modelReady = false;
+    let modelLoading = false;
+
+    // Elemento para mostrar estado
+    const modelStatusElem = document.getElementById('model-status');
+
+    async function initWebLLM() {
+        if (modelReady || modelLoading) return;
+        modelLoading = true;
+        modelStatusElem.className = 'model-status loading';
+        modelStatusElem.innerHTML = '<div class="spinner"></div> Cargando IA local... (esto puede tomar unos minutos la primera vez)';
+        try {
+            // Usamos un modelo pequeño y eficiente
+            const selectedModel = "Phi-3.5-mini-instruct-q4f16_1-MLC";
+            // Creamos el motor
+            llmEngine = await window.WebLLM.CreateMLCEngine(selectedModel, {
+                initProgressCallback: (progress) => {
+                    const percent = Math.round(progress.progress * 100);
+                    modelStatusElem.innerHTML = `<div class="spinner"></div> Cargando IA: ${percent}% - ${progress.text}`;
+                }
+            });
+            modelReady = true;
+            modelStatusElem.className = 'model-status';
+            modelStatusElem.innerHTML = '🤖 IA Local lista';
+        } catch (err) {
+            console.error("Error inicializando WebLLM:", err);
+            modelStatusElem.className = 'model-status error';
+            modelStatusElem.innerHTML = '⚠️ Error al cargar IA local. Recarga la página.';
+            modelReady = false;
+        } finally {
+            modelLoading = false;
+        }
+    }
+
+    // Inicializar el modelo apenas se cargue la página
+    initWebLLM();
 
     function activarVoz() {
-        modoSiempreActivo = !modoSiempreActivo;
+        if (!modelReady) {
+            alert("El asistente IA aún se está cargando. Espera unos segundos e intenta de nuevo.");
+            return;
+        }
+        modoAsistenteActivo = !modoAsistenteActivo;
         const btn = document.getElementById('btn-voz');
-        if (modoSiempreActivo) {
-            btn.innerText = "👂 Asistente Activo...";
+        if (modoAsistenteActivo) {
+            btn.innerText = "🤖 Asistente IA Activo...";
             btn.style.backgroundColor = "#27ae60";
-            iniciarEscucha();
+            iniciarReconocimientoVoz();
         } else {
-            btn.innerText = "🎤 Ordenar por Voz";
+            btn.innerText = "🎤 Asistente IA (Local)";
             btn.style.backgroundColor = "#2980b9";
-            recognition.stop();
+            if (recognition) recognition.stop();
         }
     }
 
-    function iniciarEscucha() {
-        if (modoSiempreActivo) {
-            try { recognition.start(); } catch (e) {}
-        }
-    }
-
-    recognition.onend = () => { if (modoSiempreActivo) iniciarEscucha(); };
-
-    function responderConVoz(mensaje) {
-        const msn = new SpeechSynthesisUtterance(mensaje);
-        msn.lang = 'es-GT';
-        msn.rate = 1.15; 
-        window.speechSynthesis.speak(msn);
-    }
-
-    // === CEREBRO DE LA IA ===
-    recognition.onresult = (event) => {
-        let frase = event.results[0][0].transcript.toLowerCase().trim();
-        console.log("🗣️ Escuchado:", frase);
-
-        // 1. INTENCIÓN: REPORTES
-        if (frase.includes("cuánto llevamos") || frase.includes("reporte de ventas")) {
-            let totalTurno = ventasGlobales.reduce((sum, venta) => sum + venta.total, 0); //
-            responderConVoz(`Hasta el momento, llevamos ${totalTurno.toFixed(2)} quetzales vendidos en este turno.`);
+    function iniciarReconocimientoVoz() {
+        if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+            alert("Tu navegador no soporta reconocimiento de voz. Usa Google Chrome.");
             return;
         }
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        recognition = new SpeechRecognition();
+        recognition.lang = 'es-GT';
+        recognition.interimResults = false;
+        recognition.continuous = false;
 
-        // 2. INTENCIÓN: COBRAR EFECTIVO
-        if (frase.includes("cobrar efectivo") || frase.includes("cerrar venta")) {
-            if (carrito.length === 0) return responderConVoz("El carrito está vacío.");
-            responderConVoz("Cobrando en efectivo. Venta registrada exitosamente.");
-            completarVentaVoz('efectivo', ''); 
-            return;
-        }
-
-        // 3. INTENCIÓN: FIAR (CRÉDITO)
-        if (frase.includes("fiar a") || frase.includes("anotar a")) {
-            if (carrito.length === 0) return responderConVoz("Agrega productos antes de fiar.");
-            let cliente = frase.split(" a ")[1] || "Cliente sin nombre";
-            responderConVoz(`Anotado. Fiando esta venta a ${cliente}.`);
-            completarVentaVoz('fiar', cliente);
-            return;
-        }
-
-        // 4. INTENCIÓN: INVENTARIO (AGREGAR PAN)
-        if (frase.includes("entró pan") || frase.includes("agregar stock")) {
-            procesarInventario(frase);
-            return;
-        }
-
-        // 5. INTENCIÓN: VENTAS Y PREDICCIÓN
-        procesarVentaMultiproducto(frase);
-    };
-
-    // === LÓGICA DE VENTAS MULTIPRODUCTO ===
-    function procesarVentaMultiproducto(frase) {
-        const comandos = frase.split(/\s+y\s+|\s+con\s+/);
-        let respuestas = [];
-
-        // Diccionario para precios rápidos
-        const modismosDinero = {
-            "cero cincuenta": 0.50, "unosincuenta": 1.50, "uno cincuenta": 1.50,
-            "dos cincuenta": 2.50, "tres cincuenta": 3.50, "cuatro cincuenta": 4.50,
-            "cinco cincuenta": 5.50, "seis cincuenta": 6.50, "siete cincuenta": 7.50,
-            "ocho cincuenta": 8.50, "nueve cincuenta": 9.50, "diez cincuenta": 10.50
+        recognition.onstart = () => {
+            console.log("🎤 Escuchando...");
         };
 
+        recognition.onresult = async (event) => {
+            const texto = event.results[0][0].transcript;
+            console.log("🗣️ Usuario dijo:", texto);
 
-        // Piezas para construir números dinámicamente
-        const unidades = { 
-    "un": 1, "uno": 1, "una": 1, "dos": 2, "tres": 3, "cuatro": 4, "cinco": 5, 
-    "seis": 6, "siete": 7, "ocho": 8, "nueve": 9, "diez": 10, "once": 11, 
-    "doce": 12, "trece": 13, "catorce": 14, "quince": 15, "dieciseis": 16, "diecisiete": 17, "dieciocho": 18, "diecinueve": 19 
-};
+            // Pausamos la escucha para que no se escuche a sí mismo
+            procesandoComando = true;
+            recognition.stop();
 
-const decenas = { 
-    "veinte": 20, "veinti": 20, "treinta": 30, "cuarenta": 40, "cincuenta": 50, 
-    "sesenta": 60, "setenta": 70, "ochenta": 80, "noventa": 90 
-};
+            await procesarConWebLLM(texto);
 
-const centenas = { 
-    "cien": 100, "ciento": 100, "doscientos": 200, "trescientos": 300, 
-    "cuatrocientos": 400, "quinientos": 500, "seiscientos": 600, 
-    "setecientos": 700, "ochocientos": 800, "novecientos": 900 
-};
+            procesandoComando = false;
 
-       // === MOTOR DE CONVERSIÓN DINÁMICA ===
-function procesarTextoANumero(texto) {
-    let total = 0;
-    let acumulado = 0;
-    // Dividimos la frase por espacios, comas o la letra "y" (ej: treinta y cinco)
-    const palabras = texto.toLowerCase().split(/[ ,y]+/); 
+            // Reiniciar escucha si el modo sigue activo
+            if (modoAsistenteActivo) {
+                try { recognition.start(); } catch(e){}
+            }
+        };
 
-    palabras.forEach(palabra => {
-        if (unidades[palabra]) acumulado += unidades[palabra];
-        else if (decenas[palabra]) acumulado += decenas[palabra];
-        else if (centenas[palabra]) acumulado += centenas[palabra];
-        else if (palabra === "mil") {
-            total += (acumulado === 0 ? 1 : acumulado) * 1000;
-            acumulado = 0;
-        }
-    });
+        recognition.onerror = (err) => {
+            console.warn("⚠️ Error reconocimiento:", err.error);
+            if (err.error === 'not-allowed') {
+                modoAsistenteActivo = false;
+                document.getElementById('btn-voz').innerText = "🎤 Asistente IA (Local)";
+                document.getElementById('btn-voz').style.backgroundColor = "#2980b9";
+                alert("Permiso de micrófono denegado.");
+            }
+        };
 
-    return total + acumulado;
-}
+        recognition.onend = () => {
+            // Solo reinicia si el botón está encendido y la IA no está pensando/hablando
+            if (modoAsistenteActivo && !procesandoComando) {
+                try { recognition.start(); } catch(e){}
+            }
+        };
 
+        try { recognition.start(); } catch(e){}
+    }
 
-        comandos.forEach(comando => {
-    let valor = 0;
+    async function procesarConWebLLM(textoUsuario) {
+        const prompt = `
+Eres un asistente virtual de una panadería llamada "Panadería Marvin".
+Debes clasificar el mensaje del usuario en uno de estos dos tipos:
 
-    // 1. Limpiamos la frase de "quetzales" o "quetzal"
-    let fraseLimpia = comando.replace(/quetzales|quetzal/g, "").trim();
+1. **Comando de negocio**: si el usuario quiere realizar una acción de ventas (agregar productos, cobrar, fiar, preguntar por el total del carrito, reporte de ventas del turno, agregar stock a un producto, etc.). En ese caso debes responder ÚNICAMENTE con un objeto JSON con la siguiente estructura:
+   {
+     "type": "command",
+     "action": "add" | "ask_total" | "cash" | "credit" | "report" | "add_stock",
+     "response": "mensaje corto de confirmación que dirás en voz alta",
+     ... (parámetros según la acción)
+   }
+   
+   - Para "add": incluir "items": [{"name":"nombre_producto","quantity":cantidad}]
+   - Para "credit": incluir "customer": "nombre_cliente"
+   - Para "add_stock": incluir "product":"nombre_producto","quantity":cantidad
 
-    // 2. Verificamos si es un "modismo" de los que ya tienes (0.50, 1.50, etc.)
-    if (modismosDinero[fraseLimpia]) {
-        valor = modismosDinero[fraseLimpia];
-    } else {
-        // 3. Si no es un modismo simple, usamos la lógica dinámica
-        // Detectar si termina en "cincuenta" para los decimales
-        let tieneDecimal = fraseLimpia.includes("cincuenta") && !fraseLimpia.startsWith("cincuenta");
+   REGLAS DE CANTIDAD:
+   Si el usuario menciona dinero en lugar de cantidad (ej. "un quetzal de francés"), convierte el dinero a cantidad según el precio del producto (cada francés cuesta 0.50, entonces 1 quetzal = 2 unidades. 5 quetzales = 10 unidades).
+   Si dice "una tira de francés", son 6 panes.
 
-        if (tieneDecimal) {
-            let base = fraseLimpia.replace("cincuenta", "").trim();
-            valor = procesarTextoANumero(base) + 0.50; 
-        } else {
-            valor = procesarTextoANumero(fraseLimpia);
+2. **Consulta general**: si el usuario hace una pregunta o comentario que NO está relacionado con las operaciones de la panadería. Responde ÚNICAMENTE con un objeto JSON:
+   {
+     "type": "chat",
+     "response": "tu respuesta amigable aquí"
+   }
+
+INVENTARIO ACTUAL (solo nombres y precios):
+${JSON.stringify(inventarioFirebase.map(p => ({ nombre: p.nombre, precio: p.precio, stock: p.stock })))}
+
+CARRITO ACTUAL:
+${JSON.stringify(carrito)}
+
+TEXTO DEL USUARIO: "${textoUsuario}"
+
+Responde solo con el JSON, sin texto adicional ni bloques de código markdown.
+`;
+
+        try {
+            const respuesta = await llmEngine.chat.completions.create({
+                messages: [{ role: "user", content: prompt }],
+                temperature: 0.1,
+                stream: false
+            });
+            let textoRespuesta = respuesta.choices[0].message.content;
+            // Limpiar posibles markdown
+            textoRespuesta = textoRespuesta.replace(/```json|```/g, "").trim();
+            const resultado = JSON.parse(textoRespuesta);
+
+            if (resultado.type === "command") {
+                if (resultado.response) responderConVoz(resultado.response);
+                await ejecutarAccionWebLLM(resultado);
+            } else if (resultado.type === "chat") {
+                responderConVoz(resultado.response);
+            } else {
+                responderConVoz("No entendí bien. Intenta de nuevo.");
+            }
+        } catch (error) {
+            console.error("❌ Error con WebLLM o JSON:", error);
+            responderConVoz("Lo siento, hubo un problema al procesar tu voz.");
         }
     }
 
-    // === NUEVA LÓGICA DE BÚSQUEDA DE PRODUCTO ===
-    // Buscamos si el comando de voz menciona algún pan de tu inventario
-    let producto = inventarioFirebase.find(p => comando.includes(p.nombre.toLowerCase()));
+    async function ejecutarAccionWebLLM(comando) {
+        switch (comando.action) {
+            case "add":
+                for (let item of comando.items) {
+                    const producto = inventarioFirebase.find(p => p.nombre.toLowerCase().includes(item.name.toLowerCase()));
+                    if (!producto) {
+                        responderConVoz(`No encontré ${item.name} en el inventario.`);
+                        continue;
+                    }
+                    const existente = carrito.find(i => i.id === producto.id);
+                    const cantidadActual = existente ? existente.cantidad : 0;
 
-    if (producto) {
-        // === LÓGICA DE DISTINCIÓN: UNIDADES VS QUETZALES ===
-        let esDinero = comando.includes("quetzal") || comando.includes("quetzales") || 
-                       comando.includes("7.50") || comando.includes("2.50") || 
-                       Object.keys(modismosDinero).some(m => comando.includes(m));
+                    if (cantidadActual + item.quantity > producto.stock) {
+                        responderConVoz(`Stock insuficiente para ${producto.nombre}. Solo quedan ${producto.stock - cantidadActual} unidades.`);
+                        continue;
+                    }
 
-        let cant = 0;
-
-        if (esDinero) {
-            // Si mencionas dinero, dividimos el monto por el precio del pan
-            // Ejemplo: 7.50 / 0.50 = 15 unidades
-            cant = Math.floor(valor / producto.precio);
-            if (cant === 0) cant = 1; 
-        } else {
-            // Si no dices "quetzales", el número es la cantidad directa (ej: 15 campechas)
-            cant = valor === 0 ? 1 : valor;
-        }
-
-        let item = carrito.find(i => i.id === producto.id);
-        if (item) {
-            item.cantidad += cant;
-        } else {
-            carrito.push({ ...producto, cantidad: cant });
-        }
-
-        actualizarCarrito();
-        respuestas.push(`${cant} de ${producto.nombre}`);
-
-        // 💡 PREDICCIÓN / SUGERENCIA IA
-        let stockRestante = producto.stock - (item ? item.cantidad : cant);
-        if (stockRestante <= 12 && stockRestante > 0) {
-            respuestas.push(`Quedan solo ${stockRestante} de ${producto.nombre}, te sugiero preparar más.`);
-        } else if (stockRestante <= 0) {
-            respuestas.push(`Cuidado, el inventario de ${producto.nombre} se ha agotado.`);
-        }
-
-    } 
-}); 
-
-if (respuestas.length > 0) {responderConVoz("Agregado"); 
-}
-}
-
-
-    // === LÓGICA PARA ACTUALIZAR STOCK POR VOZ ===
-    async function procesarInventario(frase) {
-        let producto = inventarioFirebase.find(p => frase.includes(p.nombre.toLowerCase())); //
-        if (producto) {
-            let cant = 0;
-            frase.split(" ").forEach(p => { if (!isNaN(p)) cant = parseInt(p); });
-            if (cant > 0) {
-                try {
-                    await db.collection("inventario").doc(producto.id).update({
-                        stock: firebase.firestore.FieldValue.increment(cant)
-                    }); //
-                    responderConVoz(`Inventario actualizado. Se sumaron ${cant} unidades a ${producto.nombre}.`);
-                } catch (error) {
-                    responderConVoz("Error al actualizar la base de datos.");
+                    if (existente) {
+                        existente.cantidad += item.quantity;
+                    } else {
+                        carrito.push({
+                            id: producto.id,
+                            nombre: producto.nombre,
+                            precio: producto.precio,
+                            cantidad: item.quantity
+                        });
+                    }
+                    actualizarCarrito();
                 }
-            }
+                break;
+
+            case "ask_total":
+                const total = carrito.reduce((sum, i) => sum + (i.precio * i.cantidad), 0);
+                responderConVoz(`El total del carrito es de Q${total.toFixed(2)}.`);
+                break;
+
+            case "cash":
+                if (carrito.length === 0) {
+                    responderConVoz("El carrito está vacío. No puedo cobrar.");
+                    return;
+                }
+                await completarVentaVoz('efectivo', '');
+                break;
+
+            case "credit":
+                if (carrito.length === 0) {
+                    responderConVoz("El carrito está vacío. No puedo fiar.");
+                    return;
+                }
+                let cliente = comando.customer || "Cliente general";
+                await completarVentaVoz('fiar', cliente);
+                break;
+
+            case "report":
+                let totalVendido = (typeof ventasGlobales !== 'undefined') ? ventasGlobales.reduce((sum, v) => sum + v.total, 0) : 0;
+                responderConVoz(`Llevamos ${totalVendido.toFixed(2)} quetzales vendidos en este turno.`);
+                break;
+
+            case "add_stock":
+                const prodStock = inventarioFirebase.find(p => p.nombre.toLowerCase().includes(comando.product.toLowerCase()));
+                if (prodStock) {
+                    await db.collection("inventario").doc(prodStock.id).update({
+                        stock: firebase.firestore.FieldValue.increment(comando.quantity)
+                    });
+                    responderConVoz(`Se agregaron ${comando.quantity} unidades de ${prodStock.nombre}.`);
+                } else {
+                    responderConVoz(`No encontré el producto ${comando.product}.`);
+                }
+                break;
+
+            default:
+                console.warn("Acción desconocida:", comando.action);
         }
     }
 
     async function completarVentaVoz(tipoDePago, clienteFiar) {
-        let totalVenta = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0); //
+        if (carrito.length === 0) return;
+        let totalVenta = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
         try {
+            let vendedorNombre = "Asistente IA";
+            const displayVendedor = document.getElementById('display-vendedor');
+            if (displayVendedor) vendedorNombre = displayVendedor.innerText;
+
             await db.collection("ventas").add({
-                vendedor: document.getElementById('display-vendedor').innerText, //
-                productos: carrito, //
+                vendedor: vendedorNombre,
+                productos: carrito,
                 total: totalVenta,
-                tipo: tipoDePago,          
-                cliente: clienteFiar,    
-                timestamp: firebase.firestore.FieldValue.serverTimestamp() //
+                tipo: tipoDePago,
+                cliente: clienteFiar,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
             });
 
-            const batch = db.batch(); //
+            const batch = db.batch();
             carrito.forEach(item => {
                 const docRef = db.collection("inventario").doc(item.id);
-                batch.update(docRef, { stock: firebase.firestore.FieldValue.increment(-item.cantidad) }); //
+                batch.update(docRef, { stock: firebase.firestore.FieldValue.increment(-item.cantidad) });
             });
-            await batch.commit(); //
+            await batch.commit();
 
-            carrito = []; //
-            actualizarCarrito(); //
+            carrito = [];
+            actualizarCarrito();
+            responderConVoz("Venta guardada exitosamente.");
         } catch (error) {
-            responderConVoz("Error al guardar la venta en la nube.");
+            console.error("Error al guardar la venta:", error);
+            responderConVoz("Error al guardar la venta en la base de datos.");
         }
     }
-}
 
+    // === Sistema de síntesis de voz en cola (evita solapamientos) ===
+    let utteranceQueue = [];
+    let isSpeaking = false;
+
+    function speak(text) {
+        return new Promise((resolve) => {
+            if (!window.speechSynthesis) {
+                console.warn("Web Speech API no soportada");
+                resolve();
+                return;
+            }
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'es-GT';
+            utterance.rate = 1.0;
+            utterance.onend = () => {
+                isSpeaking = false;
+                if (utteranceQueue.length) {
+                    const next = utteranceQueue.shift();
+                    speak(next);
+                } else {
+                    resolve();
+                }
+            };
+            utterance.onerror = () => {
+                isSpeaking = false;
+                if (utteranceQueue.length) {
+                    const next = utteranceQueue.shift();
+                    speak(next);
+                } else {
+                    resolve();
+                }
+            };
+            if (isSpeaking) {
+                utteranceQueue.push(text);
+            } else {
+                isSpeaking = true;
+                window.speechSynthesis.cancel(); // Limpia cualquier síntesis anterior
+                window.speechSynthesis.speak(utterance);
+            }
+        });
+    }
+
+    async function responderConVoz(mensaje) {
+        await speak(mensaje);
+    }
 </script>
 
 </body>
