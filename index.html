@@ -9,276 +9,82 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
-    <!-- Gemini AI Library -->
+    <!-- Gemini AI Library (opcional, usaremos REST si falla) -->
     <script src="https://cdn.jsdelivr.net/npm/@google/generative-ai@0.21.0/dist/index.min.js"></script>
 
     <style>
-        /* === ESTILOS BASE Y RESET === */ 
-        body { 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-            background-color: #f0f2f5; 
-            margin: 0; 
-            padding: 10px; 
-            display: flex;
-            justify-content: center;
-            box-sizing: border-box;
-        }
-
+        /* (estilos igual que antes, no cambio) */
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f2f5; margin: 0; padding: 10px; display: flex; justify-content: center; box-sizing: border-box; }
         h1, h2, h3, h4 { color: #333; margin-top: 0; }
-
-        /* === CONTENEDOR PRINCIPAL RESPONSIVO === */
-        .container { 
-            width: 100%;
-            max-width: 1200px; 
-            background: #fff; 
-            padding: 15px; 
-            border-radius: 12px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
-            box-sizing: border-box;
-            margin-top: 10px;
-        }
-
-        input, select, button { 
-            padding: 12px 15px; 
-            margin: 5px 0; 
-            border: 1px solid #ccc; 
-            border-radius: 6px; 
-            font-size: 16px; 
-            box-sizing: border-box; 
-            width: 100%; 
-        }
-
-        input:focus, select:focus {
-            border-color: #d35400;
-            outline: none;
-            box-shadow: 0 0 0 2px rgba(211, 84, 0, 0.2);
-        }
-
+        .container { width: 100%; max-width: 1200px; background: #fff; padding: 15px; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.08); box-sizing: border-box; margin-top: 10px; }
+        input, select, button { padding: 12px 15px; margin: 5px 0; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; box-sizing: border-box; width: 100%; }
+        input:focus, select:focus { border-color: #d35400; outline: none; box-shadow: 0 0 0 2px rgba(211, 84, 0, 0.2); }
         button { background-color: #d35400; color: white; border: none; cursor: pointer; transition: all 0.3s; font-weight: 600; width: auto; }
         button:hover { background-color: #e67e22; transform: translateY(-1px); }
         button:active { transform: translateY(1px); }
-
         .btn-danger { background-color: #c0392b; }
         .btn-danger:hover { background-color: #e74c3c; }
         .btn-success { background-color: #27ae60; }
         .btn-success:hover { background-color: #2ecc71; }
-
-        /* === PESTAÑAS (TABS) === */
         .tabs { display: flex; border-bottom: 2px solid #ddd; margin-bottom: 20px; flex-wrap: wrap; }
-        .tab { 
-            padding: 12px 18px; cursor: pointer; background: #f8f9fa; border: 1px solid #ddd;
-            border-bottom: none; margin-right: 2px; margin-bottom: 2px;
-            border-radius: 8px 8px 0 0; font-size: 15px; color: #555;
-            flex-grow: 1; text-align: center; transition: all 0.2s;
-        }
+        .tab { padding: 12px 18px; cursor: pointer; background: #f8f9fa; border: 1px solid #ddd; border-bottom: none; margin-right: 2px; margin-bottom: 2px; border-radius: 8px 8px 0 0; font-size: 15px; color: #555; flex-grow: 1; text-align: center; transition: all 0.2s; }
         .tab.active { background: #d35400; color: white; font-weight: bold; border-color: #d35400; }
         .tab-content { display: none; }
         .tab-content.active { display: block; animation: fadeIn 0.5s; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-
-        /* === TABLAS RESPONSIVAS === */
         .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; border-radius: 8px; overflow: hidden; min-width: 500px; }
         th, td { padding: 12px; border: 1px solid #eee; text-align: left; }
         th { background-color: #f8f9fa; color: #333; font-weight: 600; }
         tr:hover { background-color: #fbfbfb; }
-
         #dashboard, #inicio-turno-section { display: none; }
         #pantalla-carga { text-align: center; padding: 60px 20px; font-size: 18px; color: #666; }
-
         .form-row { display: flex; gap: 10px; align-items: center; margin-bottom: 15px; flex-wrap: wrap; }
         .form-row input, .form-row select { width: auto; flex-grow: 1; }
         .header-dashboard { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #eee; padding-bottom: 15px; margin-bottom: 20px; gap: 15px; flex-wrap: wrap; }
-
         .inicio-layout, .pos-container { display: flex; gap: 20px; flex-direction: column; }
         .productos-section { flex: 2; }
         .cart-section { flex: 1; padding: 15px; border: 2px dashed #d35400; border-radius: 8px; background-color: #fffaf5; height: fit-content; }
-
-        /* === ESTILOS PARA IMÁGENES Y TARJETAS === */
-        #productos-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); 
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-
-        .producto-card {
-            background: #fff;
-            border: 2px solid #e1e1e1;
-            border-radius: 10px;
-            padding: 0 0 10px 0;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.2s ease-in-out;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            min-height: 180px; 
-            position: relative;
-        }
-
-        .producto-img {
-            width: 100%;
-            height: 100px;
-            object-fit: cover;
-            border-radius: 8px 8px 0 0;
-            margin-bottom: 8px;
-            background-color: #f9f9f9;
-        }
-
-        .producto-card h4, .producto-card p, .producto-card small {
-            padding: 0 10px; 
-        }
-
+        #productos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .producto-card { background: #fff; border: 2px solid #e1e1e1; border-radius: 10px; padding: 0 0 10px 0; text-align: center; cursor: pointer; transition: all 0.2s ease-in-out; display: flex; flex-direction: column; justify-content: space-between; min-height: 180px; position: relative; }
+        .producto-img { width: 100%; height: 100px; object-fit: cover; border-radius: 8px 8px 0 0; margin-bottom: 8px; background-color: #f9f9f9; }
+        .producto-card h4, .producto-card p, .producto-card small { padding: 0 10px; }
         .producto-card:hover { border-color: #d35400; transform: translateY(-3px); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
         .producto-card.selected { border-color: #27ae60; background-color: #eafaf1; }
-        .producto-card.selected::after {
-            content: '✓'; position: absolute; top: 5px; right: 5px; background: #27ae60; color: white; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-        }
-
+        .producto-card.selected::after { content: '✓'; position: absolute; top: 5px; right: 5px; background: #27ae60; color: white; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
         .producto-card h4 { margin: 0 0 5px 0; color: #333; font-size: 15px; word-wrap: break-word; }
         .producto-card p { margin: 0; color: #d35400; font-weight: bold; font-size: 16px; }
         .producto-card small { color: #7f8c8d; font-size: 12px; }
-
         .producto-card.sin-stock { opacity: 0.5; cursor: not-allowed; background: #f4f4f4; }
-        .producto-card.sin-stock .producto-img { filter: grayscale(100%); } 
-
-        /* === CARRITO Y TABLAS (ADAPTABLE PC Y MÓVIL) === */
-        #carrito-lista { 
-            list-style: none; 
-            padding: 0; 
-            margin: 0 0 15px 0; 
-            overflow-y: auto;  
-            border: 1px dashed #e67e22;
-            border-radius: 5px;
-            background-color: #fffaf5;
-            max-height: 280px; 
-        }
-
-        @media (min-width: 768px) {
-            #carrito-lista { max-height: 500px; }
-        }
-
+        .producto-card.sin-stock .producto-img { filter: grayscale(100%); }
+        #carrito-lista { list-style: none; padding: 0; margin: 0 0 15px 0; overflow-y: auto; border: 1px dashed #e67e22; border-radius: 5px; background-color: #fffaf5; max-height: 280px; }
+        @media (min-width: 768px) { #carrito-lista { max-height: 500px; } }
         #carrito-lista::-webkit-scrollbar { width: 8px; }
         #carrito-lista::-webkit-scrollbar-thumb { background: #e67e22; border-radius: 10px; }
         #carrito-lista::-webkit-scrollbar-track { background: #f1f1f1; }
-
-        #carrito-lista li { 
-            background: #fff; 
-            padding: 10px; 
-            border-bottom: 1px solid #eee; 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-            font-size: 15px;
-        }
-
-        .cart-total-area { 
-            border-top: 2px solid #ddd; 
-            padding-top: 10px; 
-            text-align: right; 
-            background: white;
-        }
-
-        .cart-botones { 
-            display: flex; 
-            flex-direction: column; 
-            gap: 8px; 
-            margin-top: 15px; 
-        }
-
-        .cart-botones button { 
-            width: 100%; 
-            font-size: 16px; 
-            padding: 12px; 
-            font-weight: bold;
-            cursor: pointer;
-        }
-
+        #carrito-lista li { background: #fff; padding: 10px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; font-size: 15px; }
+        .cart-total-area { border-top: 2px solid #ddd; padding-top: 10px; text-align: right; background: white; }
+        .cart-botones { display: flex; flex-direction: column; gap: 8px; margin-top: 15px; }
+        .cart-botones button { width: 100%; font-size: 16px; padding: 12px; font-weight: bold; cursor: pointer; }
         .text-rojo { color: #c0392b; font-weight: bold; }
-
-        /* === NUEVOS ESTILOS PARA EL FLOTANTE === */
-        .overlay-vendedor {
-            display: none;
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.4);
-            z-index: 999;
-        }
-
-        .barra-accion-venta {
-            display: none; 
-            position: fixed;
-            bottom: 0;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 100%;
-            max-width: 500px;
-            background: #fff;
-            padding: 20px;
-            border-radius: 20px 20px 0 0;
-            box-shadow: 0 -10px 25px rgba(0,0,0,0.15);
-            z-index: 1000;
-            border-top: 4px solid #d35400;
-            flex-direction: column;
-            gap: 15px;
-            animation: slideUp 0.3s ease-out;
-            box-sizing: border-box;
-        }
-
-        @keyframes slideUp {
-            from { transform: translate(-50%, 100%); opacity: 0; }
-            to { transform: translate(-50%, 0); opacity: 1; }
-        }
-
-        /* === MEDIA QUERIES === */
-        @media (min-width: 850px) {
-            body { padding: 20px; }
-            .container { padding: 30px; margin-top: 0; }
-            input, select, button { width: auto; }
-            .inicio-layout { flex-direction: row; }
-            .inicio-inventario { flex: 2; }
-            .inicio-vendedor { flex: 1; min-width: 300px; height: fit-content; position: sticky; top: 20px; }
-            .pos-container { flex-direction: row; align-items: flex-start; }
-            .cart-section { position: sticky; top: 20px; min-width: 300px; max-width: 350px; }
-            #productos-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 20px; }
-            .producto-card { min-height: 200px; }
-            .producto-img { height: 120px; }
-            .producto-card h4 { font-size: 16px; }
-            .tab { flex-grow: 0; padding: 15px 25px; }
-            th, td { padding: 15px; }
-            .barra-accion-venta { bottom: 20px; border-radius: 12px; border: 2px solid #d35400; }
-        }
-
-        @media (max-width: 480px) {
-            .tab { font-size: 13px; padding: 10px 5px; }
-            #productos-grid { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; }
-            .producto-card { min-height: 160px; }
-            .producto-img { height: 80px; }
-            .header-dashboard h1 { font-size: 1.5em; }
-        }
+        .overlay-vendedor { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); z-index: 999; }
+        .barra-accion-venta { display: none; position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 500px; background: #fff; padding: 20px; border-radius: 20px 20px 0 0; box-shadow: 0 -10px 25px rgba(0,0,0,0.15); z-index: 1000; border-top: 4px solid #d35400; flex-direction: column; gap: 15px; animation: slideUp 0.3s ease-out; box-sizing: border-box; }
+        @keyframes slideUp { from { transform: translate(-50%, 100%); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
+        @media (min-width: 850px) { body { padding: 20px; } .container { padding: 30px; margin-top: 0; } input, select, button { width: auto; } .inicio-layout { flex-direction: row; } .inicio-inventario { flex: 2; } .inicio-vendedor { flex: 1; min-width: 300px; height: fit-content; position: sticky; top: 20px; } .pos-container { flex-direction: row; align-items: flex-start; } .cart-section { position: sticky; top: 20px; min-width: 300px; max-width: 350px; } #productos-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 20px; } .producto-card { min-height: 200px; } .producto-img { height: 120px; } .producto-card h4 { font-size: 16px; } .tab { flex-grow: 0; padding: 15px 25px; } th, td { padding: 15px; } .barra-accion-venta { bottom: 20px; border-radius: 12px; border: 2px solid #d35400; } }
+        @media (max-width: 480px) { .tab { font-size: 13px; padding: 10px 5px; } #productos-grid { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; } .producto-card { min-height: 160px; } .producto-img { height: 80px; } .header-dashboard h1 { font-size: 1.5em; } }
     </style>
 </head>
 <body>
 
 <div id="pantalla-carga" class="bakery-loader">
     <div class="oven-container">
-        <div class="steam-wrap">
-            <span class="steam s1"></span>
-            <span class="steam s2"></span>
-            <span class="steam s3"></span>
-        </div>
-        <div class="bread-glow">
-            <svg viewBox="0 0 512 512" class="main-bread">
-                <path fill="#D97706" d="M394,171c-15-26-43-43-74-43c-10,0-20,2-29,5c-14-32-47-55-86-55c-35,0-65,19-81,47c-13-5-27-8-41-8 c-56,0-101,45-101,101c0,5,0,10,1,14c-31,17-63,65-63,121c0,82,67,149,149,149h213c82,0,149-67,149-149C512,259,461,185,394,171z"/>
-            </svg>
-        </div>
+        <div class="steam-wrap"><span class="steam s1"></span><span class="steam s2"></span><span class="steam s3"></span></div>
+        <div class="bread-glow"><svg viewBox="0 0 512 512" class="main-bread"><path fill="#D97706" d="M394,171c-15-26-43-43-74-43c-10,0-20,2-29,5c-14-32-47-55-86-55c-35,0-65,19-81,47c-13-5-27-8-41-8 c-56,0-101,45-101,101c0,5,0,10,1,14c-31,17-63,65-63,121c0,82,67,149,149,149h213c82,0,149-67,149-149C512,259,461,185,394,171z"/></svg></div>
         <h2 class="bakery-title">Panadería Marvin</h2>
         <div class="dough-track"><div id="progress-fill" class="dough-fill"></div></div>
         <p class="loading-msg">Preparando algo delicioso...</p>
     </div>
 </div>
-
 <style>
     .bakery-loader { position: fixed; inset: 0; background: radial-gradient(circle, #fff9f0 0%, #f7e6d2 100%); display: flex; justify-content: center; align-items: center; z-index: 10000; font-family: 'Comic Sans MS', 'Segoe UI', cursive, sans-serif; }
     .oven-container { text-align: center; position: relative; }
@@ -296,45 +102,17 @@
     @media (max-width: 480px) { .bakery-title { font-size: 1.4rem; } .bread-glow { width: 90px; height: 90px; } .dough-track { width: 200px; } }
 </style>
 
-<script>
-    console.log("✅ Iniciando script de Panadería Marvin");
-    function simulateLoading() {
-        const fill = document.getElementById('progress-fill');
-        const loader = document.getElementById('pantalla-carga');
-        let width = 0;
-        const interval = setInterval(() => {
-            if (width >= 100) {
-                clearInterval(interval);
-                setTimeout(() => {
-                    loader.style.transition = "all 0.8s cubic-bezier(0.4, 0, 0.2, 1)";
-                    loader.style.opacity = "0";
-                    loader.style.transform = "scale(1.2)";
-                    setTimeout(() => loader.remove(), 800);
-                }, 500);
-            } else {
-                width += Math.random() * 20;
-                if (width > 100) width = 100;
-                fill.style.width = width + "%";
-            }
-        }, 300);
-    }
-    document.addEventListener('DOMContentLoaded', simulateLoading);
-</script>
-
 <div class="container" id="inicio-turno-section">
     <div style="text-align: center; margin-bottom: 25px;">
         <h1 style="color: #d35400;">🥐 Iniciar Turno de Venta</h1>
         <p style="color: #666; margin: 0;">Configure el inventario y sus datos para comenzar.</p>
     </div>
-
     <div class="inicio-layout">
         <div class="inicio-inventario" style="background: #f9f9f9; padding: 15px; border-radius: 8px; border: 1px solid #eee;">
             <h3>1. Inventario del Día</h3>
             <div class="table-responsive" style="max-height: 450px; overflow-y: auto; background: white; border-radius: 4px; border: 1px solid #ddd;">
                 <table style="margin-top: 0; min-width: 400px;">
-                    <thead style="position: sticky; top: 0; z-index: 1;">
-                        <tr><th>Pan</th><th>Precio</th><th style="width: 100px;">Cantidad</th> </tr>
-                    </thead>
+                    <thead style="position: sticky; top: 0; z-index: 1;"><tr><th>Pan</th><th>Precio</th><th style="width: 100px;">Cantidad</th></tr></thead>
                     <tbody id="tabla-automatica"></tbody>
                 </table>
             </div>
@@ -354,10 +132,7 @@
             <div style="display: flex; flex-direction: column; gap: 10px;">
                 <input type="text" id="nombre-vendedor" placeholder="Tu Nombre">
                 <input type="password" id="firma-vendedor" placeholder="Clave secreta para cerrar">
-                <select id="tipo-turno">
-                    <option value="Diurno">☀️ Turno Diurno</option>
-                    <option value="Tarde">🌙 Turno Tarde</option>
-                </select>
+                <select id="tipo-turno"><option value="Diurno">☀️ Turno Diurno</option><option value="Tarde">🌙 Turno Tarde</option></select>
                 <button onclick="iniciarTurno()" class="btn-success" style="width: 100%; font-size: 18px; padding: 15px;">🚀 Iniciar Turno Global</button>
             </div>
         </div>
@@ -406,197 +181,258 @@
 </div>
 
 <script>
-    // ==================== CONFIGURACIÓN FIREBASE ====================
-    const firebaseConfig = {
-        apiKey: "AIzaSyD7iqWBCoScuHSID15itaShi7dRQuQwkEo",
-        authDomain: "panaderia-marvin.firebaseapp.com",
-        projectId: "panaderia-marvin",
-        storageBucket: "panaderia-marvin.firebasestorage.app",
-        messagingSenderId: "908203563116",
-        appId: "1:908203563116:web:69995ce1866a536bf3e049"
-    };
-    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
-
-    // ==================== VARIABLES GLOBALES ====================
-    let inventarioLocal = [];
-    let carrito = [];
-    let inventarioFirebase = [];
-    let ventasGlobales = [];
-    let firmaActivaEnNube = "";
-    let vendedorActivo = "";
-    let turnoActivo = "";
-    let escuchasIniciadas = false;
-    let productoSeleccionadoId = null;
-
-    const IMAGENES_PRODUCTOS = {
-        "tira": "https://i.postimg.cc/KYCgF76d/20260314-170824.jpg",
-        "francés": "https://i.postimg.cc/Sxvn77x4/20260314-170912.jpg",
-        "pan-dulce-grande": "https://i.postimg.cc/vBWDsJLZ/20260314-170934.jpg",
-        "pan-dulce-pequeño": "https://i.postimg.cc/Rh4hVgg5/20260314-171043.jpg",
-        "pirujos-pequeños": "https://i.postimg.cc/VL7vmBMh/20260314-171021.jpg",
-        "pirujos-grande": "https://i.postimg.cc/DZKyBCkm/20260314-171124.jpg",
-        "pan-chata": "https://i.postimg.cc/3N8rHdwT/20260314-171315.jpg",
-        "pan-galleta": "https://i.postimg.cc/CLKMPBtJ/20260314-171406.jpg",
-        "bollo": "https://i.postimg.cc/VNXzrjrc/20260314-171418.jpg",
-        "cemita": "",
-        "gallina": "",
-        "campechana-grande": "https://i.postimg.cc/RVq9Qr6T/20260314-171501.jpg",
-        "campechana-pequeña": "https://i.postimg.cc/mkg45Jdh/20260314-171448.jpg",
-        "volovanes": "https://i.postimg.cc/pLFH4DBY/20260314-171608.jpg",
-        "donas": "https://i.postimg.cc/q7cdM4S7/20260314-171655.jpg",
-        "roles-de-canela": "https://i.postimg.cc/bwCmxMnm/20260314-174211.jpg",
-        "salpora": "",
-        "bolsa-de-galleta": "https://i.postimg.cc/65BcDwL0/20260314-174254.jpg",
-        "conos-de-manjar": "https://i.postimg.cc/767XyZWn/20260314-174225.jpg",
-        "default": "https://via.placeholder.com/300x200?text=Panaderia+Marvin"
-    };
-
-    // ==================== GEMINI IA ====================
-    const GEMINI_API_KEY = "AIzaSyClPu_A2TqEbYp6ksvU-XT3IFQmAksJDto"; // CLAVE INTEGRADA
-    let genAI = null, model = null;
-    try {
-        if (typeof GoogleGenerativeAI !== 'undefined') {
-            genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-            model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-            console.log("✅ Gemini inicializado correctamente.");
-        } else {
-            console.warn("⚠️ GoogleGenerativeAI no está definido. Revisa la carga de la librería.");
-        }
-    } catch (error) {
-        console.error("❌ Error inicializando Gemini:", error);
-    }
-
-    // ==================== FUNCIONES AUXILIARES ====================
-    function responderConVoz(mensaje) {
-        const msn = new SpeechSynthesisUtterance(mensaje);
-        msn.lang = 'es-GT';
-        msn.rate = 1.1;
-        window.speechSynthesis.speak(msn);
-    }
-
-    async function completarVentaVoz(tipo, clienteFiar) {
-        if (carrito.length === 0) return;
-        let totalVenta = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
-        try {
-            await db.collection("ventas").add({
-                vendedor: document.getElementById('display-vendedor').innerText,
-                productos: carrito.map(({ id, nombre, precio, cantidad }) => ({ id, nombre, precio, cantidad })),
-                total: totalVenta,
-                tipo: tipo,
-                cliente: clienteFiar || "",
-                timestamp: firebase.firestore.FieldValue.serverTimestamp()
-            });
-            const batch = db.batch();
-            carrito.forEach(item => {
-                const docRef = db.collection("inventario").doc(item.id);
-                batch.update(docRef, { stock: firebase.firestore.FieldValue.increment(-item.cantidad) });
-            });
-            await batch.commit();
-            carrito = [];
-            actualizarCarrito();
-        } catch (error) {
-            console.error(error);
-            responderConVoz("Error al guardar la venta.");
-        }
-    }
-
-    function actualizarCarrito() {
-        const lista = document.getElementById('carrito-lista');
-        let total = 0;
-        lista.innerHTML = '';
-        carrito.forEach((item, index) => {
-            const subtotal = item.precio * item.cantidad;
-            total += subtotal;
-            lista.innerHTML += `<li>${item.cantidad}x ${item.nombre} - Q${subtotal.toFixed(2)} 
-                <button class="btn-danger" style="padding:2px 5px; font-size:12px; width:auto; float: right;" onclick="carrito.splice(${index}, 1); actualizarCarrito();">X</button>
-            </li>`;
-        });
-        document.getElementById('carrito-total').innerText = total.toFixed(2);
-    }
-
-    async function ejecutarAccionGemini(accion) {
-        switch (accion.accion) {
-            case "agregar_al_carrito":
-                if (accion.productos && accion.productos.length) {
-                    for (const prod of accion.productos) {
-                        const productoDB = inventarioFirebase.find(p => p.nombre.toLowerCase() === prod.nombre.toLowerCase());
-                        if (productoDB) {
-                            const itemCarrito = carrito.find(i => i.id === productoDB.id);
-                            const nuevaCantidad = (itemCarrito ? itemCarrito.cantidad : 0) + prod.cantidad;
-                            if (nuevaCantidad > productoDB.stock) {
-                                responderConVoz(`No hay suficiente stock de ${productoDB.nombre}. Solo quedan ${productoDB.stock}.`);
-                                continue;
-                            }
-                            if (itemCarrito) itemCarrito.cantidad += prod.cantidad;
-                            else carrito.push({ ...productoDB, cantidad: prod.cantidad });
-                        } else {
-                            responderConVoz(`El producto ${prod.nombre} no existe.`);
-                            return;
-                        }
-                    }
-                    actualizarCarrito();
-                    responderConVoz(accion.respuesta);
-                }
-                break;
-            case "cobrar_efectivo":
-                if (carrito.length === 0) { responderConVoz("El carrito está vacío."); return; }
-                await completarVentaVoz('efectivo', '');
-                responderConVoz(accion.respuesta);
-                break;
-            case "fiar":
-                if (carrito.length === 0) { responderConVoz("El carrito está vacío."); return; }
-                if (!accion.cliente) { responderConVoz("No entendí el nombre del cliente."); return; }
-                await completarVentaVoz('fiar', accion.cliente);
-                responderConVoz(accion.respuesta);
-                break;
-            case "reporte_ventas":
-                let totalTurno = ventasGlobales.reduce((sum, v) => sum + v.total, 0);
-                responderConVoz(accion.respuesta || `Hasta ahora llevamos Q${totalTurno.toFixed(2)} en ventas.`);
-                break;
-            case "actualizar_inventario":
-                if (accion.productos && accion.productos.length) {
-                    for (const prod of accion.productos) {
-                        const productoDB = inventarioFirebase.find(p => p.nombre.toLowerCase() === prod.nombre.toLowerCase());
-                        if (productoDB) {
-                            await db.collection("inventario").doc(productoDB.id).update({
-                                stock: firebase.firestore.FieldValue.increment(prod.cantidad)
-                            });
-                            responderConVoz(`Actualizado ${prod.nombre} con +${prod.cantidad}`);
-                        }
-                    }
-                    responderConVoz(accion.respuesta);
-                }
-                break;
-            default:
-                responderConVoz(accion.respuesta || "No entendí la acción.");
-        }
-    }
-
-    // ==================== RECONOCIMIENTO DE VOZ CON GEMINI ====================
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    let recognition = null;
-    let modoSiempreActivo = false;
-
-    if (SpeechRecognition) {
-        recognition = new SpeechRecognition();
-        recognition.lang = 'es-GT';
-        recognition.interimResults = false;
-
-        recognition.onresult = async (event) => {
-            let frase = event.results[0][0].transcript.toLowerCase().trim();
-            console.log("🗣️ Escuchado:", frase);
-            if (!model) {
-                responderConVoz("Gemini no está disponible. Revisa la API key.");
-                return;
+    (function() {
+        // ==================== MANEJO DE ERRORES GLOBAL ====================
+        window.addEventListener('error', function(e) {
+            console.error('❌ Error global capturado:', e.error);
+            // Mostrar un mensaje amigable en la página si ocurre un error fatal
+            const loader = document.getElementById('pantalla-carga');
+            if (loader) {
+                loader.innerHTML = '<div style="background:#fff; padding:20px; border-radius:8px;"><h3>Error al cargar la aplicación</h3><p>Revisa la consola (F12) para más detalles.</p><button onclick="location.reload()">Recargar</button></div>';
             }
-            // Estado actual
-            const estado = {
-                carrito: carrito.map(i => ({ nombre: i.nombre, cantidad: i.cantidad, precio: i.precio })),
-                inventario: inventarioFirebase.map(p => ({ nombre: p.nombre, stock: p.stock, precio: p.precio })),
-                ventasDelTurno: ventasGlobales.map(v => ({ total: v.total, tipo: v.tipo }))
+        });
+
+        console.log("✅ Iniciando script de Panadería Marvin");
+
+        // ==================== CONFIGURACIÓN FIREBASE ====================
+        const firebaseConfig = {
+            apiKey: "AIzaSyD7iqWBCoScuHSID15itaShi7dRQuQwkEo",
+            authDomain: "panaderia-marvin.firebaseapp.com",
+            projectId: "panaderia-marvin",
+            storageBucket: "panaderia-marvin.firebasestorage.app",
+            messagingSenderId: "908203563116",
+            appId: "1:908203563116:web:69995ce1866a536bf3e049"
+        };
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        // ==================== VARIABLES GLOBALES ====================
+        let inventarioLocal = [];
+        let carrito = [];
+        let inventarioFirebase = [];
+        let ventasGlobales = [];
+        let firmaActivaEnNube = "";
+        let vendedorActivo = "";
+        let turnoActivo = "";
+        let escuchasIniciadas = false;
+        let productoSeleccionadoId = null;
+
+        const IMAGENES_PRODUCTOS = {
+            "tira": "https://i.postimg.cc/KYCgF76d/20260314-170824.jpg",
+            "francés": "https://i.postimg.cc/Sxvn77x4/20260314-170912.jpg",
+            "pan-dulce-grande": "https://i.postimg.cc/vBWDsJLZ/20260314-170934.jpg",
+            "pan-dulce-pequeño": "https://i.postimg.cc/Rh4hVgg5/20260314-171043.jpg",
+            "pirujos-pequeños": "https://i.postimg.cc/VL7vmBMh/20260314-171021.jpg",
+            "pirujos-grande": "https://i.postimg.cc/DZKyBCkm/20260314-171124.jpg",
+            "pan-chata": "https://i.postimg.cc/3N8rHdwT/20260314-171315.jpg",
+            "pan-galleta": "https://i.postimg.cc/CLKMPBtJ/20260314-171406.jpg",
+            "bollo": "https://i.postimg.cc/VNXzrjrc/20260314-171418.jpg",
+            "cemita": "",
+            "gallina": "",
+            "campechana-grande": "https://i.postimg.cc/RVq9Qr6T/20260314-171501.jpg",
+            "campechana-pequeña": "https://i.postimg.cc/mkg45Jdh/20260314-171448.jpg",
+            "volovanes": "https://i.postimg.cc/pLFH4DBY/20260314-171608.jpg",
+            "donas": "https://i.postimg.cc/q7cdM4S7/20260314-171655.jpg",
+            "roles-de-canela": "https://i.postimg.cc/bwCmxMnm/20260314-174211.jpg",
+            "salpora": "",
+            "bolsa-de-galleta": "https://i.postimg.cc/65BcDwL0/20260314-174254.jpg",
+            "conos-de-manjar": "https://i.postimg.cc/767XyZWn/20260314-174225.jpg",
+            "default": "https://via.placeholder.com/300x200?text=Panaderia+Marvin"
+        };
+
+        // ==================== GEMINI IA con FALLBACK REST ====================
+        const GEMINI_API_KEY = "AIzaSyClPu_A2TqEbYp6ksvU-XT3IFQmAksJDto";
+        let geminiModel = null;
+        let usarREST = false;
+
+        // Intento inicializar la librería oficial
+        try {
+            if (typeof GoogleGenerativeAI !== 'undefined') {
+                const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+                geminiModel = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+                console.log("✅ Gemini inicializado con librería oficial.");
+            } else {
+                console.warn("⚠️ Librería GoogleGenerativeAI no cargada, usaremos API REST como fallback.");
+                usarREST = true;
+            }
+        } catch (e) {
+            console.error("❌ Error inicializando Gemini con librería:", e);
+            usarREST = true;
+        }
+
+        // Función para llamar a Gemini usando REST (más robusto)
+        async function llamarGeminiREST(prompt) {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+            const body = {
+                contents: [{ parts: [{ text: prompt }] }]
             };
-            const prompt = `
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
+                }
+                const data = await response.json();
+                const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (!text) throw new Error("Respuesta sin contenido");
+                return text;
+            } catch (err) {
+                console.error("Error en llamada REST a Gemini:", err);
+                throw err;
+            }
+        }
+
+        // Función unificada para obtener respuesta de Gemini
+        async function obtenerRespuestaGemini(prompt) {
+            if (!usarREST && geminiModel) {
+                try {
+                    const result = await geminiModel.generateContent(prompt);
+                    const response = await result.response;
+                    return response.text();
+                } catch (err) {
+                    console.error("Error con librería oficial, cambiando a REST:", err);
+                    usarREST = true;
+                    // Fallback a REST
+                    return await llamarGeminiREST(prompt);
+                }
+            } else {
+                return await llamarGeminiREST(prompt);
+            }
+        }
+
+        // ==================== FUNCIONES AUXILIARES ====================
+        function responderConVoz(mensaje) {
+            const msn = new SpeechSynthesisUtterance(mensaje);
+            msn.lang = 'es-GT';
+            msn.rate = 1.1;
+            window.speechSynthesis.speak(msn);
+        }
+
+        async function completarVentaVoz(tipo, clienteFiar) {
+            if (carrito.length === 0) return;
+            let totalVenta = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
+            try {
+                await db.collection("ventas").add({
+                    vendedor: document.getElementById('display-vendedor').innerText,
+                    productos: carrito.map(({ id, nombre, precio, cantidad }) => ({ id, nombre, precio, cantidad })),
+                    total: totalVenta,
+                    tipo: tipo,
+                    cliente: clienteFiar || "",
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                const batch = db.batch();
+                carrito.forEach(item => {
+                    const docRef = db.collection("inventario").doc(item.id);
+                    batch.update(docRef, { stock: firebase.firestore.FieldValue.increment(-item.cantidad) });
+                });
+                await batch.commit();
+                carrito = [];
+                actualizarCarrito();
+            } catch (error) {
+                console.error(error);
+                responderConVoz("Error al guardar la venta.");
+            }
+        }
+
+        function actualizarCarrito() {
+            const lista = document.getElementById('carrito-lista');
+            let total = 0;
+            lista.innerHTML = '';
+            carrito.forEach((item, index) => {
+                const subtotal = item.precio * item.cantidad;
+                total += subtotal;
+                lista.innerHTML += `<li>${item.cantidad}x ${item.nombre} - Q${subtotal.toFixed(2)} 
+                    <button class="btn-danger" style="padding:2px 5px; font-size:12px; width:auto; float: right;" onclick="carrito.splice(${index}, 1); actualizarCarrito();">X</button>
+                </li>`;
+            });
+            document.getElementById('carrito-total').innerText = total.toFixed(2);
+        }
+
+        async function ejecutarAccionGemini(accion) {
+            switch (accion.accion) {
+                case "agregar_al_carrito":
+                    if (accion.productos && accion.productos.length) {
+                        for (const prod of accion.productos) {
+                            const productoDB = inventarioFirebase.find(p => p.nombre.toLowerCase() === prod.nombre.toLowerCase());
+                            if (productoDB) {
+                                const itemCarrito = carrito.find(i => i.id === productoDB.id);
+                                const nuevaCantidad = (itemCarrito ? itemCarrito.cantidad : 0) + prod.cantidad;
+                                if (nuevaCantidad > productoDB.stock) {
+                                    responderConVoz(`No hay suficiente stock de ${productoDB.nombre}. Solo quedan ${productoDB.stock}.`);
+                                    continue;
+                                }
+                                if (itemCarrito) itemCarrito.cantidad += prod.cantidad;
+                                else carrito.push({ ...productoDB, cantidad: prod.cantidad });
+                            } else {
+                                responderConVoz(`El producto ${prod.nombre} no existe.`);
+                                return;
+                            }
+                        }
+                        actualizarCarrito();
+                        responderConVoz(accion.respuesta);
+                    }
+                    break;
+                case "cobrar_efectivo":
+                    if (carrito.length === 0) { responderConVoz("El carrito está vacío."); return; }
+                    await completarVentaVoz('efectivo', '');
+                    responderConVoz(accion.respuesta);
+                    break;
+                case "fiar":
+                    if (carrito.length === 0) { responderConVoz("El carrito está vacío."); return; }
+                    if (!accion.cliente) { responderConVoz("No entendí el nombre del cliente."); return; }
+                    await completarVentaVoz('fiar', accion.cliente);
+                    responderConVoz(accion.respuesta);
+                    break;
+                case "reporte_ventas":
+                    let totalTurno = ventasGlobales.reduce((sum, v) => sum + v.total, 0);
+                    responderConVoz(accion.respuesta || `Hasta ahora llevamos Q${totalTurno.toFixed(2)} en ventas.`);
+                    break;
+                case "actualizar_inventario":
+                    if (accion.productos && accion.productos.length) {
+                        for (const prod of accion.productos) {
+                            const productoDB = inventarioFirebase.find(p => p.nombre.toLowerCase() === prod.nombre.toLowerCase());
+                            if (productoDB) {
+                                await db.collection("inventario").doc(productoDB.id).update({
+                                    stock: firebase.firestore.FieldValue.increment(prod.cantidad)
+                                });
+                                responderConVoz(`Actualizado ${prod.nombre} con +${prod.cantidad}`);
+                            }
+                        }
+                        responderConVoz(accion.respuesta);
+                    }
+                    break;
+                default:
+                    responderConVoz(accion.respuesta || "No entendí la acción.");
+            }
+        }
+
+        // ==================== RECONOCIMIENTO DE VOZ CON GEMINI ====================
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        let recognition = null;
+        let modoSiempreActivo = false;
+
+        if (SpeechRecognition) {
+            recognition = new SpeechRecognition();
+            recognition.lang = 'es-GT';
+            recognition.interimResults = false;
+
+            recognition.onresult = async (event) => {
+                let frase = event.results[0][0].transcript.toLowerCase().trim();
+                console.log("🗣️ Escuchado:", frase);
+                if (!geminiModel && !usarREST) {
+                    responderConVoz("Gemini no está disponible. Revisa la API key.");
+                    return;
+                }
+                const estado = {
+                    carrito: carrito.map(i => ({ nombre: i.nombre, cantidad: i.cantidad, precio: i.precio })),
+                    inventario: inventarioFirebase.map(p => ({ nombre: p.nombre, stock: p.stock, precio: p.precio })),
+                    ventasDelTurno: ventasGlobales.map(v => ({ total: v.total, tipo: v.tipo }))
+                };
+                const prompt = `
 Eres un asistente de ventas para una panadería llamada Panadería Marvin. El usuario da órdenes de voz. Tu tarea es interpretar la intención y devolver un JSON con las acciones a realizar.
 
 Acciones posibles: "agregar_al_carrito", "cobrar_efectivo", "fiar", "reporte_ventas", "actualizar_inventario", "responder".
@@ -616,201 +452,241 @@ Ventas del turno: ${JSON.stringify(estado.ventasDelTurno)}
 
 Usuario dijo: "${frase}"
 Responde únicamente con el JSON, sin texto adicional.`;
+                try {
+                    const respuestaTexto = await obtenerRespuestaGemini(prompt);
+                    const jsonMatch = respuestaTexto.match(/\{[\s\S]*\}/);
+                    if (!jsonMatch) throw new Error("No se encontró JSON en la respuesta");
+                    const accion = JSON.parse(jsonMatch[0]);
+                    await ejecutarAccionGemini(accion);
+                } catch (err) {
+                    console.error("Error procesando con Gemini:", err);
+                    responderConVoz("No pude entender la orden, por favor repite.");
+                }
+            };
+
+            recognition.onend = () => { if (modoSiempreActivo) recognition.start(); };
+        }
+
+        function activarVoz() {
+            if (!recognition) {
+                alert("Tu navegador no soporta reconocimiento de voz.");
+                return;
+            }
+            modoSiempreActivo = !modoSiempreActivo;
+            const btn = document.getElementById('btn-voz');
+            if (modoSiempreActivo) {
+                btn.innerText = "👂 Asistente Activo...";
+                btn.style.backgroundColor = "#27ae60";
+                recognition.start();
+            } else {
+                btn.innerText = "🎤 Ordenar por Voz (Gemini IA)";
+                btn.style.backgroundColor = "#2980b9";
+                recognition.stop();
+            }
+        }
+
+        // ==================== RESTANTE CÓDIGO ORIGINAL (INICIAR TURNO, INVENTARIO, ETC) ====================
+        const CATALOGO_PREDETERMINADO = [
+            { nombre: "Tira", precio: 3.00 }, { nombre: "Francés", precio: 0.50 }, { nombre: "Pan Dulce Grande", precio: 1.00 },
+            { nombre: "Pan Dulce Pequeño", precio: 0.50 }, { nombre: "Pirujos Pequeños", precio: 0.50 }, { nombre: "Pirujos Grande", precio: 1.00 },
+            { nombre: "Pan chata", precio: 0.50 }, { nombre: "Pan Galleta", precio: 1.00 }, { nombre: "Bollo", precio: 0.50 },
+            { nombre: "Cemita", precio: 1.00 }, { nombre: "Gallina", precio: 1.00 }, { nombre: "Campechana Grande", precio: 1.00 },
+            { nombre: "Campechana pequeña", precio: 0.50 }, { nombre: "Volovanes", precio: 1.50 }, { nombre: "Donas", precio: 2.00 },
+            { nombre: "Roles de Canela", precio: 2.00 }, { nombre: "Salpora", precio: 1.00 }, { nombre: "Bolsa de galleta", precio: 3.00 },
+            { nombre: "Conos de manjar", precio: 3.00 }
+        ];
+        function cargarCatalogo() {
+            const tabla = document.getElementById('tabla-automatica');
+            if (!tabla) return;
+            tabla.innerHTML = "";
+            CATALOGO_PREDETERMINADO.forEach((item) => {
+                tabla.innerHTML += `<tr><td>${item.nombre}</td><td>Q${item.precio.toFixed(2)}</td><td><input type="number" class="cant-auto" data-nombre="${item.nombre}" data-precio="${item.precio}" placeholder="0" style="width:100%; max-width:80px;"></td></tr>`;
+            });
+        }
+        window.cargarCatalogo = cargarCatalogo; // Hacer accesible globalmente
+        function agregarAInventarioLocal() {
+            const nombre = document.getElementById('nuevo-pan').value.trim();
+            const precio = parseFloat(document.getElementById('nuevo-precio').value);
+            const cantidad = parseInt(document.getElementById('nueva-cantidad').value);
+            if (nombre && !isNaN(precio) && !isNaN(cantidad)) {
+                inventarioLocal.push({ nombre, precio, stock: cantidad, stockInicial: cantidad });
+                actualizarListaLocal();
+                document.getElementById('nuevo-pan').value = ''; document.getElementById('nuevo-precio').value = ''; document.getElementById('nueva-cantidad').value = '';
+            } else alert("Completa todos los campos.");
+        }
+        function actualizarListaLocal() {
+            const lista = document.getElementById('lista-inventario-local');
+            if (!lista) return;
+            lista.innerHTML = "";
+            inventarioLocal.forEach((item, index) => {
+                lista.innerHTML += `<li>${item.nombre} - Q${item.precio} (Cant: ${item.stock}) <button class="btn-danger" style="padding:2px 5px; width:auto; margin-left:10px;" onclick="eliminarLocal(${index})">X</button></li>`;
+            });
+        }
+        function eliminarLocal(index) { inventarioLocal.splice(index, 1); actualizarListaLocal(); }
+        async function iniciarTurno() {
+            const nombreVendedor = document.getElementById('nombre-vendedor').value.trim();
+            const firmaVendedor = document.getElementById('firma-vendedor').value.trim();
+            const tipoTurno = document.getElementById('tipo-turno').value;
+            if (!nombreVendedor || !firmaVendedor) return alert("Faltan datos del vendedor");
+            let inventarioFinal = [];
+            document.querySelectorAll('.cant-auto').forEach(input => {
+                const cant = parseInt(input.value);
+                if (cant > 0) inventarioFinal.push({ nombre: input.dataset.nombre, precio: parseFloat(input.dataset.precio), stock: cant, stockInicial: cant });
+            });
+            inventarioFinal = inventarioFinal.concat(inventarioLocal);
+            if (inventarioFinal.length === 0) return alert("Debes ingresar al menos un producto.");
             try {
-                const result = await model.generateContent(prompt);
-                const response = await result.response;
-                let text = response.text();
-                const jsonMatch = text.match(/\{[\s\S]*\}/);
-                if (jsonMatch) text = jsonMatch[0];
-                const accion = JSON.parse(text);
-                await ejecutarAccionGemini(accion);
-            } catch (err) {
-                console.error("Error Gemini:", err);
-                responderConVoz("No pude entender la orden, por favor repite.");
-            }
-        };
-
-        recognition.onend = () => { if (modoSiempreActivo) recognition.start(); };
-    }
-
-    function activarVoz() {
-        if (!recognition) {
-            alert("Tu navegador no soporta reconocimiento de voz.");
-            return;
+                const batch = db.batch();
+                inventarioFinal.forEach(item => { const docRef = db.collection("inventario").doc(item.nombre.toLowerCase().replace(/\s+/g, '-')); batch.set(docRef, item); });
+                await batch.commit();
+                await db.collection("configuracion").doc("estado_turno").set({ activo: true, vendedor: nombreVendedor, firma: firmaVendedor, turno: tipoTurno });
+            } catch (error) { alert("Error al conectar con la base de datos."); }
         }
-        modoSiempreActivo = !modoSiempreActivo;
-        const btn = document.getElementById('btn-voz');
-        if (modoSiempreActivo) {
-            btn.innerText = "👂 Asistente Activo...";
-            btn.style.backgroundColor = "#27ae60";
-            recognition.start();
-        } else {
-            btn.innerText = "🎤 Ordenar por Voz (Gemini IA)";
-            btn.style.backgroundColor = "#2980b9";
-            recognition.stop();
-        }
-    }
-
-    // ==================== RESTANTE CÓDIGO ORIGINAL (INICIAR TURNO, INVENTARIO, ETC) ====================
-    const CATALOGO_PREDETERMINADO = [
-        { nombre: "Tira", precio: 3.00 }, { nombre: "Francés", precio: 0.50 }, { nombre: "Pan Dulce Grande", precio: 1.00 },
-        { nombre: "Pan Dulce Pequeño", precio: 0.50 }, { nombre: "Pirujos Pequeños", precio: 0.50 }, { nombre: "Pirujos Grande", precio: 1.00 },
-        { nombre: "Pan chata", precio: 0.50 }, { nombre: "Pan Galleta", precio: 1.00 }, { nombre: "Bollo", precio: 0.50 },
-        { nombre: "Cemita", precio: 1.00 }, { nombre: "Gallina", precio: 1.00 }, { nombre: "Campechana Grande", precio: 1.00 },
-        { nombre: "Campechana pequeña", precio: 0.50 }, { nombre: "Volovanes", precio: 1.50 }, { nombre: "Donas", precio: 2.00 },
-        { nombre: "Roles de Canela", precio: 2.00 }, { nombre: "Salpora", precio: 1.00 }, { nombre: "Bolsa de galleta", precio: 3.00 },
-        { nombre: "Conos de manjar", precio: 3.00 }
-    ];
-    function cargarCatalogo() {
-        const tabla = document.getElementById('tabla-automatica');
-        tabla.innerHTML = "";
-        CATALOGO_PREDETERMINADO.forEach((item) => {
-            tabla.innerHTML += `<tr><td>${item.nombre}</td><td>Q${item.precio.toFixed(2)}</td><td><input type="number" class="cant-auto" data-nombre="${item.nombre}" data-precio="${item.precio}" placeholder="0" style="width:100%; max-width:80px;"></td></tr>`;
-        });
-    }
-    window.onload = cargarCatalogo;
-    function agregarAInventarioLocal() {
-        const nombre = document.getElementById('nuevo-pan').value.trim();
-        const precio = parseFloat(document.getElementById('nuevo-precio').value);
-        const cantidad = parseInt(document.getElementById('nueva-cantidad').value);
-        if (nombre && !isNaN(precio) && !isNaN(cantidad)) {
-            inventarioLocal.push({ nombre, precio, stock: cantidad, stockInicial: cantidad });
-            actualizarListaLocal();
-            document.getElementById('nuevo-pan').value = ''; document.getElementById('nuevo-precio').value = ''; document.getElementById('nueva-cantidad').value = '';
-        } else alert("Completa todos los campos.");
-    }
-    function actualizarListaLocal() {
-        const lista = document.getElementById('lista-inventario-local');
-        lista.innerHTML = "";
-        inventarioLocal.forEach((item, index) => {
-            lista.innerHTML += `<li>${item.nombre} - Q${item.precio} (Cant: ${item.stock}) <button class="btn-danger" style="padding:2px 5px; width:auto; margin-left:10px;" onclick="eliminarLocal(${index})">X</button></li>`;
-        });
-    }
-    function eliminarLocal(index) { inventarioLocal.splice(index, 1); actualizarListaLocal(); }
-    async function iniciarTurno() {
-        const nombreVendedor = document.getElementById('nombre-vendedor').value.trim();
-        const firmaVendedor = document.getElementById('firma-vendedor').value.trim();
-        const tipoTurno = document.getElementById('tipo-turno').value;
-        if (!nombreVendedor || !firmaVendedor) return alert("Faltan datos del vendedor");
-        let inventarioFinal = [];
-        document.querySelectorAll('.cant-auto').forEach(input => {
-            const cant = parseInt(input.value);
-            if (cant > 0) inventarioFinal.push({ nombre: input.dataset.nombre, precio: parseFloat(input.dataset.precio), stock: cant, stockInicial: cant });
-        });
-        inventarioFinal = inventarioFinal.concat(inventarioLocal);
-        if (inventarioFinal.length === 0) return alert("Debes ingresar al menos un producto.");
-        try {
-            const batch = db.batch();
-            inventarioFinal.forEach(item => { const docRef = db.collection("inventario").doc(item.nombre.toLowerCase().replace(/\s+/g, '-')); batch.set(docRef, item); });
-            await batch.commit();
-            await db.collection("configuracion").doc("estado_turno").set({ activo: true, vendedor: nombreVendedor, firma: firmaVendedor, turno: tipoTurno });
-        } catch (error) { alert("Error al conectar con la base de datos."); }
-    }
-    function iniciarEscuchasEnTiempoReal() {
-        db.collection("inventario").onSnapshot((snap) => {
-            const grid = document.getElementById('productos-grid');
-            const tablaInv = document.getElementById('tabla-inventario');
-            grid.innerHTML = ''; tablaInv.innerHTML = ''; inventarioFirebase = [];
-            snap.forEach(doc => {
-                const prod = doc.data(); prod.id = doc.id; inventarioFirebase.push(prod);
-                tablaInv.innerHTML += `<tr><td>${prod.nombre}</td><td>Q${prod.precio.toFixed(2)}</td><td>${prod.stockInicial || prod.stock}</td><td><strong>${prod.stock}</strong></td></tr>`;
-                const sinStock = prod.stock <= 0;
-                const card = document.createElement('div');
-                card.className = `producto-card ${sinStock ? 'sin-stock' : ''}`;
-                if (productoSeleccionadoId === prod.id) card.classList.add('selected');
-                const imgUrl = IMAGENES_PRODUCTOS[prod.id] || IMAGENES_PRODUCTOS["default"];
-                card.innerHTML = `<img src="${imgUrl}" class="producto-img"><h4>${prod.nombre}</h4><p>Q${prod.precio.toFixed(2)}</p><small>Disponible: ${prod.stock}</small>`;
-                if (!sinStock) card.onclick = () => seleccionarParaVenta(prod.id, prod.nombre, card);
-                grid.appendChild(card);
+        function iniciarEscuchasEnTiempoReal() {
+            db.collection("inventario").onSnapshot((snap) => {
+                const grid = document.getElementById('productos-grid');
+                const tablaInv = document.getElementById('tabla-inventario');
+                if (!grid || !tablaInv) return;
+                grid.innerHTML = ''; tablaInv.innerHTML = ''; inventarioFirebase = [];
+                snap.forEach(doc => {
+                    const prod = doc.data(); prod.id = doc.id; inventarioFirebase.push(prod);
+                    tablaInv.innerHTML += `<tr><td>${prod.nombre}</td><td>Q${prod.precio.toFixed(2)}</td><td>${prod.stockInicial || prod.stock}</td><td><strong>${prod.stock}</strong></td></tr>`;
+                    const sinStock = prod.stock <= 0;
+                    const card = document.createElement('div');
+                    card.className = `producto-card ${sinStock ? 'sin-stock' : ''}`;
+                    if (productoSeleccionadoId === prod.id) card.classList.add('selected');
+                    const imgUrl = IMAGENES_PRODUCTOS[prod.id] || IMAGENES_PRODUCTOS["default"];
+                    card.innerHTML = `<img src="${imgUrl}" class="producto-img"><h4>${prod.nombre}</h4><p>Q${prod.precio.toFixed(2)}</p><small>Disponible: ${prod.stock}</small>`;
+                    if (!sinStock) card.onclick = () => seleccionarParaVenta(prod.id, prod.nombre, card);
+                    grid.appendChild(card);
+                });
             });
-        });
-        db.collection("ventas").orderBy("timestamp", "desc").onSnapshot((snap) => {
-            const tablaHistorial = document.getElementById('tabla-historial');
-            tablaHistorial.innerHTML = ''; ventasGlobales = [];
-            snap.forEach(doc => {
-                const venta = doc.data(); ventasGlobales.push(venta);
-                const fecha = venta.timestamp ? new Date(venta.timestamp.toDate()).toLocaleTimeString() : 'Reciente...';
-                let resumen = venta.productos.map(p => `${p.cantidad}x ${p.nombre}`).join(', ');
-                let badge = venta.tipo === 'fiar' ? `<span class="text-rojo">Fiado: ${venta.cliente}</span>` : '<span style="color:#27ae60;">Efectivo</span>';
-                tablaHistorial.innerHTML += `<tr><td>${fecha}</td><td>${resumen}</td><td><strong>Q${venta.total.toFixed(2)}</strong></td><td>${badge}</td></tr>`;
+            db.collection("ventas").orderBy("timestamp", "desc").onSnapshot((snap) => {
+                const tablaHistorial = document.getElementById('tabla-historial');
+                if (!tablaHistorial) return;
+                tablaHistorial.innerHTML = ''; ventasGlobales = [];
+                snap.forEach(doc => {
+                    const venta = doc.data(); ventasGlobales.push(venta);
+                    const fecha = venta.timestamp ? new Date(venta.timestamp.toDate()).toLocaleTimeString() : 'Reciente...';
+                    let resumen = venta.productos.map(p => `${p.cantidad}x ${p.nombre}`).join(', ');
+                    let badge = venta.tipo === 'fiar' ? `<span class="text-rojo">Fiado: ${venta.cliente}</span>` : '<span style="color:#27ae60;">Efectivo</span>';
+                    tablaHistorial.innerHTML += `<tr><td>${fecha}</td><td>${resumen}</td><td><strong>Q${venta.total.toFixed(2)}</strong></td><td>${badge}</td></tr>`;
+                });
+                ventasGlobales.reverse();
             });
-            ventasGlobales.reverse();
-        });
-    }
-    db.collection("configuracion").doc("estado_turno").onSnapshot((doc) => {
-        document.getElementById('pantalla-carga').style.display = 'none';
-        if (doc.exists && doc.data().activo === true) {
-            document.getElementById('inicio-turno-section').style.display = 'none';
-            document.getElementById('dashboard').style.display = 'block';
-            vendedorActivo = doc.data().vendedor; turnoActivo = doc.data().turno; firmaActivaEnNube = doc.data().firma;
-            document.getElementById('display-vendedor').innerText = `${vendedorActivo} (${turnoActivo})`;
-            if (!escuchasIniciadas) { iniciarEscuchasEnTiempoReal(); escuchasIniciadas = true; }
-        } else {
-            document.getElementById('inicio-turno-section').style.display = 'block';
-            document.getElementById('dashboard').style.display = 'none';
-            inventarioLocal = []; carrito = []; actualizarListaLocal(); escuchasIniciadas = false;
         }
-    });
-    function seleccionarParaVenta(id, nombre, elemento) {
-        productoSeleccionadoId = id;
-        document.getElementById('nombre-prod-sel').innerText = nombre;
-        document.getElementById('barra-flotante').style.display = 'flex';
-        document.getElementById('overlay-pos').style.display = 'block';
-        document.querySelectorAll('.producto-card').forEach(c => c.classList.remove('selected'));
-        elemento.classList.add('selected');
-        setTimeout(() => { document.getElementById('cantidad-venta').focus(); }, 100);
-    }
-    function cerrarFlotante() {
-        document.getElementById('barra-flotante').style.display = 'none';
-        document.getElementById('overlay-pos').style.display = 'none';
-        productoSeleccionadoId = null;
-        document.querySelectorAll('.producto-card').forEach(c => c.classList.remove('selected'));
-    }
-    function agregarAlCarrito() {
-        if (!productoSeleccionadoId) return alert("Selecciona un pan.");
-        const prod = inventarioFirebase.find(p => p.id === productoSeleccionadoId);
-        const cantidad = parseInt(document.getElementById('cantidad-venta').value);
-        if (isNaN(cantidad) || cantidad <= 0) return alert("Cantidad válida.");
-        const existente = carrito.find(i => i.id === productoSeleccionadoId);
-        const nuevaCant = (existente ? existente.cantidad : 0) + cantidad;
-        if (nuevaCant > prod.stock) return alert(`Stock insuficiente. Quedan ${prod.stock}.`);
-        if (existente) existente.cantidad += cantidad;
-        else carrito.push({ ...prod, cantidad });
-        actualizarCarrito();
-        document.getElementById('cantidad-venta').value = 1;
-        cerrarFlotante();
-    }
-    async function completarVenta(tipoDePago) {
-        if (carrito.length === 0) return alert("Carrito vacío.");
-        let nombreCliente = "";
-        if (tipoDePago === 'fiar') { nombreCliente = prompt("Nombre del cliente:"); if (!nombreCliente) return; }
-        let totalVenta = carrito.reduce((s, i) => s + (i.precio * i.cantidad), 0);
-        try {
-            await db.collection("ventas").add({ vendedor: document.getElementById('display-vendedor').innerText, productos: carrito, total: totalVenta, tipo: tipoDePago, cliente: nombreCliente, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
-            const batch = db.batch();
-            carrito.forEach(i => batch.update(db.collection("inventario").doc(i.id), { stock: firebase.firestore.FieldValue.increment(-i.cantidad) }));
-            await batch.commit();
-            alert(tipoDePago === 'fiar' ? `Venta FIADA a ${nombreCliente} registrada.` : "Venta en EFECTIVO registrada.");
-            carrito = []; actualizarCarrito(); cerrarFlotante();
-        } catch (error) { alert("Error al procesar venta."); }
-    }
-    function generarPDFCierre() { alert("PDF generado (función existente)"); }
-    async function cerrarTurno() {
-        const clave = prompt("Clave para cerrar turno:");
-        if (clave === firmaActivaEnNube || clave === "admin123") {
-            if (confirm("Generar reporte y limpiar base de datos?")) {
-                generarPDFCierre();
-                const invSnap = await db.collection("inventario").get(); const batch1 = db.batch(); invSnap.docs.forEach(d => batch1.delete(d.ref)); await batch1.commit();
-                const ventasSnap = await db.collection("ventas").get(); const batch2 = db.batch(); ventasSnap.docs.forEach(d => batch2.delete(d.ref)); await batch2.commit();
-                await db.collection("configuracion").doc("estado_turno").set({ activo: false, vendedor: "", firma: "" });
+        db.collection("configuracion").doc("estado_turno").onSnapshot((doc) => {
+            const loader = document.getElementById('pantalla-carga');
+            if (loader) loader.style.display = 'none';
+            if (doc.exists && doc.data().activo === true) {
+                const inicioSection = document.getElementById('inicio-turno-section');
+                const dashboardDiv = document.getElementById('dashboard');
+                if (inicioSection) inicioSection.style.display = 'none';
+                if (dashboardDiv) dashboardDiv.style.display = 'block';
+                vendedorActivo = doc.data().vendedor; turnoActivo = doc.data().turno; firmaActivaEnNube = doc.data().firma;
+                const displaySpan = document.getElementById('display-vendedor');
+                if (displaySpan) displaySpan.innerText = `${vendedorActivo} (${turnoActivo})`;
+                if (!escuchasIniciadas) { iniciarEscuchasEnTiempoReal(); escuchasIniciadas = true; }
+            } else {
+                const inicioSection = document.getElementById('inicio-turno-section');
+                const dashboardDiv = document.getElementById('dashboard');
+                if (inicioSection) inicioSection.style.display = 'block';
+                if (dashboardDiv) dashboardDiv.style.display = 'none';
+                inventarioLocal = []; carrito = []; actualizarListaLocal(); escuchasIniciadas = false;
             }
-        } else if (clave) alert("Clave incorrecta.");
-    }
-    function cambiarPestaña(evt, nombre) {
-        const tabs = document.getElementsByClassName("tab-content"); for (let t of tabs) t.style.display = "none";
-        const btns = document.getElementsByClassName("tab"); for (let b of btns) b.className = b.className.replace(" active", "");
-        document.getElementById(nombre).style.display = "block"; evt.currentTarget.className += " active";
-    }
+        });
+        function seleccionarParaVenta(id, nombre, elemento) {
+            productoSeleccionadoId = id;
+            document.getElementById('nombre-prod-sel').innerText = nombre;
+            document.getElementById('barra-flotante').style.display = 'flex';
+            document.getElementById('overlay-pos').style.display = 'block';
+            document.querySelectorAll('.producto-card').forEach(c => c.classList.remove('selected'));
+            elemento.classList.add('selected');
+            setTimeout(() => { document.getElementById('cantidad-venta').focus(); }, 100);
+        }
+        function cerrarFlotante() {
+            document.getElementById('barra-flotante').style.display = 'none';
+            document.getElementById('overlay-pos').style.display = 'none';
+            productoSeleccionadoId = null;
+            document.querySelectorAll('.producto-card').forEach(c => c.classList.remove('selected'));
+        }
+        function agregarAlCarrito() {
+            if (!productoSeleccionadoId) return alert("Selecciona un pan.");
+            const prod = inventarioFirebase.find(p => p.id === productoSeleccionadoId);
+            const cantidad = parseInt(document.getElementById('cantidad-venta').value);
+            if (isNaN(cantidad) || cantidad <= 0) return alert("Cantidad válida.");
+            const existente = carrito.find(i => i.id === productoSeleccionadoId);
+            const nuevaCant = (existente ? existente.cantidad : 0) + cantidad;
+            if (nuevaCant > prod.stock) return alert(`Stock insuficiente. Quedan ${prod.stock}.`);
+            if (existente) existente.cantidad += cantidad;
+            else carrito.push({ ...prod, cantidad });
+            actualizarCarrito();
+            document.getElementById('cantidad-venta').value = 1;
+            cerrarFlotante();
+        }
+        async function completarVenta(tipoDePago) {
+            if (carrito.length === 0) return alert("Carrito vacío.");
+            let nombreCliente = "";
+            if (tipoDePago === 'fiar') { nombreCliente = prompt("Nombre del cliente:"); if (!nombreCliente) return; }
+            let totalVenta = carrito.reduce((s, i) => s + (i.precio * i.cantidad), 0);
+            try {
+                await db.collection("ventas").add({ vendedor: document.getElementById('display-vendedor').innerText, productos: carrito, total: totalVenta, tipo: tipoDePago, cliente: nombreCliente, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
+                const batch = db.batch();
+                carrito.forEach(i => batch.update(db.collection("inventario").doc(i.id), { stock: firebase.firestore.FieldValue.increment(-i.cantidad) }));
+                await batch.commit();
+                alert(tipoDePago === 'fiar' ? `Venta FIADA a ${nombreCliente} registrada.` : "Venta en EFECTIVO registrada.");
+                carrito = []; actualizarCarrito(); cerrarFlotante();
+            } catch (error) { alert("Error al procesar venta."); }
+        }
+        function generarPDFCierre() { alert("PDF generado (función existente)"); }
+        async function cerrarTurno() {
+            const clave = prompt("Clave para cerrar turno:");
+            if (clave === firmaActivaEnNube || clave === "admin123") {
+                if (confirm("Generar reporte y limpiar base de datos?")) {
+                    generarPDFCierre();
+                    const invSnap = await db.collection("inventario").get(); const batch1 = db.batch(); invSnap.docs.forEach(d => batch1.delete(d.ref)); await batch1.commit();
+                    const ventasSnap = await db.collection("ventas").get(); const batch2 = db.batch(); ventasSnap.docs.forEach(d => batch2.delete(d.ref)); await batch2.commit();
+                    await db.collection("configuracion").doc("estado_turno").set({ activo: false, vendedor: "", firma: "" });
+                }
+            } else if (clave) alert("Clave incorrecta.");
+        }
+        function cambiarPestaña(evt, nombre) {
+            const tabs = document.getElementsByClassName("tab-content"); for (let t of tabs) t.style.display = "none";
+            const btns = document.getElementsByClassName("tab"); for (let b of btns) b.className = b.className.replace(" active", "");
+            document.getElementById(nombre).style.display = "block"; evt.currentTarget.className += " active";
+        }
+
+        // Exponer funciones necesarias globalmente
+        window.agregarAInventarioLocal = agregarAInventarioLocal;
+        window.eliminarLocal = eliminarLocal;
+        window.iniciarTurno = iniciarTurno;
+        window.cerrarTurno = cerrarTurno;
+        window.completarVenta = completarVenta;
+        window.cambiarPestaña = cambiarPestaña;
+        window.activarVoz = activarVoz;
+        window.seleccionarParaVenta = seleccionarParaVenta;
+        window.cerrarFlotante = cerrarFlotante;
+        window.agregarAlCarrito = agregarAlCarrito;
+        window.actualizarCarrito = actualizarCarrito; // para el botón de eliminar
+        window.carrito = carrito; // Para que el botón de eliminar funcione (referencia)
+        // Asegurar que carrito sea accesible desde los botones inline
+        Object.defineProperty(window, 'carrito', {
+            get: () => carrito,
+            set: (val) => { carrito = val; }
+        });
+
+        // Cargar catálogo inicial
+        cargarCatalogo();
+
+        // Simular loader (el loader se quitará cuando Firebase responda, pero también podemos quitar después de 5 segundos por si acaso)
+        setTimeout(() => {
+            const loader = document.getElementById('pantalla-carga');
+            if (loader && loader.style.display !== 'none') {
+                console.warn("⚠️ Loader no se ocultó automáticamente, forzando ocultación.");
+                loader.style.display = 'none';
+            }
+        }, 5000);
+    })();
 </script>
 </body>
 </html>
