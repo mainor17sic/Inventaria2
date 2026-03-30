@@ -13,7 +13,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@google/generative-ai@0.21.0/dist/index.min.js"></script>
 
     <style>
-        /* (estilos igual que antes, no cambio) */
+        /* (estilos igual que antes, no cambio por brevedad) */
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f2f5; margin: 0; padding: 10px; display: flex; justify-content: center; box-sizing: border-box; }
         h1, h2, h3, h4 { color: #333; margin-top: 0; }
         .container { width: 100%; max-width: 1200px; background: #fff; padding: 15px; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.08); box-sizing: border-box; margin-top: 10px; }
@@ -112,7 +112,10 @@
             <h3>1. Inventario del Día</h3>
             <div class="table-responsive" style="max-height: 450px; overflow-y: auto; background: white; border-radius: 4px; border: 1px solid #ddd;">
                 <table style="margin-top: 0; min-width: 400px;">
-                    <thead style="position: sticky; top: 0; z-index: 1;"><tr><th>Pan</th><th>Precio</th><th style="width: 100px;">Cantidad</th></tr></thead>
+                    <thead style="position: sticky; top: 0; z-index: 1;">……
+                        <th>Pan</th><th>Precio</th><th style="width: 100px;">Cantidad</th>
+                    </tr>
+                    </thead>
                     <tbody id="tabla-automatica"></tbody>
                 </table>
             </div>
@@ -185,9 +188,8 @@
         // ==================== MANEJO DE ERRORES GLOBAL ====================
         window.addEventListener('error', function(e) {
             console.error('❌ Error global capturado:', e.error);
-            // Mostrar un mensaje amigable en la página si ocurre un error fatal
             const loader = document.getElementById('pantalla-carga');
-            if (loader) {
+            if (loader && loader.style.display !== 'none') {
                 loader.innerHTML = '<div style="background:#fff; padding:20px; border-radius:8px;"><h3>Error al cargar la aplicación</h3><p>Revisa la consola (F12) para más detalles.</p><button onclick="location.reload()">Recargar</button></div>';
             }
         });
@@ -242,23 +244,7 @@
 
         // ==================== GEMINI IA con FALLBACK REST ====================
         const GEMINI_API_KEY = "AIzaSyClPu_A2TqEbYp6ksvU-XT3IFQmAksJDto";
-        let geminiModel = null;
-        let usarREST = false;
-
-        // Intento inicializar la librería oficial
-        try {
-            if (typeof GoogleGenerativeAI !== 'undefined') {
-                const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-                geminiModel = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-                console.log("✅ Gemini inicializado con librería oficial.");
-            } else {
-                console.warn("⚠️ Librería GoogleGenerativeAI no cargada, usaremos API REST como fallback.");
-                usarREST = true;
-            }
-        } catch (e) {
-            console.error("❌ Error inicializando Gemini con librería:", e);
-            usarREST = true;
-        }
+        let usarREST = true; // Forzar uso de REST para mayor compatibilidad
 
         // Función para llamar a Gemini usando REST (más robusto)
         async function llamarGeminiREST(prompt) {
@@ -266,6 +252,7 @@
             const body = {
                 contents: [{ parts: [{ text: prompt }] }]
             };
+            console.log("📡 Enviando prompt a Gemini (REST):", prompt.substring(0, 200) + "...");
             try {
                 const response = await fetch(url, {
                     method: 'POST',
@@ -279,29 +266,17 @@
                 const data = await response.json();
                 const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
                 if (!text) throw new Error("Respuesta sin contenido");
+                console.log("📨 Respuesta cruda de Gemini:", text);
                 return text;
             } catch (err) {
-                console.error("Error en llamada REST a Gemini:", err);
+                console.error("❌ Error en llamada REST a Gemini:", err);
                 throw err;
             }
         }
 
         // Función unificada para obtener respuesta de Gemini
         async function obtenerRespuestaGemini(prompt) {
-            if (!usarREST && geminiModel) {
-                try {
-                    const result = await geminiModel.generateContent(prompt);
-                    const response = await result.response;
-                    return response.text();
-                } catch (err) {
-                    console.error("Error con librería oficial, cambiando a REST:", err);
-                    usarREST = true;
-                    // Fallback a REST
-                    return await llamarGeminiREST(prompt);
-                }
-            } else {
-                return await llamarGeminiREST(prompt);
-            }
+            return await llamarGeminiREST(prompt);
         }
 
         // ==================== FUNCIONES AUXILIARES ====================
@@ -346,13 +321,14 @@
                 const subtotal = item.precio * item.cantidad;
                 total += subtotal;
                 lista.innerHTML += `<li>${item.cantidad}x ${item.nombre} - Q${subtotal.toFixed(2)} 
-                    <button class="btn-danger" style="padding:2px 5px; font-size:12px; width:auto; float: right;" onclick="carrito.splice(${index}, 1); actualizarCarrito();">X</button>
+                    <button class="btn-danger" style="padding:2px 5px; font-size:12px; width:auto; float: right;" onclick="window.carrito.splice(${index}, 1); window.actualizarCarrito();">X</button>
                 </li>`;
             });
             document.getElementById('carrito-total').innerText = total.toFixed(2);
         }
 
         async function ejecutarAccionGemini(accion) {
+            console.log("⚙️ Ejecutando acción:", accion);
             switch (accion.accion) {
                 case "agregar_al_carrito":
                     if (accion.productos && accion.productos.length) {
@@ -423,43 +399,55 @@
             recognition.onresult = async (event) => {
                 let frase = event.results[0][0].transcript.toLowerCase().trim();
                 console.log("🗣️ Escuchado:", frase);
-                if (!geminiModel && !usarREST) {
-                    responderConVoz("Gemini no está disponible. Revisa la API key.");
-                    return;
-                }
+                
+                // Estado actual
                 const estado = {
                     carrito: carrito.map(i => ({ nombre: i.nombre, cantidad: i.cantidad, precio: i.precio })),
                     inventario: inventarioFirebase.map(p => ({ nombre: p.nombre, stock: p.stock, precio: p.precio })),
                     ventasDelTurno: ventasGlobales.map(v => ({ total: v.total, tipo: v.tipo }))
                 };
+                
+                // Prompt más simple y directo
                 const prompt = `
-Eres un asistente de ventas para una panadería llamada Panadería Marvin. El usuario da órdenes de voz. Tu tarea es interpretar la intención y devolver un JSON con las acciones a realizar.
+Eres un asistente de ventas para Panadería Marvin. El usuario da una orden. Devuelve SOLO un JSON con la acción.
 
 Acciones posibles: "agregar_al_carrito", "cobrar_efectivo", "fiar", "reporte_ventas", "actualizar_inventario", "responder".
-Estructura:
-{"accion": "una de las anteriores", "productos": [{"nombre": "nombre", "cantidad": número}], "cliente": "nombre si aplica", "respuesta": "texto a decir"}
+Formato: {"accion": "...", "productos": [{"nombre": "...", "cantidad": número}], "cliente": "...", "respuesta": "..."}
 
-Ejemplo: "agrega 3 tiras y 2 franceses" → {"accion":"agregar_al_carrito","productos":[{"nombre":"tira","cantidad":3},{"nombre":"francés","cantidad":2}],"respuesta":"Agregado 3 tiras y 2 franceses"}
-"cobrar efectivo" → {"accion":"cobrar_efectivo","respuesta":"Venta registrada en efectivo"}
-"fiar a Juan" → {"accion":"fiar","cliente":"Juan","respuesta":"Venta registrada a crédito para Juan"}
-"cuánto llevamos" → {"accion":"reporte_ventas","respuesta":"Total de ventas hasta ahora es Q..."}
-"entraron 10 donas" → {"accion":"actualizar_inventario","productos":[{"nombre":"donas","cantidad":10}],"respuesta":"Actualizado stock de donas"}
+Ejemplos:
+- "agrega 3 tiras" → {"accion":"agregar_al_carrito","productos":[{"nombre":"tira","cantidad":3}],"respuesta":"Agregado 3 tiras"}
+- "cobrar efectivo" → {"accion":"cobrar_efectivo","respuesta":"Venta registrada en efectivo"}
+- "fiar a Juan" → {"accion":"fiar","cliente":"Juan","respuesta":"Venta registrada a crédito para Juan"}
+- "cuánto llevamos" → {"accion":"reporte_ventas","respuesta":"Total de ventas hasta ahora es..."}
+- "entraron 10 donas" → {"accion":"actualizar_inventario","productos":[{"nombre":"donas","cantidad":10}],"respuesta":"Actualizado stock de donas"}
 
-Estado actual:
+Estado actual (puedes usar esta información):
 Carrito: ${JSON.stringify(estado.carrito)}
 Inventario: ${JSON.stringify(estado.inventario)}
-Ventas del turno: ${JSON.stringify(estado.ventasDelTurno)}
+Ventas: ${JSON.stringify(estado.ventasDelTurno)}
 
-Usuario dijo: "${frase}"
+Orden del usuario: "${frase}"
 Responde únicamente con el JSON, sin texto adicional.`;
+                
                 try {
                     const respuestaTexto = await obtenerRespuestaGemini(prompt);
+                    console.log("📝 Respuesta completa de Gemini:", respuestaTexto);
+                    
+                    // Intentar extraer JSON
+                    let jsonStr = respuestaTexto;
                     const jsonMatch = respuestaTexto.match(/\{[\s\S]*\}/);
-                    if (!jsonMatch) throw new Error("No se encontró JSON en la respuesta");
-                    const accion = JSON.parse(jsonMatch[0]);
+                    if (jsonMatch) {
+                        jsonStr = jsonMatch[0];
+                    } else {
+                        // Si no hay JSON, usar la respuesta como texto para responder
+                        responderConVoz(respuestaTexto);
+                        return;
+                    }
+                    
+                    const accion = JSON.parse(jsonStr);
                     await ejecutarAccionGemini(accion);
                 } catch (err) {
-                    console.error("Error procesando con Gemini:", err);
+                    console.error("❌ Error procesando con Gemini:", err);
                     responderConVoz("No pude entender la orden, por favor repite.");
                 }
             };
@@ -503,7 +491,6 @@ Responde únicamente con el JSON, sin texto adicional.`;
                 tabla.innerHTML += `<tr><td>${item.nombre}</td><td>Q${item.precio.toFixed(2)}</td><td><input type="number" class="cant-auto" data-nombre="${item.nombre}" data-precio="${item.precio}" placeholder="0" style="width:100%; max-width:80px;"></td></tr>`;
             });
         }
-        window.cargarCatalogo = cargarCatalogo; // Hacer accesible globalmente
         function agregarAInventarioLocal() {
             const nombre = document.getElementById('nuevo-pan').value.trim();
             const precio = parseFloat(document.getElementById('nuevo-precio').value);
@@ -667,18 +654,13 @@ Responde únicamente con el JSON, sin texto adicional.`;
         window.seleccionarParaVenta = seleccionarParaVenta;
         window.cerrarFlotante = cerrarFlotante;
         window.agregarAlCarrito = agregarAlCarrito;
-        window.actualizarCarrito = actualizarCarrito; // para el botón de eliminar
-        window.carrito = carrito; // Para que el botón de eliminar funcione (referencia)
-        // Asegurar que carrito sea accesible desde los botones inline
-        Object.defineProperty(window, 'carrito', {
-            get: () => carrito,
-            set: (val) => { carrito = val; }
-        });
+        window.actualizarCarrito = actualizarCarrito;
+        window.carrito = carrito; // Para que los botones de eliminar puedan acceder
 
         // Cargar catálogo inicial
         cargarCatalogo();
 
-        // Simular loader (el loader se quitará cuando Firebase responda, pero también podemos quitar después de 5 segundos por si acaso)
+        // Ocultar loader después de 5 segundos por si Firebase no responde
         setTimeout(() => {
             const loader = document.getElementById('pantalla-carga');
             if (loader && loader.style.display !== 'none') {
