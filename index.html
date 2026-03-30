@@ -9,11 +9,11 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
-    <!-- Gemini AI Library (opcional, usaremos REST si falla) -->
+    <!-- Gemini AI Library (opcional) -->
     <script src="https://cdn.jsdelivr.net/npm/@google/generative-ai@0.21.0/dist/index.min.js"></script>
 
     <style>
-        /* (estilos igual que antes, no cambio por brevedad) */
+        /* (Mismos estilos que antes, no los repito por brevedad pero deben estar) */
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f2f5; margin: 0; padding: 10px; display: flex; justify-content: center; box-sizing: border-box; }
         h1, h2, h3, h4 { color: #333; margin-top: 0; }
         .container { width: 100%; max-width: 1200px; background: #fff; padding: 15px; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.08); box-sizing: border-box; margin-top: 10px; }
@@ -112,9 +112,8 @@
             <h3>1. Inventario del Día</h3>
             <div class="table-responsive" style="max-height: 450px; overflow-y: auto; background: white; border-radius: 4px; border: 1px solid #ddd;">
                 <table style="margin-top: 0; min-width: 400px;">
-                    <thead style="position: sticky; top: 0; z-index: 1;">……
-                        <th>Pan</th><th>Precio</th><th style="width: 100px;">Cantidad</th>
-                    </tr>
+                    <thead style="position: sticky; top: 0; z-index: 1;">
+                        <tr><th>Pan</th><th>Precio</th><th style="width: 100px;">Cantidad</th></tr>
                     </thead>
                     <tbody id="tabla-automatica"></tbody>
                 </table>
@@ -281,10 +280,17 @@
 
         // ==================== FUNCIONES AUXILIARES ====================
         function responderConVoz(mensaje) {
-            const msn = new SpeechSynthesisUtterance(mensaje);
-            msn.lang = 'es-GT';
-            msn.rate = 1.1;
-            window.speechSynthesis.speak(msn);
+            console.log("🔊 Intentando decir:", mensaje);
+            try {
+                const msn = new SpeechSynthesisUtterance(mensaje);
+                msn.lang = 'es-GT';
+                msn.rate = 1.1;
+                msn.onend = () => console.log("✅ Síntesis finalizada");
+                msn.onerror = (e) => console.error("❌ Error en síntesis de voz:", e);
+                window.speechSynthesis.speak(msn);
+            } catch (e) {
+                console.error("❌ Error al crear utterance:", e);
+            }
         }
 
         async function completarVentaVoz(tipo, clienteFiar) {
@@ -396,6 +402,13 @@
             recognition.lang = 'es-GT';
             recognition.interimResults = false;
 
+            recognition.onstart = () => console.log("🎤 Reconocimiento de voz iniciado.");
+            recognition.onerror = (e) => console.error("❌ Error en reconocimiento de voz:", e);
+            recognition.onend = () => {
+                console.log("🎤 Reconocimiento finalizado.");
+                if (modoSiempreActivo) recognition.start();
+            };
+
             recognition.onresult = async (event) => {
                 let frase = event.results[0][0].transcript.toLowerCase().trim();
                 console.log("🗣️ Escuchado:", frase);
@@ -451,8 +464,8 @@ Responde únicamente con el JSON, sin texto adicional.`;
                     responderConVoz("No pude entender la orden, por favor repite.");
                 }
             };
-
-            recognition.onend = () => { if (modoSiempreActivo) recognition.start(); };
+        } else {
+            console.error("❌ Este navegador no soporta reconocimiento de voz.");
         }
 
         function activarVoz() {
@@ -465,6 +478,8 @@ Responde únicamente con el JSON, sin texto adicional.`;
             if (modoSiempreActivo) {
                 btn.innerText = "👂 Asistente Activo...";
                 btn.style.backgroundColor = "#27ae60";
+                // Mensaje de prueba para verificar síntesis
+                responderConVoz("Asistente activado. Di tu orden.");
                 recognition.start();
             } else {
                 btn.innerText = "🎤 Ordenar por Voz (Gemini IA)";
