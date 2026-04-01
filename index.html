@@ -50,24 +50,48 @@
         button:hover { background-color: #e67e22; transform: translateY(-1px); }
         .btn-danger { background-color: #c0392b; }
         .btn-success { background-color: #27ae60; }
+        
+        /* === PESTAÑAS HORIZONTALES CON SCROLL === */
         .tabs {
             display: flex;
-            border-bottom: 2px solid #ddd;
+            flex-wrap: nowrap;          /* Evita que las pestañas salten a la siguiente línea */
+            overflow-x: auto;           /* Scroll horizontal si no caben */
+            gap: 2px;
             margin-bottom: 20px;
-            flex-wrap: wrap;
+            padding-bottom: 5px;
+            border-bottom: 2px solid #ddd;
+            scrollbar-width: thin;
+            -webkit-overflow-scrolling: touch;
         }
         .tab {
-            padding: 12px 18px;
+            flex: 0 0 auto;             /* Tamaño según su contenido, no se expanden */
+            padding: 12px 20px;
             cursor: pointer;
             background: #f8f9fa;
             border: 1px solid #ddd;
             border-bottom: none;
-            margin-right: 2px;
             border-radius: 8px 8px 0 0;
-            flex-grow: 1;
+            font-size: 15px;
+            color: #555;
             text-align: center;
+            transition: all 0.2s;
+            white-space: nowrap;        /* Evita que el texto se parta */
         }
-        .tab.active { background: #d35400; color: white; font-weight: bold; border-color: #d35400; }
+        .tab.active {
+            background: #d35400;
+            color: white;
+            font-weight: bold;
+            border-color: #d35400;
+        }
+        .tab:hover {
+            background: #e67e22;
+            color: white;
+        }
+        /* Para pantallas muy pequeñas, reducir el padding */
+        @media (max-width: 480px) {
+            .tab { padding: 10px 12px; font-size: 13px; }
+        }
+
         .tab-content { display: none; }
         .tab-content.active { display: block; }
         .table-responsive { overflow-x: auto; }
@@ -216,12 +240,11 @@
             .barra-accion-venta input { width: 60px; }
         }
 
-        /* Otros estilos responsivos */
+        /* Responsive para escritorio */
         @media (min-width: 850px) {
             .inicio-layout { flex-direction: row; }
             .pos-container { flex-direction: row; align-items: flex-start; }
             .cart-section { position: sticky; top: 20px; min-width: 300px; max-width: 350px; }
-            .tab { flex-grow: 0; padding: 15px 25px; }
         }
     </style>
 </head>
@@ -263,7 +286,7 @@
             <h3>1. Inventario del Día</h3>
             <div class="table-responsive" style="max-height: 450px; overflow-y: auto;">
                 <table style="margin-top:0; min-width:400px;">
-                    <thead><tr><th>Pan</th><th>Precio</th><th>Cantidad</th></tr></thead>
+                    <thead> <tr><th>Pan</th><th>Precio</th><th>Cantidad</th></tr> </thead>
                     <tbody id="tabla-automatica"></tbody>
                 </table>
             </div>
@@ -295,12 +318,15 @@
         <div><h1 style="margin:0; color:#d35400;">🍞 Panadería Marvin</h1><p>Turno: <strong id="display-vendedor"></strong></p></div>
         <button class="btn-danger" onclick="cerrarTurno()">📄🔒 Cerrar Turno y Reporte</button>
     </div>
+    
+    <!-- Pestañas horizontales con scroll -->
     <div class="tabs">
         <button class="tab active" onclick="cambiarPestaña(event, 'punto-venta')">Punto de Venta</button>
         <button class="tab" onclick="cambiarPestaña(event, 'inventario-vivo')">Inventario Real</button>
         <button class="tab" onclick="cambiarPestaña(event, 'historial-ventas')">Historial</button>
         <button class="tab" onclick="cambiarPestaña(event, 'historial-cierres')">Historial Cierres</button>
     </div>
+
     <div id="punto-venta" class="tab-content active">
         <div class="pos-container">
             <div class="productos-section"><div id="productos-grid"><p>Cargando productos...</p></div></div>
