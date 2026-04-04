@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>Panadería Marvin - Control de Turno (Voz sin bucle)</title>
+    <title>Panadería Marvin - Control de Turno (Voz Mejorada)</title>
 
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
@@ -276,7 +276,6 @@
             .cart-section { position: sticky; top: 20px; min-width: 300px; max-width: 350px; }
         }
         
-        /* Estilo para el selector de voz */
         .voice-selector {
             display: inline-flex;
             align-items: center;
@@ -400,8 +399,8 @@
         </div>
     </div>
     <div id="inventario-vivo" class="tab-content"><h2>Inventario en Tiempo Real</h2><div class="table-responsive"><table><thead><tr><th>Producto</th><th>Precio</th><th>Inicial</th><th>Disponible</th></tr></thead><tbody id="tabla-inventario"></tbody></table></div></div>
-    <div id="historial-ventas" class="tab-content"><h2>Historial de Ventas</h2><div class="table-responsive"><table><thead><tr><th>Hora</th><th>Productos</th><th>Total</th><th>Método</th></tr></thead><tbody id="tabla-historial"></tbody></table></div></div>
-    <div id="historial-cierres" class="tab-content"><h2>Historial de Cierres de Turno</h2><div class="table-responsive"></table><thead><tr><th>Fecha</th><th>Turno</th><th>Vendedor</th><th>Total Efectivo</th><th>Total Fiado</th><th>Total General</th><th>PDF</th></tr></thead><tbody id="tabla-cierres"></tbody></table></div></div>
+    <div id="historial-ventas" class="tab-content"><h2>Historial de Ventas</h2><div class="table-responsive"></table><thead><tr><th>Hora</th><th>Productos</th><th>Total</th><th>Método</th></tr></thead><tbody id="tabla-historial"></tbody></table></div></div>
+    <div id="historial-cierres" class="tab-content"><h2>Historial de Cierres de Turno</h2><div class="table-responsive"><table><thead><tr><th>Fecha</th><th>Turno</th><th>Vendedor</th><th>Total Efectivo</th><th>Total Fiado</th><th>Total General</th><th>PDF</th></tr></thead><tbody id="tabla-cierres"></tbody></table></div></div>
 </div>
 
 <div id="overlay-pos" class="overlay-vendedor" onclick="cerrarFlotante()"></div>
@@ -415,7 +414,7 @@
 </div>
 
 <script>
-    // ==================== CONFIGURACIÓN FIREBASE (SIN CAMBIOS) ====================
+    // ==================== CONFIGURACIÓN FIREBASE ====================
     const firebaseConfig = {
         apiKey: "AIzaSyD7iqWBCoScuHSID15itaShi7dRQuQwkEo",
         authDomain: "panaderia-marvin.firebaseapp.com",
@@ -729,22 +728,20 @@
     }
     document.addEventListener('DOMContentLoaded', initIconTabs);
 
-    // ==================== ASISTENTE DE VOZ CORREGIDO (SIN BUCLE + SELECTOR DE VOZ) ====================
+    // ==================== ASISTENTE DE VOZ MEJORADO (SIN BUCLE, CON LÓGICA CANTIDAD/PRECIO) ====================
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (SpeechRecognition) {
         const recognition = new SpeechRecognition();
         recognition.lang = 'es-GT';
         recognition.interimResults = false;
         let modoVoz = false;
-        let hablando = false;           // Evita bucle
+        let hablando = false;
         let adivinanzaActual = null;
 
-        // Elemento selector de voz
         const voiceSelect = document.getElementById('selector-voz');
         let vocesDisponibles = [];
         let vozSeleccionada = null;
 
-        // Cargar voces disponibles
         function cargarVoces() {
             vocesDisponibles = window.speechSynthesis.getVoices();
             voiceSelect.innerHTML = '';
@@ -754,7 +751,6 @@
                 option.textContent = `${voz.name} (${voz.lang})`;
                 voiceSelect.appendChild(option);
             });
-            // Seleccionar primera voz en español si existe, o la primera disponible
             const spanishIndex = vocesDisponibles.findIndex(v => v.lang.startsWith('es'));
             if (spanishIndex !== -1) voiceSelect.selectedIndex = spanishIndex;
             actualizarVozSeleccionada();
@@ -765,7 +761,6 @@
             if (vocesDisponibles[idx]) vozSeleccionada = vocesDisponibles[idx];
         }
 
-        // Esperar a que las voces estén cargadas
         if (window.speechSynthesis.onvoiceschanged !== undefined) {
             window.speechSynthesis.onvoiceschanged = cargarVoces;
         } else {
@@ -773,7 +768,6 @@
         }
         voiceSelect.addEventListener('change', actualizarVozSeleccionada);
 
-        // Función hablar sin bucle y con voz seleccionada
         function hablar(mensaje) {
             if (!modoVoz) return;
             if (hablando) return;
@@ -800,7 +794,7 @@
                 btn.innerText = "👂 Asistente Activo...";
                 btn.style.backgroundColor = "#27ae60";
                 iniciarEscucha();
-                hablar("Hola, soy asistente de venta de Panadería.");   // Saludo breve
+                hablar("Hola, soy tu asistente.");
             } else {
                 btn.innerText = "🎤 Ordenar por Voz";
                 btn.style.backgroundColor = "#2980b9";
@@ -819,7 +813,7 @@
             if (modoVoz && !hablando) iniciarEscucha();
         };
 
-        // ---- Comandos divertidos y de negocio (igual que antes, sin cambios) ----
+        // --- Funciones de entretenimiento (chistes, adivinanzas, clima, etc.) ---
         const chistes = [
             "¿Qué le dice un pan a otro pan? ¡Nos vemos en el horno!",
             "¿Por qué el pan no tiene amigos? Porque es muy hojaldrado.",
@@ -845,10 +839,7 @@
             "Hoy es un gran día para hornear muchas ventas."
         ];
 
-        function decirChiste() {
-            const chiste = chistes[Math.floor(Math.random() * chistes.length)];
-            hablar(chiste);
-        }
+        function decirChiste() { hablar(chistes[Math.floor(Math.random() * chistes.length)]); }
         function decirAdivinanza() {
             const random = Math.floor(Math.random() * adivinanzas.length);
             adivinanzaActual = { ...adivinanzas[random] };
@@ -858,33 +849,30 @@
         function evaluarRespuesta(respuestaUsuario) {
             if (!adivinanzaActual) { hablar("No hay adivinanza activa."); return; }
             const respNorm = respuestaUsuario.toLowerCase().trim();
-            const correcta = adivinanzaActual.respuesta.toLowerCase();
+            const correcta = adivinanzaActual.r.toLowerCase();
             if (respNorm.includes(correcta) || correcta.includes(respNorm)) {
                 hablar("¡Correcto! Muy bien.");
             } else {
-                hablar(`Incorrecto. La respuesta era: ${adivinanzaActual.respuesta}`);
+                hablar(`Incorrecto. La respuesta era: ${adivinanzaActual.r}`);
             }
             adivinanzaActual = null;
         }
         function darRespuestaAdivinanza() {
             if (adivinanzaActual) {
-                hablar(`La respuesta es: ${adivinanzaActual.respuesta}`);
+                hablar(`La respuesta es: ${adivinanzaActual.r}`);
                 adivinanzaActual = null;
-            } else {
-                hablar("No hay adivinanza activa.");
-            }
+            } else { hablar("No hay adivinanza activa."); }
         }
         function decirClima() {
             const climas = ["soleado", "nublado", "lluvioso", "ventoso", "caluroso", "fresco"];
             const temp = Math.floor(Math.random() * 25) + 15;
             const clima = climas[Math.floor(Math.random() * climas.length)];
-            hablar(`El clima simulado hoy es ${clima} con ${temp} grados Celsius.`);
+            hablar(`Clima simulado: ${clima}, ${temp}°C.`);
         }
         function decirFecha() {
             const ahora = new Date();
             const opciones = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-            const fechaStr = ahora.toLocaleDateString('es-ES', opciones);
-            hablar(`Hoy es ${fechaStr}.`);
+            hablar(`Hoy es ${ahora.toLocaleDateString('es-ES', opciones)}.`);
         }
         function decirHora() {
             const ahora = new Date();
@@ -894,47 +882,179 @@
             horas = horas % 12 || 12;
             hablar(`Son las ${horas} con ${minutos} minutos ${ampm}.`);
         }
-        function decirMotivacion() {
-            const frase = motivaciones[Math.floor(Math.random() * motivaciones.length)];
-            hablar(frase);
-        }
+        function decirMotivacion() { hablar(motivaciones[Math.floor(Math.random() * motivaciones.length)]); }
 
-        // Funciones de negocio (carrito, stock, ventas) - se mantienen igual
+        // --- Funciones de negocio (carrito, stock, ventas) ---
         function eliminarProductoDelCarrito(nombreProducto) {
             const idx = carrito.findIndex(item => item.nombre.toLowerCase() === nombreProducto.toLowerCase());
             if (idx !== -1) {
                 carrito.splice(idx, 1);
                 actualizarCarrito();
-                hablar(`He quitado ${nombreProducto} del carrito.`);
-            } else {
-                hablar(`No encontré ${nombreProducto} en el carrito.`);
-            }
+                hablar(`Quité ${nombreProducto} del carrito.`);
+            } else { hablar(`No encontré ${nombreProducto}.`); }
         }
         function vaciarCarritoCompleto() {
-            if (carrito.length === 0) { hablar("El carrito ya está vacío."); return; }
+            if (carrito.length === 0) { hablar("Carrito vacío."); return; }
             carrito = [];
             actualizarCarrito();
-            hablar("Carrito vaciado por completo.");
+            hablar("Carrito vaciado.");
         }
         function consultarStock(productoNombre) {
             const prod = inventarioFirebase.find(p => p.nombre.toLowerCase() === productoNombre.toLowerCase());
-            if (prod) hablar(`${prod.nombre} tiene ${prod.stock} unidades disponibles.`);
-            else hablar(`No encontré el producto ${productoNombre}.`);
+            if (prod) hablar(`${prod.nombre}: ${prod.stock} unidades.`);
+            else hablar(`No encontré ${productoNombre}.`);
         }
-        function resumenTurno() {
-            hablar(`Turno actual: ${turnoActivo}, vendedor: ${vendedorActivo}.`);
-        }
+        function resumenTurno() { hablar(`Turno ${turnoActivo}, vendedor ${vendedorActivo}.`); }
         function totalVentasHoy() {
             let total = ventasGlobales.reduce((s, v) => s + v.total, 0);
-            hablar(`El total de ventas hasta ahora es de ${total.toFixed(2)} quetzales.`);
+            hablar(`Ventas totales: Q${total.toFixed(2)}.`);
+        }
+        function totalCarrito() {
+            let total = carrito.reduce((s, i) => s + i.precio * i.cantidad, 0);
+            if (carrito.length === 0) hablar("Carrito vacío.");
+            else hablar(`Total del carrito: Q${total.toFixed(2)}.`);
         }
         function ayudaVoz() {
-            hablar("Comandos: chiste, adivinanza, fecha, hora, clima, motivación, agrega [cantidad] [producto], cuánto llevamos, cobrar efectivo, fiar a [nombre], stock de [producto], vaciar carrito, quitar [producto], resumen del turno, ventas totales, qué productos hay, ayuda, desactivar voz.");
+            hablar("Comandos: chiste, adivinanza, fecha, hora, clima, motivación, agrega [cant] [producto], cuánto llevamos, cobrar efectivo, fiar a [nombre], stock de [producto], vaciar carrito, quitar [producto], resumen del turno, ventas totales, total del carrito, qué productos hay, ayuda, desactivar voz.");
         }
         function listarProductos() {
-            if (inventarioFirebase.length === 0) { hablar("No hay productos cargados aún."); return; }
+            if (inventarioFirebase.length === 0) { hablar("Sin productos."); return; }
             let nombres = inventarioFirebase.map(p => p.nombre).join(", ");
-            hablar(`Productos disponibles: ${nombres}`);
+            hablar(`Productos: ${nombres}`);
+        }
+
+        // --- Función para convertir palabras a número (hasta 100) ---
+        function palabrasANumero(texto) {
+            const unidades = {
+                "cero":0, "un":1, "uno":1, "una":1, "dos":2, "tres":3, "cuatro":4, "cinco":5,
+                "seis":6, "siete":7, "ocho":8, "nueve":9, "diez":10, "once":11, "doce":12,
+                "trece":13, "catorce":14, "quince":15, "dieciseis":16, "diecisiete":17,
+                "dieciocho":18, "diecinueve":19, "veinte":20, "veintiuno":21, "veintidos":22,
+                "veintitres":23, "veinticuatro":24, "veinticinco":25, "veintiseis":26,
+                "veintisiete":27, "veintiocho":28, "veintinueve":29, "treinta":30,
+                "cuarenta":40, "cincuenta":50, "sesenta":60, "setenta":70, "ochenta":80,
+                "noventa":90, "cien":100
+            };
+            const palabras = texto.toLowerCase().split(/[ ,y]+/);
+            let total = 0;
+            for (let i = 0; i < palabras.length; i++) {
+                let p = palabras[i];
+                if (unidades[p] !== undefined) {
+                    if (p === "cien") total += 100;
+                    else total += unidades[p];
+                } else if (p === "y" || p === "") continue;
+                else if (!isNaN(parseInt(p))) total += parseInt(p);
+            }
+            return total;
+        }
+
+        // --- Procesar frase para agregar productos al carrito (con lógica cantidad vs precio) ---
+        async function procesarPedido(frase, producto) {
+            if (!producto) return false;
+            // Detectar si es modo precio (contiene "quetzal", "centavos", o patrón "dos cincuenta")
+            let esModoPrecio = false;
+            let monto = 0;
+            let cantidad = 0;
+
+            // 1. Detectar "X quetzal/quetzales"
+            if (frase.includes("quetzal")) {
+                esModoPrecio = true;
+                const match = frase.match(/(\d+|\w+)\s+quetzal/);
+                if (match) {
+                    let numStr = match[1];
+                    monto = palabrasANumero(numStr);
+                } else {
+                    monto = 0;
+                }
+            }
+            // 2. Detectar "X centavos" (cualquier número + centavos)
+            else if (frase.includes("centavos")) {
+                esModoPrecio = true;
+                // Extraer el número antes de "centavos"
+                const match = frase.match(/(\d+|\w+)\s+centavos/);
+                if (match) {
+                    let numStr = match[1];
+                    let centavos = palabrasANumero(numStr);
+                    monto = centavos / 100;
+                } else {
+                    monto = 0;
+                }
+            }
+            // 3. Detectar patrón "dos cincuenta" (número + cincuenta, sin centavos)
+            else if (frase.match(/\b(\w+)\s+cincuenta\b/)) {
+                esModoPrecio = true;
+                const match = frase.match(/\b(\w+)\s+cincuenta\b/);
+                if (match) {
+                    let num = palabrasANumero(match[1]);
+                    monto = num + 0.50;
+                }
+            }
+            // 4. Detectar "cincuenta" solo (sin número)
+            else if (frase.includes("cincuenta") && !frase.match(/\d/)) {
+                esModoPrecio = true;
+                monto = 0.50;
+            }
+
+            if (esModoPrecio && monto > 0) {
+                cantidad = Math.floor(monto / producto.precio);
+                if (cantidad === 0) {
+                    hablar(`Con ${monto.toFixed(2)} quetzales no alcanza para ni un ${producto.nombre}.`);
+                    return false;
+                }
+            } else {
+                // Modo cantidad: extraer número de la frase
+                const numerosEnFrase = frase.match(/\d+|\b(?:un|uno|una|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|once|doce|trece|catorce|quince|veinte|treinta|cuarenta|cincuenta|sesenta|setenta|ochenta|noventa|cien)\b/gi);
+                if (numerosEnFrase && numerosEnFrase.length > 0) {
+                    let numStr = numerosEnFrase[0];
+                    cantidad = palabrasANumero(numStr);
+                } else {
+                    cantidad = 1; // por defecto 1 si no se especifica
+                }
+            }
+
+            if (cantidad <= 0) return false;
+
+            // Verificar stock
+            const existente = carrito.find(i => i.id === producto.id);
+            const prev = existente ? existente.cantidad : 0;
+            if (cantidad + prev > producto.stock) {
+                hablar(`Stock insuficiente. Solo quedan ${producto.stock - prev} unidades.`);
+                return false;
+            }
+            if (existente) existente.cantidad += cantidad;
+            else carrito.push({ id: producto.id, nombre: producto.nombre, precio: producto.precio, cantidad: cantidad });
+            actualizarCarrito();
+            hablar("Agregado");
+            return true;
+        }
+
+        // --- Extraer nombre del producto de la frase ---
+        function extraerProducto(frase) {
+            // Buscar coincidencia con algún producto en inventarioFirebase
+            for (let prod of inventarioFirebase) {
+                if (frase.includes(prod.nombre.toLowerCase())) {
+                    return prod;
+                }
+            }
+            return null;
+        }
+
+        // --- Función para reabastecer inventario ---
+        async function procesarInventario(frase) {
+            let prod = inventarioFirebase.find(p => frase.includes(p.nombre.toLowerCase()));
+            if (prod) {
+                let cant = 0;
+                let palabras = frase.split(" ");
+                for (let p of palabras) {
+                    let num = parseInt(p);
+                    if (!isNaN(num)) cant = num;
+                    else if (palabrasANumero(p) > 0) cant = palabrasANumero(p);
+                }
+                if (cant > 0) {
+                    await db.collection("inventario").doc(prod.id).update({ stock: firebase.firestore.FieldValue.increment(cant) });
+                    hablar(`Añadí ${cant} ${prod.nombre} al inventario.`);
+                } else { hablar("¿Cuántas unidades?"); }
+            } else { hablar("Producto no encontrado."); }
         }
 
         recognition.onresult = async (e) => {
@@ -942,7 +1062,7 @@
             let frase = e.results[0][0].transcript.toLowerCase().trim();
             console.log("Voz:", frase);
             
-            // Si hay adivinanza activa y no es un comando especial, tratar como respuesta
+            // Adivinanza interactiva
             if (adivinanzaActual !== null) {
                 const comandosEspeciales = ["adivinanza", "chiste", "fecha", "hora", "clima", "motivación", "ayuda", "desactivar voz", "dame la respuesta", "paso", "respuesta", "cuál es", "dímelo"];
                 const esComandoEspecial = comandosEspeciales.some(cmd => frase.includes(cmd));
@@ -956,19 +1076,19 @@
                 }
             }
             
-            // Comandos normales
+            // Comandos de entretenimiento y consulta
             if (frase.includes("chiste")) { decirChiste(); return; }
             if (frase.includes("adivinanza")) { decirAdivinanza(); return; }
             if (frase.includes("fecha")) { decirFecha(); return; }
             if (frase.includes("hora") && !frase.includes("ahora")) { decirHora(); return; }
             if (frase.includes("clima") || frase.includes("tiempo")) { decirClima(); return; }
             if (frase.includes("motivación") || frase.includes("ánimo") || frase.includes("motiva")) { decirMotivacion(); return; }
-            if (frase.match(/^(hola|buenos días|buenas tardes|buenas noches|qué tal|hey)/i)) { hablar("¡Hola! ¿En qué puedo ayudarte?"); return; }
             if (frase.includes("ayuda") || frase.includes("comandos")) { ayudaVoz(); return; }
             if (frase.includes("desactivar voz") || frase.includes("apagar voz")) { if (modoVoz) activarVoz(); return; }
-            if (frase.includes("quién está trabajando")) { hablar(`El vendedor actual es ${vendedorActivo || "ninguno"} en turno ${turnoActivo || "no definido"}.`); return; }
+            if (frase.includes("quién está trabajando")) { hablar(`Vendedor: ${vendedorActivo || "ninguno"}, turno: ${turnoActivo || "no definido"}.`); return; }
             if (frase.includes("resumen del turno")) { resumenTurno(); return; }
             if (frase.includes("ventas totales") || frase.includes("total de ventas")) { totalVentasHoy(); return; }
+            if (frase.includes("total del carrito") || frase.includes("cuánto llevo") || frase.includes("total carrito")) { totalCarrito(); return; }
             if (frase.includes("qué productos hay") || frase.includes("lista de productos")) { listarProductos(); return; }
             if (frase.includes("vaciar carrito") || frase.includes("limpiar carrito")) { vaciarCarritoCompleto(); return; }
             if (frase.match(/quitar\s+(\w+)/i) || frase.match(/eliminar\s+(\w+)/i)) {
@@ -983,15 +1103,9 @@
                 else hablar("Dime el nombre del producto.");
                 return;
             }
-            if (frase.includes("total del carrito") || frase.includes("cuánto tengo en el carrito")) {
-                let total = carrito.reduce((s, i) => s + i.precio * i.cantidad, 0);
-                if (carrito.length === 0) hablar("El carrito está vacío.");
-                else hablar(`El carrito suma ${total.toFixed(2)} quetzales.`);
-                return;
-            }
             if (frase.includes("cuánto llevamos") || frase.includes("reporte de ventas")) {
                 let total = ventasGlobales.reduce((s, v) => s + v.total, 0);
-                hablar(`Ventas hasta ahora: ${total.toFixed(2)} quetzales.`);
+                hablar(`Ventas hasta ahora: Q${total.toFixed(2)}.`);
                 return;
             }
             if (frase.includes("cobrar efectivo") || frase.includes("cerrar venta") || frase.includes("cobrar")) {
@@ -1015,69 +1129,15 @@
                 procesarInventario(frase);
                 return;
             }
-            procesarVentaMulti(frase);
-        } 
-
-        function procesarVentaMulti(frase) {
-            const modismos = { "cero cincuenta":0.50, "uno cincuenta":1.50, "uno cincuenta":1.50, "dos cincuenta":2.50, "tres cincuenta":3.50, "cuatro cincuenta":4.50, "cinco cincuenta":5.50, "seis cincuenta":6.50, "siete cincuenta":7.50, "ocho cincuenta":8.50, "nueve cincuenta":9.50, "diez cincuenta":10.50 };
-            const unidades = { "un":1,"uno":1,"una":1,"dos":2,"tres":3,"cuatro":4,"cinco":5,"seis":6,"siete":7,"ocho":8,"nueve":9,"diez":10,"once":11,"doce":12,"trece":13,"catorce":14,"quince":15,"dieciseis":16,"diecisiete":17,"dieciocho":18,"diecinueve":19 };
-            const decenas = { "veinte":20,"veinti":20,"treinta":30,"cuarenta":40,"cincuenta":50,"sesenta":60,"setenta":70,"ochenta":80,"noventa":90 };
-            const centenas = { "cien":100,"ciento":100,"doscientos":200,"trescientos":300,"cuatrocientos":400,"quinientos":500,"seiscientos":600,"setecientos":700,"ochocientos":800,"novecientos":900 };
-            function textoANum(txt) {
-                let total=0, acc=0;
-                txt.toLowerCase().split(/[ ,y]+/).forEach(p => {
-                    if (unidades[p]) acc+=unidades[p];
-                    else if (decenas[p]) acc+=decenas[p];
-                    else if (centenas[p]) acc+=centenas[p];
-                    else if (p==="mil") { total += (acc===0?1:acc)*1000; acc=0; }
-                });
-                return total+acc;
-            }
-            let productosAgregados = [];
-            let comandos = frase.split(/\s+y\s+|\s+con\s+|\s+luego\s+/);
-            for (let comando of comandos) {
-                let valor=0;
-                let limpio = comando.replace(/quetzales?/g,"").trim();
-                if (modismos[limpio]) valor = modismos[limpio];
-                else {
-                    let tiene50 = limpio.includes("cincuenta") && !limpio.startsWith("cincuenta");
-                    if (tiene50) { let base = limpio.replace("cincuenta","").trim(); valor = textoANum(base) + 0.50; }
-                    else valor = textoANum(limpio);
-                }
-                let prod = inventarioFirebase.find(p => comando.includes(p.nombre.toLowerCase()));
-                if (prod) {
-                    let esDinero = comando.includes("quetzal") || comando.includes("7.50") || Object.keys(modismos).some(m=>comando.includes(m));
-                    let cant = esDinero ? Math.floor(valor / prod.precio) || 1 : (valor===0?1:valor);
-                    let item = carrito.find(i=>i.id===prod.id);
-                    if (item) item.cantidad += cant;
-                    else carrito.push({ ...prod, cantidad: cant });
-                    productosAgregados.push(`${cant} ${prod.nombre}`);
-                }
-            }
-            if (productosAgregados.length) {
-                actualizarCarrito();
-                hablar(`Agregado al carrito: ${productosAgregados.join(", ")}. Total: Q${document.getElementById('carrito-total').innerText}.`);
+            
+            // Si no es comando especial, intentar agregar producto al carrito
+            const producto = extraerProducto(frase);
+            if (producto) {
+                await procesarPedido(frase, producto);
             } else {
-                hablar("No entendí el producto. Di 'ayuda' para ver comandos.");
+                hablar("No entendí. Di 'ayuda' para comandos.");
             }
-        }
-
-        async function procesarInventario(frase) {
-            let prod = inventarioFirebase.find(p => frase.includes(p.nombre.toLowerCase()));
-            if (prod) {
-                let cant = 0;
-                let palabras = frase.split(" ");
-                for (let p of palabras) { if (!isNaN(p)) cant = parseInt(p); }
-                if (cant > 0) {
-                    await db.collection("inventario").doc(prod.id).update({ stock: firebase.firestore.FieldValue.increment(cant) });
-                    hablar(`Se añadieron ${cant} ${prod.nombre} al inventario.`);
-                } else {
-                    hablar("¿Cuántas unidades quieres agregar? Di el número.");
-                }
-            } else {
-                hablar("No encontré ese producto para reabastecer.");
-            }
-        }
+        };
 
         window.activarVoz = activarVoz;
     }
