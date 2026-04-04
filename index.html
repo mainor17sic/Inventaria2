@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>Panadería Marvin - Control de Turno (Voz Interactiva)</title>
+    <title>Panadería Marvin - Control de Turno (Voz sin bucle)</title>
 
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
@@ -11,7 +11,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
 
     <style>
-        /* === ESTILOS (igual que antes, sin cambios) === */
+        /* === ESTILOS (sin cambios, los mismos que antes) === */
         * { box-sizing: border-box; }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -275,6 +275,29 @@
             .pos-container { flex-direction: row; align-items: flex-start; }
             .cart-section { position: sticky; top: 20px; min-width: 300px; max-width: 350px; }
         }
+        
+        /* Estilo para el selector de voz */
+        .voice-selector {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #f0f2f5;
+            padding: 5px 10px;
+            border-radius: 40px;
+            margin-left: 10px;
+        }
+        .voice-selector select {
+            width: auto;
+            padding: 6px 10px;
+            margin: 0;
+            font-size: 14px;
+            background: white;
+            border-radius: 30px;
+        }
+        .voice-selector label {
+            font-size: 14px;
+            color: #555;
+        }
     </style>
 </head>
 <body>
@@ -363,7 +386,13 @@
                 <ul id="carrito-lista"></ul>
                 <div class="cart-total-area"><span>Total:</span><div style="font-size:2em; font-weight:bold; color:#27ae60;">Q<span id="carrito-total">0.00</span></div></div>
                 <div class="cart-botones">
-                    <button id="btn-voz" onclick="activarVoz()" style="background:#2980b9;">🎤 Ordenar por Voz</button>
+                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                        <button id="btn-voz" onclick="activarVoz()" style="background:#2980b9; flex:1;">🎤 Ordenar por Voz</button>
+                        <div class="voice-selector">
+                            <label>🗣️</label>
+                            <select id="selector-voz" title="Elige la voz del asistente"></select>
+                        </div>
+                    </div>
                     <button onclick="completarVenta('efectivo')" class="btn-success">✅ Cobrar Efectivo</button>
                     <button onclick="completarVenta('fiar')" class="btn-danger" style="background:#e67e22;">📒 Fiar (Crédito)</button>
                 </div>
@@ -372,7 +401,7 @@
     </div>
     <div id="inventario-vivo" class="tab-content"><h2>Inventario en Tiempo Real</h2><div class="table-responsive"><table><thead><tr><th>Producto</th><th>Precio</th><th>Inicial</th><th>Disponible</th></tr></thead><tbody id="tabla-inventario"></tbody></table></div></div>
     <div id="historial-ventas" class="tab-content"><h2>Historial de Ventas</h2><div class="table-responsive"><table><thead><tr><th>Hora</th><th>Productos</th><th>Total</th><th>Método</th></tr></thead><tbody id="tabla-historial"></tbody></table></div></div>
-    <div id="historial-cierres" class="tab-content"><h2>Historial de Cierres de Turno</h2><div class="table-responsive"><table><thead><tr><th>Fecha</th><th>Turno</th><th>Vendedor</th><th>Total Efectivo</th><th>Total Fiado</th><th>Total General</th><th>PDF</th></tr></thead><tbody id="tabla-cierres"></tbody></table></div></div>
+    <div id="historial-cierres" class="tab-content"><h2>Historial de Cierres de Turno</h2><div class="table-responsive"></table><thead><tr><th>Fecha</th><th>Turno</th><th>Vendedor</th><th>Total Efectivo</th><th>Total Fiado</th><th>Total General</th><th>PDF</th></tr></thead><tbody id="tabla-cierres"></tbody></table></div></div>
 </div>
 
 <div id="overlay-pos" class="overlay-vendedor" onclick="cerrarFlotante()"></div>
@@ -700,49 +729,68 @@
     }
     document.addEventListener('DOMContentLoaded', initIconTabs);
 
-    // ==================== ASISTENTE DE VOZ CON ADIVINANZAS INTERACTIVAS ====================
+    // ==================== ASISTENTE DE VOZ CORREGIDO (SIN BUCLE + SELECTOR DE VOZ) ====================
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (SpeechRecognition) {
         const recognition = new SpeechRecognition();
         recognition.lang = 'es-GT';
         recognition.interimResults = false;
         let modoVoz = false;
-        let adivinanzaActual = null;   // { pregunta, respuesta }
+        let hablando = false;           // Evita bucle
+        let adivinanzaActual = null;
 
-        const chistes = [
-            "¿Qué le dice un pan a otro pan? ¡Nos vemos en el horno!",
-            "¿Por qué el pan no tiene amigos? Porque es muy hojaldrado.",
-            "¿Cómo se despide un pan? ¡Hasta luego, miga!",
-            "¿Qué le dijo el pan francés al pan dulce? Eres muy empalagoso.",
-            "¿Cuál es el pan más deportista? El pan con correa.",
-            "¿Qué hace una tira en el gimnasio? Ejercicios de estiramiento."
-        ];
-        
-        const adivinanzas = [
-            { p: "Blanco por dentro, verde por fuera. Si no lo sabes, espera.", r: "perejil" },
-            { p: "Oro parece, plata no es. El que no lo adivine, bien tonto es.", r: "plátano" },
-            { p: "Tengo agujas pero no sé coser, tengo números pero no sé leer. ¿Qué soy?", r: "reloj" },
-            { p: "Vuelo sin alas, lloro sin ojos. ¿Quién soy?", r: "nube" },
-            { p: "Cuanto más grande, menos se ve. ¿Qué es?", r: "oscuridad" },
-            { p: "Blanco es, la gallina lo pone, con aceite se come y a la masa se le pone.", r: "huevo" },
-            { p: "Chiquito como un ratón, guarda la casa como un león.", r: "cerrojo" }
-        ];
-        
-        const motivaciones = [
-            "¡Tú puedes! Cada venta es un paso al éxito.",
-            "Eres el mejor vendedor de pan, sigue así.",
-            "El día está para triunfar, ¡ánimo!",
-            "Sonríe, que el pan se vende solo con buena actitud.",
-            "Hoy es un gran día para hornear muchas ventas."
-        ];
+        // Elemento selector de voz
+        const voiceSelect = document.getElementById('selector-voz');
+        let vocesDisponibles = [];
+        let vozSeleccionada = null;
 
+        // Cargar voces disponibles
+        function cargarVoces() {
+            vocesDisponibles = window.speechSynthesis.getVoices();
+            voiceSelect.innerHTML = '';
+            vocesDisponibles.forEach((voz, idx) => {
+                const option = document.createElement('option');
+                option.value = idx;
+                option.textContent = `${voz.name} (${voz.lang})`;
+                voiceSelect.appendChild(option);
+            });
+            // Seleccionar primera voz en español si existe, o la primera disponible
+            const spanishIndex = vocesDisponibles.findIndex(v => v.lang.startsWith('es'));
+            if (spanishIndex !== -1) voiceSelect.selectedIndex = spanishIndex;
+            actualizarVozSeleccionada();
+        }
+
+        function actualizarVozSeleccionada() {
+            const idx = voiceSelect.value;
+            if (vocesDisponibles[idx]) vozSeleccionada = vocesDisponibles[idx];
+        }
+
+        // Esperar a que las voces estén cargadas
+        if (window.speechSynthesis.onvoiceschanged !== undefined) {
+            window.speechSynthesis.onvoiceschanged = cargarVoces;
+        } else {
+            cargarVoces();
+        }
+        voiceSelect.addEventListener('change', actualizarVozSeleccionada);
+
+        // Función hablar sin bucle y con voz seleccionada
         function hablar(mensaje) {
             if (!modoVoz) return;
-            const u = new SpeechSynthesisUtterance(mensaje);
-            u.lang = 'es-GT';
-            u.rate = 0.9;
-            speechSynthesis.cancel();
-            speechSynthesis.speak(u);
+            if (hablando) return;
+            hablando = true;
+            try { recognition.stop(); } catch(e) {}
+            const utterance = new SpeechSynthesisUtterance(mensaje);
+            utterance.lang = 'es-GT';
+            utterance.rate = 0.9;
+            if (vozSeleccionada) utterance.voice = vozSeleccionada;
+            utterance.onend = () => {
+                hablando = false;
+                if (modoVoz) {
+                    try { recognition.start(); } catch(e) {}
+                }
+            };
+            window.speechSynthesis.cancel();
+            window.speechSynthesis.speak(utterance);
         }
 
         function activarVoz() {
@@ -752,75 +800,92 @@
                 btn.innerText = "👂 Asistente Activo...";
                 btn.style.backgroundColor = "#27ae60";
                 iniciarEscucha();
-                hablar("¡Hola! Soy tu asistente alegre. Di 'chiste', 'adivinanza', 'fecha', 'hora', 'clima', 'motivación' o 'ayuda'.");
+                hablar("Hola, soy tu asistente.");   // Saludo breve
             } else {
                 btn.innerText = "🎤 Ordenar por Voz";
                 btn.style.backgroundColor = "#2980b9";
-                recognition.stop();
-                hablar("Asistente desactivado. ¡Vuelve cuando quieras!");
+                try { recognition.stop(); } catch(e) {}
+                hablar("Asistente desactivado.");
             }
         }
 
         function iniciarEscucha() {
-            if (modoVoz) try { recognition.start(); } catch(e) {}
+            if (modoVoz && !hablando) {
+                try { recognition.start(); } catch(e) {}
+            }
         }
 
         recognition.onend = () => {
-            if (modoVoz) iniciarEscucha();
+            if (modoVoz && !hablando) iniciarEscucha();
         };
+
+        // ---- Comandos divertidos y de negocio (igual que antes, sin cambios) ----
+        const chistes = [
+            "¿Qué le dice un pan a otro pan? ¡Nos vemos en el horno!",
+            "¿Por qué el pan no tiene amigos? Porque es muy hojaldrado.",
+            "¿Cómo se despide un pan? ¡Hasta luego, miga!",
+            "¿Qué le dijo el pan francés al pan dulce? Eres muy empalagoso.",
+            "¿Cuál es el pan más deportista? El pan con correa.",
+            "¿Qué hace una tira en el gimnasio? Ejercicios de estiramiento."
+        ];
+        const adivinanzas = [
+            { p: "Blanco por dentro, verde por fuera. Si no lo sabes, espera.", r: "perejil" },
+            { p: "Oro parece, plata no es. El que no lo adivine, bien tonto es.", r: "plátano" },
+            { p: "Tengo agujas pero no sé coser, tengo números pero no sé leer. ¿Qué soy?", r: "reloj" },
+            { p: "Vuelo sin alas, lloro sin ojos. ¿Quién soy?", r: "nube" },
+            { p: "Cuanto más grande, menos se ve. ¿Qué es?", r: "oscuridad" },
+            { p: "Blanco es, la gallina lo pone, con aceite se come y a la masa se le pone.", r: "huevo" },
+            { p: "Chiquito como un ratón, guarda la casa como un león.", r: "cerrojo" }
+        ];
+        const motivaciones = [
+            "¡Tú puedes! Cada venta es un paso al éxito.",
+            "Eres el mejor vendedor de pan, sigue así.",
+            "El día está para triunfar, ¡ánimo!",
+            "Sonríe, que el pan se vende solo con buena actitud.",
+            "Hoy es un gran día para hornear muchas ventas."
+        ];
 
         function decirChiste() {
             const chiste = chistes[Math.floor(Math.random() * chistes.length)];
             hablar(chiste);
         }
-
         function decirAdivinanza() {
             const random = Math.floor(Math.random() * adivinanzas.length);
             adivinanzaActual = { ...adivinanzas[random] };
             hablar(`Adivinanza: ${adivinanzaActual.p}`);
-            hablar("Puedes responder ahora o decir 'dame la respuesta' o 'paso'.");
+            hablar("Puedes responder ahora o decir 'dame la respuesta'.");
         }
-
         function evaluarRespuesta(respuestaUsuario) {
-            if (!adivinanzaActual) {
-                hablar("No hay ninguna adivinanza activa. Di 'adivinanza' para empezar una.");
-                return;
-            }
-            const respuestaNormalizada = respuestaUsuario.toLowerCase().trim();
-            const respuestaCorrecta = adivinanzaActual.respuesta.toLowerCase();
-            // Comparar si contiene la palabra clave o es muy similar
-            if (respuestaNormalizada.includes(respuestaCorrecta) || respuestaCorrecta.includes(respuestaNormalizada)) {
-                hablar("¡Correcto! Muy bien. ¿Quieres otra adivinanza o seguimos con las ventas?");
-                adivinanzaActual = null;
+            if (!adivinanzaActual) { hablar("No hay adivinanza activa."); return; }
+            const respNorm = respuestaUsuario.toLowerCase().trim();
+            const correcta = adivinanzaActual.respuesta.toLowerCase();
+            if (respNorm.includes(correcta) || correcta.includes(respNorm)) {
+                hablar("¡Correcto! Muy bien.");
             } else {
-                hablar(`Incorrecto. La respuesta era: ${adivinanzaActual.respuesta}. ¡Sigue participando!`);
-                adivinanzaActual = null;
+                hablar(`Incorrecto. La respuesta era: ${adivinanzaActual.respuesta}`);
             }
+            adivinanzaActual = null;
         }
-
         function darRespuestaAdivinanza() {
             if (adivinanzaActual) {
-                hablar(`La respuesta es: ${adivinanzaActual.respuesta}.`);
+                hablar(`La respuesta es: ${adivinanzaActual.respuesta}`);
                 adivinanzaActual = null;
             } else {
-                hablar("No hay una adivinanza activa. Pide una con 'adivinanza'.");
+                hablar("No hay adivinanza activa.");
             }
         }
-
         function decirClima() {
             const climas = ["soleado", "nublado", "lluvioso", "ventoso", "caluroso", "fresco"];
             const temp = Math.floor(Math.random() * 25) + 15;
             const clima = climas[Math.floor(Math.random() * climas.length)];
-            hablar(`El clima simulado hoy es ${clima} con ${temp} grados Celsius. ¡Perfecto para disfrutar de nuestro pan!`);
+            hablar(`El clima simulado hoy es ${clima} con ${temp} grados Celsius.`);
         }
-
         function decirFecha() {
             const ahora = new Date();
             const opciones = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
             const fechaStr = ahora.toLocaleDateString('es-ES', opciones);
-            hablar(`Hoy es ${fechaStr}. Que tengas un excelente día.`);
+            hablar(`Hoy es ${fechaStr}.`);
         }
-
         function decirHora() {
             const ahora = new Date();
             let horas = ahora.getHours();
@@ -829,52 +894,43 @@
             horas = horas % 12 || 12;
             hablar(`Son las ${horas} con ${minutos} minutos ${ampm}.`);
         }
-
         function decirMotivacion() {
             const frase = motivaciones[Math.floor(Math.random() * motivaciones.length)];
             hablar(frase);
         }
 
-        // Funciones de negocio (sin cambios)
+        // Funciones de negocio (carrito, stock, ventas) - se mantienen igual
         function eliminarProductoDelCarrito(nombreProducto) {
             const idx = carrito.findIndex(item => item.nombre.toLowerCase() === nombreProducto.toLowerCase());
             if (idx !== -1) {
                 carrito.splice(idx, 1);
                 actualizarCarrito();
                 hablar(`He quitado ${nombreProducto} del carrito.`);
-                return true;
             } else {
                 hablar(`No encontré ${nombreProducto} en el carrito.`);
-                return false;
             }
         }
-
         function vaciarCarritoCompleto() {
             if (carrito.length === 0) { hablar("El carrito ya está vacío."); return; }
             carrito = [];
             actualizarCarrito();
             hablar("Carrito vaciado por completo.");
         }
-
         function consultarStock(productoNombre) {
             const prod = inventarioFirebase.find(p => p.nombre.toLowerCase() === productoNombre.toLowerCase());
             if (prod) hablar(`${prod.nombre} tiene ${prod.stock} unidades disponibles.`);
             else hablar(`No encontré el producto ${productoNombre}.`);
         }
-
         function resumenTurno() {
             hablar(`Turno actual: ${turnoActivo}, vendedor: ${vendedorActivo}.`);
         }
-
         function totalVentasHoy() {
             let total = ventasGlobales.reduce((s, v) => s + v.total, 0);
             hablar(`El total de ventas hasta ahora es de ${total.toFixed(2)} quetzales.`);
         }
-
         function ayudaVoz() {
-            hablar("Comandos: 'chiste', 'adivinanza' (responde después), 'dame la respuesta', 'fecha', 'hora', 'clima', 'motivación', 'agrega [cant] [producto]', 'cuánto llevamos', 'cobrar efectivo', 'fiar a [nombre]', 'stock de [producto]', 'vaciar carrito', 'quitar [producto]', 'resumen del turno', 'ventas totales', 'qué productos hay', 'ayuda', 'desactivar voz'.");
+            hablar("Comandos: chiste, adivinanza, fecha, hora, clima, motivación, agrega [cantidad] [producto], cuánto llevamos, cobrar efectivo, fiar a [nombre], stock de [producto], vaciar carrito, quitar [producto], resumen del turno, ventas totales, qué productos hay, ayuda, desactivar voz.");
         }
-
         function listarProductos() {
             if (inventarioFirebase.length === 0) { hablar("No hay productos cargados aún."); return; }
             let nombres = inventarioFirebase.map(p => p.nombre).join(", ");
@@ -882,12 +938,12 @@
         }
 
         recognition.onresult = async (e) => {
+            if (hablando) return;
             let frase = e.results[0][0].transcript.toLowerCase().trim();
             console.log("Voz:", frase);
             
-            // Si hay una adivinanza activa y el usuario no está pidiendo un comando especial, tratamos como respuesta
+            // Si hay adivinanza activa y no es un comando especial, tratar como respuesta
             if (adivinanzaActual !== null) {
-                // Comandos que no deben interferir con la respuesta
                 const comandosEspeciales = ["adivinanza", "chiste", "fecha", "hora", "clima", "motivación", "ayuda", "desactivar voz", "dame la respuesta", "paso", "respuesta", "cuál es", "dímelo"];
                 const esComandoEspecial = comandosEspeciales.some(cmd => frase.includes(cmd));
                 if (frase.includes("dame la respuesta") || frase.includes("paso") || frase.includes("respuesta") || frase.includes("cuál es") || frase.includes("dímelo")) {
@@ -901,99 +957,55 @@
             }
             
             // Comandos normales
-            if (frase.includes("chiste")) {
-                decirChiste();
-                return;
-            }
-            if (frase.includes("adivinanza")) {
-                decirAdivinanza();
-                return;
-            }
-            if (frase.includes("fecha")) {
-                decirFecha();
-                return;
-            }
-            if (frase.includes("hora") && !frase.includes("ahora")) {
-                decirHora();
-                return;
-            }
-            if (frase.includes("clima") || frase.includes("tiempo")) {
-                decirClima();
-                return;
-            }
-            if (frase.includes("motivación") || frase.includes("ánimo") || frase.includes("motiva")) {
-                decirMotivacion();
-                return;
-            }
-            
-            // Resto de comandos (conversacionales y de negocio)
-            if (frase.match(/^(hola|buenos días|buenas tardes|buenas noches|qué tal|hey)/i)) {
-                hablar(`¡Hola! ¿En qué puedo ayudarte? Estoy aquí para hacerte más alegre la jornada.`);
-                return;
-            }
-            if (frase.includes("ayuda") || frase.includes("comandos") || frase.includes("qué puedes hacer")) {
-                ayudaVoz();
-                return;
-            }
-            if (frase.includes("desactivar voz") || frase.includes("apagar voz") || frase.includes("dejar de escuchar")) {
-                if (modoVoz) activarVoz();
-                return;
-            }
-            if (frase.includes("quién está trabajando") || frase.includes("quién es el vendedor")) {
-                hablar(`El vendedor actual es ${vendedorActivo || "ninguno"} en turno ${turnoActivo || "no definido"}.`);
-                return;
-            }
-            if (frase.includes("resumen del turno")) {
-                resumenTurno();
-                return;
-            }
-            if (frase.includes("ventas totales") || frase.includes("total de ventas") || frase.includes("cuánto se ha vendido")) {
-                totalVentasHoy();
-                return;
-            }
-            if (frase.includes("qué productos hay") || frase.includes("lista de productos") || frase.includes("qué panes tienes")) {
-                listarProductos();
-                return;
-            }
-            if (frase.includes("vaciar carrito") || frase.includes("limpiar carrito") || frase.includes("borrar todo")) {
-                vaciarCarritoCompleto();
-                return;
-            }
+            if (frase.includes("chiste")) { decirChiste(); return; }
+            if (frase.includes("adivinanza")) { decirAdivinanza(); return; }
+            if (frase.includes("fecha")) { decirFecha(); return; }
+            if (frase.includes("hora") && !frase.includes("ahora")) { decirHora(); return; }
+            if (frase.includes("clima") || frase.includes("tiempo")) { decirClima(); return; }
+            if (frase.includes("motivación") || frase.includes("ánimo") || frase.includes("motiva")) { decirMotivacion(); return; }
+            if (frase.match(/^(hola|buenos días|buenas tardes|buenas noches|qué tal|hey)/i)) { hablar("¡Hola! ¿En qué puedo ayudarte?"); return; }
+            if (frase.includes("ayuda") || frase.includes("comandos")) { ayudaVoz(); return; }
+            if (frase.includes("desactivar voz") || frase.includes("apagar voz")) { if (modoVoz) activarVoz(); return; }
+            if (frase.includes("quién está trabajando")) { hablar(`El vendedor actual es ${vendedorActivo || "ninguno"} en turno ${turnoActivo || "no definido"}.`); return; }
+            if (frase.includes("resumen del turno")) { resumenTurno(); return; }
+            if (frase.includes("ventas totales") || frase.includes("total de ventas")) { totalVentasHoy(); return; }
+            if (frase.includes("qué productos hay") || frase.includes("lista de productos")) { listarProductos(); return; }
+            if (frase.includes("vaciar carrito") || frase.includes("limpiar carrito")) { vaciarCarritoCompleto(); return; }
             if (frase.match(/quitar\s+(\w+)/i) || frase.match(/eliminar\s+(\w+)/i)) {
                 const match = frase.match(/quitar\s+(\w+)/i) || frase.match(/eliminar\s+(\w+)/i);
                 if (match && match[1]) eliminarProductoDelCarrito(match[1]);
-                else hablar("No entendí qué producto quieres quitar.");
+                else hablar("No entendí qué producto quitar.");
                 return;
             }
-            if (frase.match(/stock de (\w+)/i) || frase.match(/cuánto (\w+) queda/i) || frase.match(/cuántos (\w+) hay/i)) {
-                let match = frase.match(/stock de (\w+)/i) || frase.match(/cuánto (\w+) queda/i) || frase.match(/cuántos (\w+) hay/i);
+            if (frase.match(/stock de (\w+)/i) || frase.match(/cuánto (\w+) queda/i)) {
+                let match = frase.match(/stock de (\w+)/i) || frase.match(/cuánto (\w+) queda/i);
                 if (match && match[1]) consultarStock(match[1]);
-                else hablar("Dime el nombre del producto, por ejemplo: stock de tira.");
+                else hablar("Dime el nombre del producto.");
                 return;
             }
             if (frase.includes("total del carrito") || frase.includes("cuánto tengo en el carrito")) {
                 let total = carrito.reduce((s, i) => s + i.precio * i.cantidad, 0);
                 if (carrito.length === 0) hablar("El carrito está vacío.");
-                else hablar(`El carrito suma un total de ${total.toFixed(2)} quetzales.`);
+                else hablar(`El carrito suma ${total.toFixed(2)} quetzales.`);
                 return;
             }
             if (frase.includes("cuánto llevamos") || frase.includes("reporte de ventas")) {
                 let total = ventasGlobales.reduce((s, v) => s + v.total, 0);
-                hablar(`Hasta ahora, ${total.toFixed(2)} quetzales vendidos.`);
+                hablar(`Ventas hasta ahora: ${total.toFixed(2)} quetzales.`);
                 return;
             }
-            if (frase.includes("cobrar efectivo") || frase.includes("cerrar venta") || frase.includes("pagar con efectivo") || frase.includes("cobrar")) {
-                if (carrito.length === 0) { hablar("El carrito está vacío, no hay nada que cobrar."); return; }
+            if (frase.includes("cobrar efectivo") || frase.includes("cerrar venta") || frase.includes("cobrar")) {
+                if (carrito.length === 0) { hablar("Carrito vacío."); return; }
                 hablar("Procesando venta en efectivo.");
                 await completarVenta('efectivo');
                 return;
             }
-            if (frase.includes("fiar a") || frase.includes("anotar a") || frase.match(/fi[aá]r\s+a\s+(\w+)/i)) {
-                if (carrito.length === 0) { hablar("Agrega productos al carrito primero."); return; }
+            if (frase.includes("fiar a") || frase.match(/fi[aá]r\s+a\s+(\w+)/i)) {
+                if (carrito.length === 0) { hablar("Agrega productos primero."); return; }
                 let cliente = "cliente";
-                let match = frase.match(/fiar a (\w+)/i) || frase.match(/anotar a (\w+)/i);
+                let match = frase.match(/fiar a (\w+)/i);
                 if (match && match[1]) cliente = match[1];
-                else if (frase.includes("fiar")) cliente = prompt("Nombre del cliente que fía:");
+                else cliente = prompt("Nombre del cliente que fía:");
                 if (!cliente) { hablar("Venta cancelada."); return; }
                 hablar(`Fiando a ${cliente}.`);
                 await completarVenta('fiar', cliente);
@@ -1044,9 +1056,9 @@
             }
             if (productosAgregados.length) {
                 actualizarCarrito();
-                hablar(`Agregado al carrito: ${productosAgregados.join(", ")}. Total actual: Q${document.getElementById('carrito-total').innerText}.`);
+                hablar(`Agregado al carrito: ${productosAgregados.join(", ")}. Total: Q${document.getElementById('carrito-total').innerText}.`);
             } else {
-                hablar("No entendí el producto. Intenta decir 'agrega dos tiras' o 'ayuda' para más opciones.");
+                hablar("No entendí el producto. Di 'ayuda' para ver comandos.");
             }
         }
 
@@ -1060,7 +1072,7 @@
                     await db.collection("inventario").doc(prod.id).update({ stock: firebase.firestore.FieldValue.increment(cant) });
                     hablar(`Se añadieron ${cant} ${prod.nombre} al inventario.`);
                 } else {
-                    hablar("¿Cuántas unidades quieres agregar? Dilo con un número.");
+                    hablar("¿Cuántas unidades quieres agregar? Di el número.");
                 }
             } else {
                 hablar("No encontré ese producto para reabastecer.");
