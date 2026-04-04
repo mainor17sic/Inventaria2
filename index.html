@@ -800,7 +800,7 @@
                 btn.innerText = "👂 Asistente Activo...";
                 btn.style.backgroundColor = "#27ae60";
                 iniciarEscucha();
-                hablar("Hola, soy tu asistente.");   // Saludo breve
+                hablar("Hola, soy asistente de venta de Panadería.");   // Saludo breve
             } else {
                 btn.innerText = "🎤 Ordenar por Voz";
                 btn.style.backgroundColor = "#2980b9";
@@ -1016,10 +1016,10 @@
                 return;
             }
             procesarVentaMulti(frase);
-        };
+        } 
 
         function procesarVentaMulti(frase) {
-            const modismos = { "cero cincuenta":0.50, "unosincuenta":1.50, "uno cincuenta":1.50, "dos cincuenta":2.50, "tres cincuenta":3.50, "cuatro cincuenta":4.50, "cinco cincuenta":5.50, "seis cincuenta":6.50, "siete cincuenta":7.50, "ocho cincuenta":8.50, "nueve cincuenta":9.50, "diez cincuenta":10.50 };
+            const modismos = { "cero cincuenta":0.50, "uno cincuenta":1.50, "uno cincuenta":1.50, "dos cincuenta":2.50, "tres cincuenta":3.50, "cuatro cincuenta":4.50, "cinco cincuenta":5.50, "seis cincuenta":6.50, "siete cincuenta":7.50, "ocho cincuenta":8.50, "nueve cincuenta":9.50, "diez cincuenta":10.50 };
             const unidades = { "un":1,"uno":1,"una":1,"dos":2,"tres":3,"cuatro":4,"cinco":5,"seis":6,"siete":7,"ocho":8,"nueve":9,"diez":10,"once":11,"doce":12,"trece":13,"catorce":14,"quince":15,"dieciseis":16,"diecisiete":17,"dieciocho":18,"diecinueve":19 };
             const decenas = { "veinte":20,"veinti":20,"treinta":30,"cuarenta":40,"cincuenta":50,"sesenta":60,"setenta":70,"ochenta":80,"noventa":90 };
             const centenas = { "cien":100,"ciento":100,"doscientos":200,"trescientos":300,"cuatrocientos":400,"quinientos":500,"seiscientos":600,"setecientos":700,"ochocientos":800,"novecientos":900 };
