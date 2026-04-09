@@ -11,7 +11,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
 
     <style>
-        /* === ESTILOS (sin cambios, los mismos que antes) === */
+        /* === ESTILOS (sin cambios) === */
         * { box-sizing: border-box; }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -50,7 +50,7 @@
         button:hover { background-color: #e67e22; transform: translateY(-1px); }
         .btn-danger { background-color: #c0392b; }
         .btn-success { background-color: #27ae60; }
-        
+
         .tabs {
             display: flex;
             justify-content: space-around;
@@ -106,7 +106,7 @@
             color: #d35400;
             transform: translateY(-2px);
         }
-        
+
         .tab-content {
             display: none;
             animation: fadeSlide 0.3s ease-out;
@@ -116,7 +116,7 @@
             from { opacity: 0; transform: translateY(8px); }
             to { opacity: 1; transform: translateY(0); }
         }
-        
+
         .table-responsive { overflow-x: auto; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; min-width: 500px; }
         th, td { padding: 12px; border: 1px solid #eee; text-align: left; }
@@ -127,7 +127,7 @@
         .inicio-layout, .pos-container { display: flex; gap: 20px; flex-direction: column; }
         .productos-section { flex: 2; }
         .cart-section { flex: 1; padding: 15px; border: 2px dashed #d35400; border-radius: 8px; background: #fffaf5; height: fit-content; }
-        
+
         #productos-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
@@ -198,7 +198,7 @@
             cursor: not-allowed;
             filter: grayscale(0.3);
         }
-        
+
         @media (max-width: 560px) {
             #productos-grid {
                 grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
@@ -209,7 +209,7 @@
             .producto-card p { font-size: 15px; }
             .producto-card small { font-size: 10px; }
         }
-        
+
         #carrito-lista {
             list-style: none;
             padding: 0;
@@ -275,28 +275,8 @@
             .pos-container { flex-direction: row; align-items: flex-start; }
             .cart-section { position: sticky; top: 20px; min-width: 300px; max-width: 350px; }
         }
-        
-        .voice-selector {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            background: #f0f2f5;
-            padding: 5px 10px;
-            border-radius: 40px;
-            margin-left: 10px;
-        }
-        .voice-selector select {
-            width: auto;
-            padding: 6px 10px;
-            margin: 0;
-            font-size: 14px;
-            background: white;
-            border-radius: 30px;
-        }
-        .voice-selector label {
-            font-size: 14px;
-            color: #555;
-        }
+
+        /* Selector de voz eliminado, estilos sobrantes quitados */
     </style>
 </head>
 <body>
@@ -369,7 +349,7 @@
         <div><h1 style="margin:0; color:#d35400;">🍞 Panadería Marvin</h1><p>Turno: <strong id="display-vendedor"></strong></p></div>
         <button class="btn-danger" onclick="cerrarTurno()">📄🔒 Cerrar Turno y Reporte</button>
     </div>
-    
+
     <div class="tabs">
         <button class="tab active" data-tab="punto-venta" data-label="Venta">🛒</button>
         <button class="tab" data-tab="inventario-vivo" data-label="Inventario">📦</button>
@@ -385,13 +365,7 @@
                 <ul id="carrito-lista"></ul>
                 <div class="cart-total-area"><span>Total:</span><div style="font-size:2em; font-weight:bold; color:#27ae60;">Q<span id="carrito-total">0.00</span></div></div>
                 <div class="cart-botones">
-                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
-                        <button id="btn-voz" onclick="activarVoz()" style="background:#2980b9; flex:1;">🎤 Ordenar por Voz</button>
-                        <div class="voice-selector">
-                            <label>🗣️</label>
-                            <select id="selector-voz" title="Elige la voz del asistente"></select>
-                        </div>
-                    </div>
+                    <button id="btn-voz" onclick="activarVoz()" style="background:#2980b9;">🎤 Ordenar por Voz</button>
                     <button onclick="completarVenta('efectivo')" class="btn-success">✅ Cobrar Efectivo</button>
                     <button onclick="completarVenta('fiar')" class="btn-danger" style="background:#e67e22;">📒 Fiar (Crédito)</button>
                 </div>
@@ -399,7 +373,15 @@
         </div>
     </div>
     <div id="inventario-vivo" class="tab-content"><h2>Inventario en Tiempo Real</h2><div class="table-responsive"><table><thead><tr><th>Producto</th><th>Precio</th><th>Inicial</th><th>Disponible</th></tr></thead><tbody id="tabla-inventario"></tbody></table></div></div>
-    <div id="historial-ventas" class="tab-content"><h2>Historial de Ventas</h2><div class="table-responsive"></table><thead><tr><th>Hora</th><th>Productos</th><th>Total</th><th>Método</th></tr></thead><tbody id="tabla-historial"></tbody></table></div></div>
+    <div id="historial-ventas" class="tab-content">
+        <h2>Historial de Ventas</h2>
+        <div class="table-responsive">
+            <table>
+                <thead><tr><th>Hora</th><th>Productos</th><th>Total</th><th>Método</th></tr></thead>
+                <tbody id="tabla-historial"></tbody>
+            </table>
+        </div>
+    </div>
     <div id="historial-cierres" class="tab-content"><h2>Historial de Cierres de Turno</h2><div class="table-responsive"><table><thead><tr><th>Fecha</th><th>Turno</th><th>Vendedor</th><th>Total Efectivo</th><th>Total Fiado</th><th>Total General</th><th>PDF</th></tr></thead><tbody id="tabla-cierres"></tbody></table></div></div>
 </div>
 
@@ -634,10 +616,19 @@
         document.getElementById('carrito-total').innerText = total.toFixed(2);
     }
     async function completarVenta(tipo, clienteFiar = "") {
-        if (carrito.length === 0) return alert("Carrito vacío.");
+        if (carrito.length === 0) {
+            hablar("El carrito está vacío.");
+            return;
+        }
         if (tipo === 'fiar') {
-            clienteFiar = prompt("Nombre de la persona que fía:");
-            if (!clienteFiar) return alert("Venta cancelada.");
+            // Solo mostrar prompt si no se pasa nombre (es decir, llamado desde botón, no desde voz)
+            if (!clienteFiar) {
+                clienteFiar = prompt("Nombre de la persona que fía:");
+                if (!clienteFiar) {
+                    hablar("Venta cancelada.");
+                    return;
+                }
+            }
         }
         try {
             await db.collection("ventas").add({
@@ -651,11 +642,19 @@
             const batch = db.batch();
             carrito.forEach(item => batch.update(db.collection("inventario").doc(item.id), { stock: firebase.firestore.FieldValue.increment(-item.cantidad) }));
             await batch.commit();
-            alert(tipo === 'fiar' ? `Venta FIADA a ${clienteFiar} registrada.` : "Venta en EFECTIVO registrada.");
+            // Notificación por voz (sin alert)
+            if (tipo === 'fiar') {
+                hablar(`Venta fiada a ${clienteFiar} registrada.`);
+            } else {
+                hablar("Venta en efectivo registrada.");
+            }
             carrito = [];
             actualizarCarrito();
             cerrarFlotante();
-        } catch(e) { alert("Error al procesar venta."); }
+        } catch(e) {
+            hablar("Error al procesar venta.");
+            console.error(e);
+        }
     }
 
     async function generarPDFDesdeCierre(cierreId) {
@@ -728,7 +727,7 @@
     }
     document.addEventListener('DOMContentLoaded', initIconTabs);
 
-    // ==================== ASISTENTE DE VOZ MEJORADO (SIN BUCLE, CON LÓGICA CANTIDAD/PRECIO) ====================
+    // ==================== ASISTENTE DE VOZ MEJORADO (SIN SELECTOR DE VOZ) ====================
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (SpeechRecognition) {
         const recognition = new SpeechRecognition();
@@ -738,36 +737,6 @@
         let hablando = false;
         let adivinanzaActual = null;
 
-        const voiceSelect = document.getElementById('selector-voz');
-        let vocesDisponibles = [];
-        let vozSeleccionada = null;
-
-        function cargarVoces() {
-            vocesDisponibles = window.speechSynthesis.getVoices();
-            voiceSelect.innerHTML = '';
-            vocesDisponibles.forEach((voz, idx) => {
-                const option = document.createElement('option');
-                option.value = idx;
-                option.textContent = `${voz.name} (${voz.lang})`;
-                voiceSelect.appendChild(option);
-            });
-            const spanishIndex = vocesDisponibles.findIndex(v => v.lang.startsWith('es'));
-            if (spanishIndex !== -1) voiceSelect.selectedIndex = spanishIndex;
-            actualizarVozSeleccionada();
-        }
-
-        function actualizarVozSeleccionada() {
-            const idx = voiceSelect.value;
-            if (vocesDisponibles[idx]) vozSeleccionada = vocesDisponibles[idx];
-        }
-
-        if (window.speechSynthesis.onvoiceschanged !== undefined) {
-            window.speechSynthesis.onvoiceschanged = cargarVoces;
-        } else {
-            cargarVoces();
-        }
-        voiceSelect.addEventListener('change', actualizarVozSeleccionada);
-
         function hablar(mensaje) {
             if (!modoVoz) return;
             if (hablando) return;
@@ -776,7 +745,6 @@
             const utterance = new SpeechSynthesisUtterance(mensaje);
             utterance.lang = 'es-GT';
             utterance.rate = 0.9;
-            if (vozSeleccionada) utterance.voice = vozSeleccionada;
             utterance.onend = () => {
                 hablando = false;
                 if (modoVoz) {
@@ -951,12 +919,10 @@
         // --- Procesar frase para agregar productos al carrito (con lógica cantidad vs precio) ---
         async function procesarPedido(frase, producto) {
             if (!producto) return false;
-            // Detectar si es modo precio (contiene "quetzal", "centavos", o patrón "dos cincuenta")
             let esModoPrecio = false;
             let monto = 0;
             let cantidad = 0;
 
-            // 1. Detectar "X quetzal/quetzales"
             if (frase.includes("quetzal")) {
                 esModoPrecio = true;
                 const match = frase.match(/(\d+|\w+)\s+quetzal/);
@@ -967,10 +933,8 @@
                     monto = 0;
                 }
             }
-            // 2. Detectar "X centavos" (cualquier número + centavos)
             else if (frase.includes("centavos")) {
                 esModoPrecio = true;
-                // Extraer el número antes de "centavos"
                 const match = frase.match(/(\d+|\w+)\s+centavos/);
                 if (match) {
                     let numStr = match[1];
@@ -980,7 +944,6 @@
                     monto = 0;
                 }
             }
-            // 3. Detectar patrón "dos cincuenta" (número + cincuenta, sin centavos)
             else if (frase.match(/\b(\w+)\s+cincuenta\b/)) {
                 esModoPrecio = true;
                 const match = frase.match(/\b(\w+)\s+cincuenta\b/);
@@ -989,7 +952,6 @@
                     monto = num + 0.50;
                 }
             }
-            // 4. Detectar "cincuenta" solo (sin número)
             else if (frase.includes("cincuenta") && !frase.match(/\d/)) {
                 esModoPrecio = true;
                 monto = 0.50;
@@ -1002,19 +964,17 @@
                     return false;
                 }
             } else {
-                // Modo cantidad: extraer número de la frase
                 const numerosEnFrase = frase.match(/\d+|\b(?:un|uno|una|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|once|doce|trece|catorce|quince|veinte|treinta|cuarenta|cincuenta|sesenta|setenta|ochenta|noventa|cien)\b/gi);
                 if (numerosEnFrase && numerosEnFrase.length > 0) {
                     let numStr = numerosEnFrase[0];
                     cantidad = palabrasANumero(numStr);
                 } else {
-                    cantidad = 1; // por defecto 1 si no se especifica
+                    cantidad = 1;
                 }
             }
 
             if (cantidad <= 0) return false;
 
-            // Verificar stock
             const existente = carrito.find(i => i.id === producto.id);
             const prev = existente ? existente.cantidad : 0;
             if (cantidad + prev > producto.stock) {
@@ -1028,9 +988,7 @@
             return true;
         }
 
-        // --- Extraer nombre del producto de la frase ---
         function extraerProducto(frase) {
-            // Buscar coincidencia con algún producto en inventarioFirebase
             for (let prod of inventarioFirebase) {
                 if (frase.includes(prod.nombre.toLowerCase())) {
                     return prod;
@@ -1039,7 +997,6 @@
             return null;
         }
 
-        // --- Función para reabastecer inventario ---
         async function procesarInventario(frase) {
             let prod = inventarioFirebase.find(p => frase.includes(p.nombre.toLowerCase()));
             if (prod) {
@@ -1061,8 +1018,7 @@
             if (hablando) return;
             let frase = e.results[0][0].transcript.toLowerCase().trim();
             console.log("Voz:", frase);
-            
-            // Adivinanza interactiva
+
             if (adivinanzaActual !== null) {
                 const comandosEspeciales = ["adivinanza", "chiste", "fecha", "hora", "clima", "motivación", "ayuda", "desactivar voz", "dame la respuesta", "paso", "respuesta", "cuál es", "dímelo"];
                 const esComandoEspecial = comandosEspeciales.some(cmd => frase.includes(cmd));
@@ -1075,8 +1031,7 @@
                     return;
                 }
             }
-            
-            // Comandos de entretenimiento y consulta
+
             if (frase.includes("chiste")) { decirChiste(); return; }
             if (frase.includes("adivinanza")) { decirAdivinanza(); return; }
             if (frase.includes("fecha")) { decirFecha(); return; }
@@ -1116,11 +1071,9 @@
             }
             if (frase.includes("fiar a") || frase.match(/fi[aá]r\s+a\s+(\w+)/i)) {
                 if (carrito.length === 0) { hablar("Agrega productos primero."); return; }
-                let cliente = "cliente";
+                let cliente = "Cliente";
                 let match = frase.match(/fiar a (\w+)/i);
                 if (match && match[1]) cliente = match[1];
-                else cliente = prompt("Nombre del cliente que fía:");
-                if (!cliente) { hablar("Venta cancelada."); return; }
                 hablar(`Fiando a ${cliente}.`);
                 await completarVenta('fiar', cliente);
                 return;
@@ -1129,8 +1082,7 @@
                 procesarInventario(frase);
                 return;
             }
-            
-            // Si no es comando especial, intentar agregar producto al carrito
+
             const producto = extraerProducto(frase);
             if (producto) {
                 await procesarPedido(frase, producto);
