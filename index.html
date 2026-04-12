@@ -440,10 +440,31 @@
         "conos-de-manjar": "https://i.postimg.cc/767XyZWn/20260314-174225.jpg",
         "default": "https://via.placeholder.com/300x200?text=Panaderia+Marvin"
     };
-
+// ==================== ANIMACIÓN DE CARGA ====================
+let progreso = 0;
+const progressFill = document.getElementById('progress-fill');
+const loadingMsg = document.querySelector('.loading-msg');
+const interval = setInterval(() => {
+    progreso += Math.floor(Math.random() * 10) + 5;
+    if (progreso >= 100) {
+        progreso = 100;
+        clearInterval(interval);
+    }
+    progressFill.style.width = progreso + '%';
+    if (progreso < 30) loadingMsg.innerText = 'Preparando masa...';
+    else if (progreso < 60) loadingMsg.innerText = 'Horneando delicias...';
+    else if (progreso < 90) loadingMsg.innerText = 'Decorando con azúcar...';
+    else loadingMsg.innerText = '¡Listo para servir!';
+}, 200);
     db.collection("configuracion").doc("estado_turno").onSnapshot((doc) => {
+    clearInterval(interval);
+    progressFill.style.width = '100%';
+    loadingMsg.innerText = '¡Listo para servir!';
+    setTimeout(() => {
         document.getElementById('pantalla-carga').style.display = 'none';
-        if (doc.exists && doc.data().activo === true) {
+    }, 300);
+    
+    if (doc.exists && doc.data().activo === true) {
             document.getElementById('inicio-turno-section').style.display = 'none';
             document.getElementById('dashboard').style.display = 'block';
             vendedorActivo = doc.data().vendedor;
