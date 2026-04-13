@@ -276,7 +276,17 @@
             .cart-section { position: sticky; top: 20px; min-width: 300px; max-width: 350px; }
         }
 
-        /* Selector de voz eliminado, estilos sobrantes quitados */
+        /* Estilo para el selector de voz */
+        .voice-selector-container {
+            margin-top: 8px;
+        }
+        #selector-voz {
+            width: 100%;
+            padding: 8px;
+            border-radius: 20px;
+            background: white;
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
@@ -366,6 +376,11 @@
                 <div class="cart-total-area"><span>Total:</span><div style="font-size:2em; font-weight:bold; color:#27ae60;">Q<span id="carrito-total">0.00</span></div></div>
                 <div class="cart-botones">
                     <button id="btn-voz" onclick="activarVoz()" style="background:#2980b9;">🎤 Ordenar por Voz</button>
+                    <div class="voice-selector-container">
+                        <select id="selector-voz" title="Elige la voz del asistente">
+                            <option value="default">🔊 Voz por defecto del navegador</option>
+                        </select>
+                    </div>
                     <button onclick="completarVenta('efectivo')" class="btn-success">✅ Cobrar Efectivo</button>
                     <button onclick="completarVenta('fiar')" class="btn-danger" style="background:#e67e22;">📒 Fiar (Crédito)</button>
                 </div>
@@ -440,31 +455,33 @@
         "conos-de-manjar": "https://i.postimg.cc/767XyZWn/20260314-174225.jpg",
         "default": "https://via.placeholder.com/300x200?text=Panaderia+Marvin"
     };
-// ==================== ANIMACIÓN DE CARGA ====================
-let progreso = 0;
-const progressFill = document.getElementById('progress-fill');
-const loadingMsg = document.querySelector('.loading-msg');
-const interval = setInterval(() => {
-    progreso += Math.floor(Math.random() * 10) + 5;
-    if (progreso >= 100) {
-        progreso = 100;
-        clearInterval(interval);
-    }
-    progressFill.style.width = progreso + '%';
-    if (progreso < 30) loadingMsg.innerText = 'Preparando masa...';
-    else if (progreso < 60) loadingMsg.innerText = 'Horneando delicias...';
-    else if (progreso < 90) loadingMsg.innerText = 'Decorando con azúcar...';
-    else loadingMsg.innerText = '¡Listo para servir!';
-}, 200);
+
+    // ==================== ANIMACIÓN DE CARGA ====================
+    let progreso = 0;
+    const progressFill = document.getElementById('progress-fill');
+    const loadingMsg = document.querySelector('.loading-msg');
+    const interval = setInterval(() => {
+        progreso += Math.floor(Math.random() * 10) + 5;
+        if (progreso >= 100) {
+            progreso = 100;
+            clearInterval(interval);
+        }
+        progressFill.style.width = progreso + '%';
+        if (progreso < 30) loadingMsg.innerText = 'Preparando masa...';
+        else if (progreso < 60) loadingMsg.innerText = 'Horneando delicias...';
+        else if (progreso < 90) loadingMsg.innerText = 'Decorando con azúcar...';
+        else loadingMsg.innerText = '¡Listo para servir!';
+    }, 200);
+
     db.collection("configuracion").doc("estado_turno").onSnapshot((doc) => {
-    clearInterval(interval);
-    progressFill.style.width = '100%';
-    loadingMsg.innerText = '¡Listo para servir!';
-    setTimeout(() => {
-        document.getElementById('pantalla-carga').style.display = 'none';
-    }, 300);
-    
-    if (doc.exists && doc.data().activo === true) {
+        clearInterval(interval);
+        progressFill.style.width = '100%';
+        loadingMsg.innerText = '¡Listo para servir!';
+        setTimeout(() => {
+            document.getElementById('pantalla-carga').style.display = 'none';
+        }, 300);
+
+        if (doc.exists && doc.data().activo === true) {
             document.getElementById('inicio-turno-section').style.display = 'none';
             document.getElementById('dashboard').style.display = 'block';
             vendedorActivo = doc.data().vendedor;
@@ -642,7 +659,6 @@ const interval = setInterval(() => {
             return;
         }
         if (tipo === 'fiar') {
-            // Solo mostrar prompt si no se pasa nombre (es decir, llamado desde botón, no desde voz)
             if (!clienteFiar) {
                 clienteFiar = prompt("Nombre de la persona que fía:");
                 if (!clienteFiar) {
@@ -663,7 +679,6 @@ const interval = setInterval(() => {
             const batch = db.batch();
             carrito.forEach(item => batch.update(db.collection("inventario").doc(item.id), { stock: firebase.firestore.FieldValue.increment(-item.cantidad) }));
             await batch.commit();
-            // Notificación por voz (sin alert)
             if (tipo === 'fiar') {
                 hablar(`Venta fiada a ${clienteFiar} registrada.`);
             } else {
@@ -748,7 +763,7 @@ const interval = setInterval(() => {
     }
     document.addEventListener('DOMContentLoaded', initIconTabs);
 
-    // ==================== ASISTENTE DE VOZ MEJORADO (SIN SELECTOR DE VOZ) ====================
+    // ==================== ASISTENTE DE VOZ MEJORADO (CON SELECTOR DE VOZ) ====================
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (SpeechRecognition) {
         const recognition = new SpeechRecognition();
@@ -758,6 +773,52 @@ const interval = setInterval(() => {
         let hablando = false;
         let adivinanzaActual = null;
 
+        // --- Variables para selector de voz ---
+        let vocesDisponibles = [];
+
+        function cargarVoces() {
+            vocesDisponibles = window.speechSynthesis.getVoices();
+            const selector = document.getElementById('selector-voz');
+            if (!selector) return;
+            // Mantener opción por defecto
+            selector.innerHTML = '<option value="default">🔊 Voz por defecto del navegador</option>';
+            // Filtrar solo voces en español
+            const vocesEspanol = vocesDisponibles.filter(v => v.lang.includes('es'));
+            vocesEspanol.forEach((voz, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                option.textContent = `${voz.name} (${voz.lang}) ${voz.localService ? '💻 Local' : '🌐 Online'}`;
+                selector.appendChild(option);
+            });
+            // Recuperar selección previa
+            const savedVoice = localStorage.getItem('vozSeleccionada');
+            if (savedVoice !== null) {
+                selector.value = savedVoice;
+            }
+        }
+
+        function obtenerVozSeleccionada() {
+            const selector = document.getElementById('selector-voz');
+            if (!selector || selector.value === 'default') return null;
+            const index = parseInt(selector.value);
+            const vocesEspanol = vocesDisponibles.filter(v => v.lang.includes('es'));
+            return vocesEspanol[index] || null;
+        }
+
+        // Evento para cuando cambian las voces
+        window.speechSynthesis.onvoiceschanged = cargarVoces;
+        cargarVoces();
+
+        // Guardar preferencia al cambiar
+        document.addEventListener('DOMContentLoaded', () => {
+            const selector = document.getElementById('selector-voz');
+            if (selector) {
+                selector.addEventListener('change', (e) => {
+                    localStorage.setItem('vozSeleccionada', e.target.value);
+                });
+            }
+        });
+
         function hablar(mensaje) {
             if (!modoVoz) return;
             if (hablando) return;
@@ -766,6 +827,13 @@ const interval = setInterval(() => {
             const utterance = new SpeechSynthesisUtterance(mensaje);
             utterance.lang = 'es-GT';
             utterance.rate = 1.0;
+
+            // Asignar voz seleccionada si existe
+            const vozElegida = obtenerVozSeleccionada();
+            if (vozElegida) {
+                utterance.voice = vozElegida;
+            }
+
             utterance.onend = () => {
                 hablando = false;
                 if (modoVoz) {
