@@ -765,7 +765,7 @@ const interval = setInterval(() => {
             try { recognition.stop(); } catch(e) {}
             const utterance = new SpeechSynthesisUtterance(mensaje);
             utterance.lang = 'es-GT';
-            utterance.rate = 0.9;
+            utterance.rate = 1.0;
             utterance.onend = () => {
                 hablando = false;
                 if (modoVoz) {
