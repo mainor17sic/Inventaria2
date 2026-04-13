@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>Panadería Marvin - Control de Turno (Voz Mejorada)</title>
+    <title>Panadería - Control de Turno 2026</title>
 
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
@@ -11,7 +11,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
 
     <style>
-        /* === ESTILOS (sin cambios) === */
+        /* === ESTILOS === */
         * { box-sizing: border-box; }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -319,12 +319,12 @@
 
 <div class="container" id="inicio-turno-section">
     <div style="text-align: center; margin-bottom: 25px;">
-        <h1 style="color: #d35400;">🥐 Iniciar Turno de Venta</h1>
+        <h1 style="color: #d35400;">🥐 PANADERIA MARVIN</h1>
         <p style="color: #666;">Configure el inventario y sus datos para comenzar.</p>
     </div>
     <div class="inicio-layout">
         <div class="inicio-inventario" style="background: #f9f9f9; padding: 15px; border-radius: 8px;">
-            <h3>1. Inventario del Día</h3>
+            <h3> style="color: #d35400; font-size: 1.5rem;margin-bottom: 15px;">CARGAR DATOS DEL DIA</h3>
             <div class="table-responsive" style="max-height: 450px; overflow-y: auto;">
                 <table style="margin-top:0; min-width:400px;">
                     <thead> <tr><th>Pan</th><th>Precio</th><th>Cantidad</th></tr> </thead>
@@ -343,12 +343,12 @@
             </div>
         </div>
         <div class="inicio-vendedor" style="background: #f9f9f9; padding: 15px; border-radius: 8px;">
-            <h3>2. Datos del Vendedor</h3>
+           <h3> style="color: #d35400; font-size: 1.5rem;margin-bottom: 15px;">ADMINISTADOR</h3>
             <div style="display:flex; flex-direction:column; gap:10px;">
-                <input type="text" id="nombre-vendedor" placeholder="Tu Nombre">
-                <input type="password" id="firma-vendedor" placeholder="Clave secreta para cerrar">
+                <input type="text" id="nombre-vendedor" placeholder="Admin.">
+                <input type="password" id="firma-vendedor" placeholder="Clave para cerrar Turno">
                 <select id="tipo-turno"><option value="Diurno">☀️ Turno Diurno</option><option value="Tarde">🌙 Turno Tarde</option></select>
-                <button onclick="iniciarTurno()" class="btn-success" style="width:100%; font-size:18px; padding:15px;">🚀 Iniciar Turno Global</button>
+                <button onclick="iniciarTurno()" class="btn-success" style="width:100%; font-size:18px; padding:15px;">Iniciar Turno</button>
             </div>
         </div>
     </div>
@@ -375,7 +375,7 @@
                 <ul id="carrito-lista"></ul>
                 <div class="cart-total-area"><span>Total:</span><div style="font-size:2em; font-weight:bold; color:#27ae60;">Q<span id="carrito-total">0.00</span></div></div>
                 <div class="cart-botones">
-                    <button id="btn-voz" onclick="activarVoz()" style="background:#2980b9;">🎤 Ordenar por Voz</button>
+                    <button id="btn-voz" onclick="activarVoz()" style="background:#2980b9;">Asistente Artificial</button>
                     <div class="voice-selector-container">
                         <select id="selector-voz" title="Elige la voz del asistente">
                             <option value="default">🔊 Voz por defecto del navegador</option>
