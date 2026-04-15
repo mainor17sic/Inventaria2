@@ -3,15 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>Panadería - Control de Turno 2026</title>
+    <title>Panadería Marvin - Asistente Gemini</title>
 
+    <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <!-- jsPDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
 
     <style>
-        /* === ESTILOS === */
+        /* ===== ESTILOS (se mantienen los mismos, con pequeños añadidos) ===== */
         * { box-sizing: border-box; }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -276,10 +278,8 @@
             .cart-section { position: sticky; top: 20px; min-width: 300px; max-width: 350px; }
         }
 
-        /* Estilo para el selector de voz */
-        .voice-selector-container {
-            margin-top: 8px;
-        }
+        /* Estilos para configuración IA */
+        .voice-selector-container { margin-top: 8px; }
         #selector-voz {
             width: 100%;
             padding: 8px;
@@ -287,10 +287,83 @@
             background: white;
             font-size: 14px;
         }
+        .ia-config {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px dashed #d35400;
+        }
+        .ia-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+        }
+        .ia-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #ccc;
+        }
+        .ia-indicator.active {
+            background: #27ae60;
+            box-shadow: 0 0 8px #27ae60;
+        }
+        .switch-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin: 10px 0;
+        }
+        .switch-label {
+            font-weight: bold;
+        }
+        /* Toggle switch */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 24px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        input:checked + .slider {
+            background-color: #2196F3;
+        }
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
     </style>
 </head>
 <body>
 
+<!-- Pantalla de carga -->
 <div id="pantalla-carga" class="bakery-loader">
     <div class="oven-container">
         <div class="steam-wrap"><span class="steam s1"></span><span class="steam s2"></span><span class="steam s3"></span></div>
@@ -317,14 +390,15 @@
     @media (max-width: 480px) { .bakery-title { font-size: 1.4rem; } .bread-glow { width: 90px; height: 90px; } .dough-track { width: 200px; } }
 </style>
 
+<!-- Inicio de Turno -->
 <div class="container" id="inicio-turno-section">
     <div style="text-align: center; margin-bottom: 25px;">
-        <h1 style="color: #d35400;">🥐 PANADERIA MARVIN</h1>
+        <h1 style="color: #d35400;">🥐 Iniciar Turno de Venta</h1>
         <p style="color: #666;">Configure el inventario y sus datos para comenzar.</p>
     </div>
     <div class="inicio-layout">
         <div class="inicio-inventario" style="background: #f9f9f9; padding: 15px; border-radius: 8px;">
-            <h3>CARGAR DATOS DEL DIA</h3>
+            <h3>1. Inventario del Día</h3>
             <div class="table-responsive" style="max-height: 450px; overflow-y: auto;">
                 <table style="margin-top:0; min-width:400px;">
                     <thead> <tr><th>Pan</th><th>Precio</th><th>Cantidad</th></tr> </thead>
@@ -343,20 +417,39 @@
             </div>
         </div>
         <div class="inicio-vendedor" style="background: #f9f9f9; padding: 15px; border-radius: 8px;">
-           <h3>ADMINISTADOR</h3>
+            <h3>2. Datos del Vendedor</h3>
             <div style="display:flex; flex-direction:column; gap:10px;">
-                <input type="text" id="nombre-vendedor" placeholder="Admin.">
-                <input type="password" id="firma-vendedor" placeholder="Clave para cerrar Turno">
+                <input type="text" id="nombre-vendedor" placeholder="Tu Nombre">
+                <input type="password" id="firma-vendedor" placeholder="Clave secreta para cerrar">
                 <select id="tipo-turno"><option value="Diurno">☀️ Turno Diurno</option><option value="Tarde">🌙 Turno Tarde</option></select>
-                <button onclick="iniciarTurno()" class="btn-success" style="width:100%; font-size:18px; padding:15px;">Iniciar Turno</button>
+                
+                <!-- API Key Gemini (opcional) -->
+                <div class="ia-config">
+                    <label style="font-weight:bold;">🔑 API Key de Gemini (opcional)</label>
+                    <input type="password" id="gemini-api-key-inicio" placeholder="Pega tu clave de Google AI">
+                    <small style="display:block; margin-top:4px;">
+                        <a href="https://aistudio.google.com/" target="_blank">Obtener clave gratuita</a> • 
+                        Se guarda solo en este navegador
+                    </small>
+                    <div id="ia-status-inicio" class="ia-status" style="margin-top:8px;">
+                        <span class="ia-indicator"></span>
+                        <span id="ia-mensaje-inicio">No configurada</span>
+                    </div>
+                </div>
+
+                <button onclick="iniciarTurno()" class="btn-success" style="width:100%; font-size:18px; padding:15px;">🚀 Iniciar Turno Global</button>
             </div>
         </div>
     </div>
 </div>
 
+<!-- Dashboard -->
 <div class="container" id="dashboard">
     <div class="header-dashboard" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; margin-bottom:20px;">
-        <div><h1 style="margin:0; color:#d35400;">🍞 Panadería Marvin</h1><p>Turno: <strong id="display-vendedor"></strong></p></div>
+        <div>
+            <h1 style="margin:0; color:#d35400;">🍞 Panadería Marvin</h1>
+            <p>Turno: <strong id="display-vendedor"></strong></p>
+        </div>
         <button class="btn-danger" onclick="cerrarTurno()">📄🔒 Cerrar Turno y Reporte</button>
     </div>
 
@@ -375,12 +468,39 @@
                 <ul id="carrito-lista"></ul>
                 <div class="cart-total-area"><span>Total:</span><div style="font-size:2em; font-weight:bold; color:#27ae60;">Q<span id="carrito-total">0.00</span></div></div>
                 <div class="cart-botones">
-                    <button id="btn-voz" onclick="activarVoz()" style="background:#2980b9;">Asistente Artificial</button>
+                    <button id="btn-voz" onclick="activarVoz()" style="background:#2980b9;">🎤 Ordenar por Voz</button>
                     <div class="voice-selector-container">
                         <select id="selector-voz" title="Elige la voz del asistente">
                             <option value="default">🔊 Voz por defecto del navegador</option>
                         </select>
                     </div>
+                    
+                    <!-- Configuración de IA (Gemini) + Switch de modo -->
+                    <details style="margin-top:10px;">
+                        <summary style="cursor:pointer; color:#2980b9; font-weight:bold;">🤖 Configurar IA (Gemini)</summary>
+                        <div class="ia-config" style="margin-top:8px;">
+                            <input type="password" id="gemini-api-key-dash" placeholder="API Key de Gemini" style="width:100%;">
+                            <button onclick="guardarApiKeyDashboard()" style="margin-top:5px; background:#2980b9;">💾 Guardar y validar</button>
+                            <button onclick="olvidarApiKey()" style="margin-top:5px; background:#888;">🗑️ Olvidar clave</button>
+                            
+                            <!-- Switch de Modo Panadería / Libre -->
+                            <div class="switch-container">
+                                <span class="switch-label">🍞 Modo Panadería</span>
+                                <label class="switch">
+                                    <input type="checkbox" id="modo-ia-switch" checked>
+                                    <span class="slider"></span>
+                                </label>
+                                <span class="switch-label">🌐 Modo Libre</span>
+                            </div>
+                            <small>Modo Panadería: responde como asistente de la tienda. Modo Libre: responde como Gemini general.</small>
+
+                            <div class="ia-status" style="margin-top:8px;">
+                                <span class="ia-indicator" id="ia-indicator-dash"></span>
+                                <span id="ia-mensaje-dash">Estado: <span id="estado-ia-texto">No configurada</span></span>
+                            </div>
+                        </div>
+                    </details>
+
                     <button onclick="completarVenta('efectivo')" class="btn-success">✅ Cobrar Efectivo</button>
                     <button onclick="completarVenta('fiar')" class="btn-danger" style="background:#e67e22;">📒 Fiar (Crédito)</button>
                 </div>
@@ -433,28 +553,121 @@
     let escuchasIniciadas = false;
     let productoSeleccionadoId = null;
 
-    const IMAGENES_PRODUCTOS = {
-        "tira": "https://i.postimg.cc/KYCgF76d/20260314-170824.jpg",
-        "francés": "https://i.postimg.cc/Sxvn77x4/20260314-170912.jpg",
-        "pan-dulce-grande": "https://i.postimg.cc/vBWDsJLZ/20260314-170934.jpg",
-        "pan-dulce-pequeño": "https://i.postimg.cc/Rh4hVgg5/20260314-171043.jpg",
-        "pirujos-pequeños": "https://i.postimg.cc/VL7vmBMh/20260314-171021.jpg",
-        "pirujos-grande": "https://i.postimg.cc/DZKyBCkm/20260314-171124.jpg",
-        "pan-chata": "https://i.postimg.cc/3N8rHdwT/20260314-171315.jpg",
-        "pan-galleta": "https://i.postimg.cc/CLKMPBtJ/20260314-171406.jpg",
-        "bollo": "https://i.postimg.cc/VNXzrjrc/20260314-171418.jpg",
-        "cemita": "",
-        "gallina": "",
-        "campechana-grande": "https://i.postimg.cc/RVq9Qr6T/20260314-171501.jpg",
-        "campechana-pequeña": "https://i.postimg.cc/mkg45Jdh/20260314-171448.jpg",
-        "volovanes": "https://i.postimg.cc/pLFH4DBY/20260314-171608.jpg",
-        "donas": "https://i.postimg.cc/q7cdM4S7/20260314-171655.jpg",
-        "roles-de-canela": "https://i.postimg.cc/bwCmxMnm/20260314-174211.jpg",
-        "salpora": "",
-        "bolsa-de-galleta": "https://i.postimg.cc/65BcDwL0/20260314-174254.jpg",
-        "conos-de-manjar": "https://i.postimg.cc/767XyZWn/20260314-174225.jpg",
-        "default": "https://via.placeholder.com/300x200?text=Panaderia+Marvin"
-    };
+    // ==================== GESTIÓN DE API KEY GEMINI ====================
+    const STORAGE_KEY = 'gemini_api_key';
+    let modoPanaderia = true; // true = panadería, false = libre
+
+    // Elemento switch
+    const switchModo = document.getElementById('modo-ia-switch');
+    if (switchModo) {
+        switchModo.addEventListener('change', (e) => {
+            modoPanaderia = e.target.checked;
+            console.log('Modo IA:', modoPanaderia ? 'Panadería' : 'Libre');
+        });
+    }
+
+    async function validarApiKeyGemini(apiKey) {
+        if (!apiKey || apiKey.trim() === "") {
+            return { valida: false, mensaje: "La API Key está vacía." };
+        }
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+        const body = {
+            contents: [{ parts: [{ text: "Responde únicamente con 'OK'." }] }],
+            generationConfig: { maxOutputTokens: 2, temperature: 0 }
+        };
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+            const data = await response.json();
+            if (response.ok && data.candidates?.[0]?.content?.parts?.[0]?.text) {
+                return { valida: true, mensaje: "✅ API Key válida. Gemini está listo." };
+            } else if (response.status === 400 && data.error?.message?.includes("API key not valid")) {
+                return { valida: false, mensaje: "❌ API Key inválida. Verifica que esté correcta." };
+            } else if (response.status === 429) {
+                return { valida: false, mensaje: "⏳ Cuota excedida.", cuotaExcedida: true };
+            } else {
+                return { valida: false, mensaje: `Error: ${data.error?.message || 'Desconocido'}` };
+            }
+        } catch (error) {
+            console.error("Error de red:", error);
+            return { valida: false, mensaje: "🌐 Error de conexión." };
+        }
+    }
+
+    async function guardarApiKeyDashboard() {
+        const input = document.getElementById('gemini-api-key-dash');
+        const key = input.value.trim();
+        if (!key) {
+            actualizarEstadoIA('invalida', 'Ingresa una clave primero.');
+            return;
+        }
+        actualizarEstadoIA('validando', 'Validando...');
+        const resultado = await validarApiKeyGemini(key);
+        if (resultado.valida) {
+            localStorage.setItem(STORAGE_KEY, key);
+            actualizarEstadoIA('valida', resultado.mensaje);
+            input.value = '';
+            if (typeof hablar === 'function') hablar("Clave de IA guardada y validada correctamente.");
+        } else {
+            actualizarEstadoIA('invalida', resultado.mensaje);
+            if (resultado.cuotaExcedida && confirm("¿Deseas guardar la clave de todos modos?")) {
+                localStorage.setItem(STORAGE_KEY, key);
+                actualizarEstadoIA('valida', 'Clave guardada (cuota excedida).');
+            }
+        }
+    }
+
+    function olvidarApiKey() {
+        localStorage.removeItem(STORAGE_KEY);
+        actualizarEstadoIA('invalida', 'Clave eliminada.');
+        if (typeof hablar === 'function') hablar("Se eliminó la clave de IA.");
+    }
+
+    function actualizarEstadoIA(estado, mensaje) {
+        const indicatorDash = document.getElementById('ia-indicator-dash');
+        const textoDash = document.getElementById('estado-ia-texto');
+        const indicatorInicio = document.querySelector('#ia-status-inicio .ia-indicator');
+        const textoInicio = document.getElementById('ia-mensaje-inicio');
+
+        const actualizar = (ind, txt) => {
+            if (ind) {
+                ind.className = 'ia-indicator';
+                if (estado === 'valida') ind.classList.add('active');
+                else if (estado === 'validando') ind.style.background = '#f1c40f';
+                else ind.style.background = '#e74c3c';
+            }
+            if (txt) txt.textContent = mensaje;
+        };
+        actualizar(indicatorDash, textoDash);
+        actualizar(indicatorInicio, textoInicio);
+    }
+
+    async function verificarClaveGuardada() {
+        const key = localStorage.getItem(STORAGE_KEY);
+        if (!key) {
+            actualizarEstadoIA('invalida', 'No configurada');
+            return;
+        }
+        actualizarEstadoIA('validando', 'Verificando...');
+        const resultado = await validarApiKeyGemini(key);
+        if (resultado.valida) {
+            actualizarEstadoIA('valida', 'Clave guardada y válida.');
+        } else {
+            actualizarEstadoIA('invalida', `Clave no válida: ${resultado.mensaje}`);
+            if (confirm(`¿Eliminar clave guardada? (${resultado.mensaje})`)) {
+                localStorage.removeItem(STORAGE_KEY);
+            }
+        }
+    }
+
+    function precargarApiKeyInicio() {
+        const key = localStorage.getItem(STORAGE_KEY);
+        const inputInicio = document.getElementById('gemini-api-key-inicio');
+        if (key && inputInicio) inputInicio.value = key;
+    }
 
     // ==================== ANIMACIÓN DE CARGA ====================
     let progreso = 0;
@@ -492,6 +705,7 @@
                 iniciarEscuchasEnTiempoReal();
                 escuchasIniciadas = true;
             }
+            verificarClaveGuardada();
         } else {
             document.getElementById('inicio-turno-section').style.display = 'block';
             document.getElementById('dashboard').style.display = 'none';
@@ -499,6 +713,7 @@
             carrito = [];
             actualizarListaLocal();
             escuchasIniciadas = false;
+            precargarApiKeyInicio();
         }
     });
 
@@ -511,6 +726,29 @@
         { nombre: "Roles de Canela", precio: 2.00 }, { nombre: "Salpora", precio: 1.00 }, { nombre: "Bolsa de galleta", precio: 3.00 },
         { nombre: "Conos de manjar", precio: 3.00 }
     ];
+    const IMAGENES_PRODUCTOS = {
+        "tira": "https://i.postimg.cc/KYCgF76d/20260314-170824.jpg",
+        "francés": "https://i.postimg.cc/Sxvn77x4/20260314-170912.jpg",
+        "pan-dulce-grande": "https://i.postimg.cc/vBWDsJLZ/20260314-170934.jpg",
+        "pan-dulce-pequeño": "https://i.postimg.cc/Rh4hVgg5/20260314-171043.jpg",
+        "pirujos-pequeños": "https://i.postimg.cc/VL7vmBMh/20260314-171021.jpg",
+        "pirujos-grande": "https://i.postimg.cc/DZKyBCkm/20260314-171124.jpg",
+        "pan-chata": "https://i.postimg.cc/3N8rHdwT/20260314-171315.jpg",
+        "pan-galleta": "https://i.postimg.cc/CLKMPBtJ/20260314-171406.jpg",
+        "bollo": "https://i.postimg.cc/VNXzrjrc/20260314-171418.jpg",
+        "cemita": "",
+        "gallina": "",
+        "campechana-grande": "https://i.postimg.cc/RVq9Qr6T/20260314-171501.jpg",
+        "campechana-pequeña": "https://i.postimg.cc/mkg45Jdh/20260314-171448.jpg",
+        "volovanes": "https://i.postimg.cc/pLFH4DBY/20260314-171608.jpg",
+        "donas": "https://i.postimg.cc/q7cdM4S7/20260314-171655.jpg",
+        "roles-de-canela": "https://i.postimg.cc/bwCmxMnm/20260314-174211.jpg",
+        "salpora": "",
+        "bolsa-de-galleta": "https://i.postimg.cc/65BcDwL0/20260314-174254.jpg",
+        "conos-de-manjar": "https://i.postimg.cc/767XyZWn/20260314-174225.jpg",
+        "default": "https://via.placeholder.com/300x200?text=Panaderia+Marvin"
+    };
+
     function cargarCatalogo() {
         const tabla = document.getElementById('tabla-automatica');
         tabla.innerHTML = "";
@@ -546,6 +784,18 @@
         const firmaVendedor = document.getElementById('firma-vendedor').value.trim();
         const tipoTurno = document.getElementById('tipo-turno').value;
         if(!nombreVendedor || !firmaVendedor) return alert("Faltan datos del vendedor");
+        
+        // Guardar API Key si se ingresó
+        const apiKey = document.getElementById('gemini-api-key-inicio').value.trim();
+        if (apiKey) {
+            const resultado = await validarApiKeyGemini(apiKey);
+            if (resultado.valida) {
+                localStorage.setItem(STORAGE_KEY, apiKey);
+            } else {
+                if (!confirm(`API Key no válida: ${resultado.mensaje}\n¿Continuar sin IA?`)) return;
+            }
+        }
+
         let inventarioFinal = [];
         document.querySelectorAll('.cant-auto').forEach(input => {
             const cant = parseInt(input.value);
@@ -658,14 +908,9 @@
             hablar("El carrito está vacío.");
             return;
         }
-        if (tipo === 'fiar') {
-            if (!clienteFiar) {
-                clienteFiar = prompt("Nombre de la persona que fía:");
-                if (!clienteFiar) {
-                    hablar("Venta cancelada.");
-                    return;
-                }
-            }
+        if (tipo === 'fiar' && !clienteFiar) {
+            clienteFiar = prompt("Nombre de la persona que fía:");
+            if (!clienteFiar) return;
         }
         try {
             await db.collection("ventas").add({
@@ -679,18 +924,11 @@
             const batch = db.batch();
             carrito.forEach(item => batch.update(db.collection("inventario").doc(item.id), { stock: firebase.firestore.FieldValue.increment(-item.cantidad) }));
             await batch.commit();
-            if (tipo === 'fiar') {
-                hablar(`Venta fiada a ${clienteFiar} registrada.`);
-            } else {
-                hablar("Venta en efectivo registrada.");
-            }
+            hablar(`Venta ${tipo === 'fiar' ? 'fiada a ' + clienteFiar : 'en efectivo'} registrada.`);
             carrito = [];
             actualizarCarrito();
             cerrarFlotante();
-        } catch(e) {
-            hablar("Error al procesar venta.");
-            console.error(e);
-        }
+        } catch(e) { console.error(e); hablar("Error al procesar venta."); }
     }
 
     async function generarPDFDesdeCierre(cierreId) {
@@ -724,7 +962,7 @@
     async function cerrarTurno() {
         const clave = prompt("Ingresa tu clave para cerrar turno:");
         if (clave !== firmaActivaEnNube && clave !== "admin123") { if(clave !== null) alert("Clave incorrecta."); return; }
-        if (!confirm("Se guardará el cierre en el historial y se reiniciará el inventario. ¿Continuar?")) return;
+        if (!confirm("¿Guardar cierre y reiniciar inventario?")) return;
         try {
             const ventasSnap = await db.collection("ventas").get();
             const invSnap = await db.collection("inventario").get();
@@ -740,7 +978,6 @@
                 inventarioFinal: invFinal,
                 totales: { efectivo: totalEf, fiado: totalFi, general: totalEf+totalFi }
             });
-            alert("Cierre guardado. Se limpiarán los datos del turno actual.");
             const batchInv = db.batch(); invSnap.docs.forEach(d=>batchInv.delete(d.ref)); await batchInv.commit();
             const batchVen = db.batch(); ventasSnap.docs.forEach(d=>batchVen.delete(d.ref)); await batchVen.commit();
             await db.collection("configuracion").doc("estado_turno").set({ activo: false, vendedor: "", firma: "" });
@@ -754,8 +991,7 @@
                 const tabId = this.getAttribute('data-tab');
                 if (!tabId) return;
                 document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-                const activeContent = document.getElementById(tabId);
-                if (activeContent) activeContent.classList.add('active');
+                document.getElementById(tabId).classList.add('active');
                 tabs.forEach(t => t.classList.remove('active'));
                 this.classList.add('active');
             });
@@ -763,7 +999,7 @@
     }
     document.addEventListener('DOMContentLoaded', initIconTabs);
 
-    // ==================== ASISTENTE DE VOZ MEJORADO (CON SELECTOR DE VOZ) ====================
+    // ==================== ASISTENTE DE VOZ (SOLO GEMINI) ====================
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (SpeechRecognition) {
         const recognition = new SpeechRecognition();
@@ -771,28 +1007,24 @@
         recognition.interimResults = false;
         let modoVoz = false;
         let hablando = false;
-        let adivinanzaActual = null;
 
-        // --- Variables para selector de voz ---
         let vocesDisponibles = [];
-
         function cargarVoces() {
             vocesDisponibles = window.speechSynthesis.getVoices();
             const selector = document.getElementById('selector-voz');
             if (!selector) return;
-            selector.innerHTML = '<option value="default">🔊 Voz por defecto del navegador</option>';
-            const vocesEspanol = vocesDisponibles.filter(v => v.lang.includes('es'));
-            vocesEspanol.forEach((voz, index) => {
+            selector.innerHTML = '<option value="default">🔊 Voz por defecto</option>';
+            vocesDisponibles.filter(v => v.lang.includes('es')).forEach((voz, i) => {
                 const option = document.createElement('option');
-                option.value = index;
-                option.textContent = `${voz.name} (${voz.lang}) ${voz.localService ? '💻 Local' : '🌐 Online'}`;
+                option.value = i;
+                option.textContent = `${voz.name} (${voz.lang}) ${voz.localService ? '💻' : '🌐'}`;
                 selector.appendChild(option);
             });
             const savedVoice = localStorage.getItem('vozSeleccionada');
-            if (savedVoice !== null) {
-                selector.value = savedVoice;
-            }
+            if (savedVoice) selector.value = savedVoice;
         }
+        window.speechSynthesis.onvoiceschanged = cargarVoces;
+        cargarVoces();
 
         function obtenerVozSeleccionada() {
             const selector = document.getElementById('selector-voz');
@@ -800,81 +1032,6 @@
             const index = parseInt(selector.value);
             const vocesEspanol = vocesDisponibles.filter(v => v.lang.includes('es'));
             return vocesEspanol[index] || null;
-        }
-
-        window.speechSynthesis.onvoiceschanged = cargarVoces;
-        cargarVoces();
-
-        document.addEventListener('DOMContentLoaded', () => {
-            const selector = document.getElementById('selector-voz');
-            if (selector) {
-                selector.addEventListener('change', (e) => {
-                    localStorage.setItem('vozSeleccionada', e.target.value);
-                });
-            }
-        });
-
-        // Función para convertir números a texto en español guatemalteco (hasta 9,999.99)
-        function formatearMonedaVoz(monto) {
-            const entero = Math.floor(monto);
-            const centavos = Math.round((monto - entero) * 100);
-            
-            const unidades = [
-                "cero", "un", "dos", "tres", "cuatro", "cinco", "seis", "siete", "ocho", "nueve",
-                "diez", "once", "doce", "trece", "catorce", "quince", "dieciséis", "diecisiete",
-                "dieciocho", "diecinueve", "veinte"
-            ];
-            const decenas = [
-                "", "", "veinti", "treinta", "cuarenta", "cincuenta", "sesenta", "setenta", "ochenta", "noventa"
-            ];
-            const centenas = [
-                "", "ciento", "doscientos", "trescientos", "cuatrocientos", "quinientos",
-                "seiscientos", "setecientos", "ochocientos", "novecientos"
-            ];
-            
-            function numeroATexto(n) {
-                if (n === 0) return "cero";
-                if (n === 100) return "cien";
-                if (n <= 20) return unidades[n];
-                if (n < 100) {
-                    const d = Math.floor(n / 10);
-                    const u = n % 10;
-                    if (n < 30) return "veinti" + unidades[u];
-                    if (u === 0) return decenas[d];
-                    return decenas[d] + " y " + unidades[u];
-                }
-                if (n < 1000) {
-                    const c = Math.floor(n / 100);
-                    const resto = n % 100;
-                    if (c === 1 && resto === 0) return "cien";
-                    const base = centenas[c];
-                    if (resto === 0) return base === "ciento" ? "cien" : base.replace("cientos", "cientos");
-                    return base + " " + numeroATexto(resto);
-                }
-                if (n < 10000) {
-                    const m = Math.floor(n / 1000);
-                    const resto = n % 1000;
-                    let milesTexto = "";
-                    if (m === 1) milesTexto = "mil";
-                    else milesTexto = numeroATexto(m) + " mil";
-                    if (resto === 0) return milesTexto;
-                    return milesTexto + " " + numeroATexto(resto);
-                }
-                return n.toString();
-            }
-            
-            let textoEntero = numeroATexto(entero);
-            if (entero === 1) textoEntero = "un";
-            const parteQuetzal = entero === 1 ? "quetzal" : "quetzales";
-            
-            if (centavos === 0) {
-                return `${textoEntero} ${parteQuetzal} exactos`;
-            } else {
-                let textoCentavos = numeroATexto(centavos);
-                if (centavos === 1) textoCentavos = "un";
-                const parteCentavo = centavos === 1 ? "centavo" : "centavos";
-                return `${textoEntero} ${parteQuetzal} con ${textoCentavos} ${parteCentavo}`;
-            }
         }
 
         function hablar(mensaje) {
@@ -885,359 +1042,87 @@
             const utterance = new SpeechSynthesisUtterance(mensaje);
             utterance.lang = 'es-GT';
             utterance.rate = 1.3;
-
-            const vozElegida = obtenerVozSeleccionada();
-            if (vozElegida) {
-                utterance.voice = vozElegida;
-            }
-
+            const voz = obtenerVozSeleccionada();
+            if (voz) utterance.voice = voz;
             utterance.onend = () => {
                 hablando = false;
-                if (modoVoz) {
-                    try { recognition.start(); } catch(e) {}
-                }
+                if (modoVoz) try { recognition.start(); } catch(e) {}
             };
             window.speechSynthesis.cancel();
             window.speechSynthesis.speak(utterance);
         }
 
-        function activarVoz() {
+        window.activarVoz = function() {
+            const apiKey = localStorage.getItem(STORAGE_KEY);
+            if (!apiKey) {
+                alert("Primero configura tu API Key de Gemini en el panel de configuración.");
+                return;
+            }
             modoVoz = !modoVoz;
             const btn = document.getElementById('btn-voz');
             if (modoVoz) {
-                btn.innerText = "👂 Asistente Activo...";
+                btn.innerText = "👂 Asistente IA Activo...";
                 btn.style.backgroundColor = "#27ae60";
-                iniciarEscucha();
-                hablar("Hola, soy tu asistente.");
+                try { recognition.start(); } catch(e) {}
+                hablar("Asistente de Gemini activado. ¿En qué puedo ayudarte?");
             } else {
                 btn.innerText = "🎤 Ordenar por Voz";
                 btn.style.backgroundColor = "#2980b9";
                 try { recognition.stop(); } catch(e) {}
                 hablar("Asistente desactivado.");
             }
-        }
-
-        function iniciarEscucha() {
-            if (modoVoz && !hablando) {
-                try { recognition.start(); } catch(e) {}
-            }
-        }
-
-        recognition.onend = () => {
-            if (modoVoz && !hablando) iniciarEscucha();
         };
 
-        // --- Funciones de entretenimiento ---
-        const chistes = [
-            "¿Qué le dice un pan a otro pan? ¡Nos vemos en el horno!",
-            "¿Por qué el pan no tiene amigos? Porque es muy hojaldrado.",
-            "¿Cómo se despide un pan? ¡Hasta luego, miga!",
-            "¿Qué le dijo el pan francés al pan dulce? Eres muy empalagoso.",
-            "¿Cuál es el pan más deportista? El pan con correa.",
-            "¿Qué hace una tira en el gimnasio? Ejercicios de estiramiento."
-        ];
-        const adivinanzas = [
-            { p: "Blanco por dentro, verde por fuera. Si no lo sabes, espera.", r: "perejil" },
-            { p: "Oro parece, plata no es. El que no lo adivine, bien tonto es.", r: "plátano" },
-            { p: "Tengo agujas pero no sé coser, tengo números pero no sé leer. ¿Qué soy?", r: "reloj" },
-            { p: "Vuelo sin alas, lloro sin ojos. ¿Quién soy?", r: "nube" },
-            { p: "Cuanto más grande, menos se ve. ¿Qué es?", r: "oscuridad" },
-            { p: "Blanco es, la gallina lo pone, con aceite se come y a la masa se le pone.", r: "huevo" },
-            { p: "Chiquito como un ratón, guarda la casa como un león.", r: "cerrojo" }
-        ];
-        const motivaciones = [
-            "¡Tú puedes! Cada venta es un paso al éxito.",
-            "Eres el mejor vendedor de pan, sigue así.",
-            "El día está para triunfar, ¡ánimo!",
-            "Sonríe, que el pan se vende solo con buena actitud.",
-            "Hoy es un gran día para hornear muchas ventas."
-        ];
+        recognition.onend = () => {
+            if (modoVoz && !hablando) try { recognition.start(); } catch(e) {}
+        };
 
-        function decirChiste() { hablar(chistes[Math.floor(Math.random() * chistes.length)]); }
-        function decirAdivinanza() {
-            const random = Math.floor(Math.random() * adivinanzas.length);
-            adivinanzaActual = { ...adivinanzas[random] };
-            hablar(`Adivinanza: ${adivinanzaActual.p}`);
-            hablar("Puedes responder ahora o decir 'dame la respuesta'.");
-        }
-        function evaluarRespuesta(respuestaUsuario) {
-            if (!adivinanzaActual) { hablar("No hay adivinanza activa."); return; }
-            const respNorm = respuestaUsuario.toLowerCase().trim();
-            const correcta = adivinanzaActual.r.toLowerCase();
-            if (respNorm.includes(correcta) || correcta.includes(respNorm)) {
-                hablar("¡Correcto! Muy bien.");
+        async function consultarGemini(frase) {
+            const apiKey = localStorage.getItem(STORAGE_KEY);
+            if (!apiKey) return "No hay API Key configurada. Ve a Configurar IA.";
+
+            // Construir prompt según modo
+            const modo = modoPanaderia ? 'panaderia' : 'libre';
+            let systemPrompt = "";
+            if (modo === 'panaderia') {
+                systemPrompt = `Eres el asistente virtual de Panadería Marvin. Tu función es ayudar a vendedores a registrar ventas, consultar inventario, agregar productos al carrito, cobrar, fiar, dar ánimos, contar chistes y adivinanzas, y realizar tareas del turno. Responde en español guatemalteco, amigable, cálido y breve. Datos actuales: Vendedor: ${vendedorActivo}, Turno: ${turnoActivo}. Inventario: ${inventarioFirebase.map(p => `${p.nombre} (${p.stock})`).join(', ')}. Carrito: ${carrito.map(i => `${i.cantidad} x ${i.nombre}`).join(', ') || 'vacío'}.`;
             } else {
-                hablar(`Incorrecto. La respuesta era: ${adivinanzaActual.r}`);
+                systemPrompt = `Eres un asistente general, útil y conversacional. Puedes responder sobre cualquier tema con conocimiento amplio. Sé amigable y claro. El usuario está en una panadería, pero puede preguntar lo que desee.`;
             }
-            adivinanzaActual = null;
-        }
-        function darRespuestaAdivinanza() {
-            if (adivinanzaActual) {
-                hablar(`La respuesta es: ${adivinanzaActual.r}`);
-                adivinanzaActual = null;
-            } else { hablar("No hay adivinanza activa."); }
-        }
-        function decirClima() {
-            const climas = ["soleado", "nublado", "lluvioso", "ventoso", "caluroso", "fresco"];
-            const temp = Math.floor(Math.random() * 25) + 15;
-            const clima = climas[Math.floor(Math.random() * climas.length)];
-            hablar(`Clima simulado: ${clima}, ${temp}°C.`);
-        }
-        function decirFecha() {
-            const ahora = new Date();
-            const opciones = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-            hablar(`Hoy es ${ahora.toLocaleDateString('es-ES', opciones)}.`);
-        }
-        function decirHora() {
-            const ahora = new Date();
-            let horas = ahora.getHours();
-            let minutos = ahora.getMinutes();
-            const ampm = horas >= 12 ? 'de la tarde' : 'de la mañana';
-            horas = horas % 12 || 12;
-            hablar(`Son las ${horas} con ${minutos} minutos ${ampm}.`);
-        }
-        function decirMotivacion() { hablar(motivaciones[Math.floor(Math.random() * motivaciones.length)]); }
 
-        // --- Funciones de negocio ---
-        function eliminarProductoDelCarrito(nombreProducto) {
-            const idx = carrito.findIndex(item => item.nombre.toLowerCase() === nombreProducto.toLowerCase());
-            if (idx !== -1) {
-                carrito.splice(idx, 1);
-                actualizarCarrito();
-                hablar(`Quité ${nombreProducto} del carrito.`);
-            } else { hablar(`No encontré ${nombreProducto}.`); }
-        }
-        function vaciarCarritoCompleto() {
-            if (carrito.length === 0) { hablar("Carrito vacío."); return; }
-            carrito = [];
-            actualizarCarrito();
-            hablar("Carrito vaciado.");
-        }
-        function consultarStock(productoNombre) {
-            const prod = inventarioFirebase.find(p => p.nombre.toLowerCase() === productoNombre.toLowerCase());
-            if (prod) hablar(`${prod.nombre}: ${prod.stock} unidades.`);
-            else hablar(`No encontré ${productoNombre}.`);
-        }
-        function resumenTurno() { hablar(`Turno ${turnoActivo}, vendedor ${vendedorActivo}.`); }
-        function totalVentasHoy() {
-            let total = ventasGlobales.reduce((s, v) => s + v.total, 0);
-            hablar(`Ventas totales: ${formatearMonedaVoz(total)}.`);
-        }
-        function totalCarrito() {
-            let total = carrito.reduce((s, i) => s + i.precio * i.cantidad, 0);
-            if (carrito.length === 0) hablar("Carrito vacío.");
-            else hablar(`Total del carrito: ${formatearMonedaVoz(total)}.`);
-        }
-        function ayudaVoz() {
-            hablar("Comandos: chiste, adivinanza, fecha, hora, clima, motivación, agrega [cant] [producto], cuánto llevamos, cobrar efectivo, fiar a [nombre], stock de [producto], vaciar carrito, quitar [producto], resumen del turno, ventas totales, total del carrito, qué productos hay, ayuda, desactivar voz.");
-        }
-        function listarProductos() {
-            if (inventarioFirebase.length === 0) { hablar("Sin productos."); return; }
-            let nombres = inventarioFirebase.map(p => p.nombre).join(", ");
-            hablar(`Productos: ${nombres}`);
-        }
-
-        // --- Función para convertir palabras a número (hasta 100) ---
-        function palabrasANumero(texto) {
-            const unidades = {
-                "cero":0, "un":1, "uno":1, "una":1, "dos":2, "tres":3, "cuatro":4, "cinco":5,
-                "seis":6, "siete":7, "ocho":8, "nueve":9, "diez":10, "once":11, "doce":12,
-                "trece":13, "catorce":14, "quince":15, "dieciseis":16, "diecisiete":17,
-                "dieciocho":18, "diecinueve":19, "veinte":20, "veintiuno":21, "veintidos":22,
-                "veintitres":23, "veinticuatro":24, "veinticinco":25, "veintiseis":26,
-                "veintisiete":27, "veintiocho":28, "veintinueve":29, "treinta":30,
-                "cuarenta":40, "cincuenta":50, "sesenta":60, "setenta":70, "ochenta":80,
-                "noventa":90, "cien":100
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+            const body = {
+                contents: [{ parts: [{ text: systemPrompt + "\n\nUsuario: " + frase }] }],
+                generationConfig: { temperature: 0.7, maxOutputTokens: 150 }
             };
-            const palabras = texto.toLowerCase().split(/[ ,y]+/);
-            let total = 0;
-            for (let i = 0; i < palabras.length; i++) {
-                let p = palabras[i];
-                if (unidades[p] !== undefined) {
-                    if (p === "cien") total += 100;
-                    else total += unidades[p];
-                } else if (p === "y" || p === "") continue;
-                else if (!isNaN(parseInt(p))) total += parseInt(p);
-            }
-            return total;
-        }
 
-        // --- Procesar frase para agregar productos al carrito ---
-        async function procesarPedido(frase, producto) {
-            if (!producto) return false;
-            let esModoPrecio = false;
-            let monto = 0;
-            let cantidad = 0;
-
-            if (frase.includes("quetzal")) {
-                esModoPrecio = true;
-                const match = frase.match(/(\d+|\w+)\s+quetzal/);
-                if (match) {
-                    let numStr = match[1];
-                    monto = palabrasANumero(numStr);
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+                const data = await response.json();
+                if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
+                    return data.candidates[0].content.parts[0].text;
                 } else {
-                    monto = 0;
+                    return "Lo siento, no pude procesar tu solicitud.";
                 }
+            } catch (error) {
+                console.error(error);
+                return "Error de conexión con Gemini.";
             }
-            else if (frase.includes("centavos")) {
-                esModoPrecio = true;
-                const match = frase.match(/(\d+|\w+)\s+centavos/);
-                if (match) {
-                    let numStr = match[1];
-                    let centavos = palabrasANumero(numStr);
-                    monto = centavos / 100;
-                } else {
-                    monto = 0;
-                }
-            }
-            else if (frase.match(/\b(\w+)\s+cincuenta\b/)) {
-                esModoPrecio = true;
-                const match = frase.match(/\b(\w+)\s+cincuenta\b/);
-                if (match) {
-                    let num = palabrasANumero(match[1]);
-                    monto = num + 0.50;
-                }
-            }
-            else if (frase.includes("cincuenta") && !frase.match(/\d/)) {
-                esModoPrecio = true;
-                monto = 0.50;
-            }
-
-            if (esModoPrecio && monto > 0) {
-                cantidad = Math.floor(monto / producto.precio);
-                if (cantidad === 0) {
-                    hablar(`Con ${monto.toFixed(2)} quetzales no alcanza para ni un ${producto.nombre}.`);
-                    return false;
-                }
-            } else {
-                const numerosEnFrase = frase.match(/\d+|\b(?:un|uno|una|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|once|doce|trece|catorce|quince|veinte|treinta|cuarenta|cincuenta|sesenta|setenta|ochenta|noventa|cien)\b/gi);
-                if (numerosEnFrase && numerosEnFrase.length > 0) {
-                    let numStr = numerosEnFrase[0];
-                    cantidad = palabrasANumero(numStr);
-                } else {
-                    cantidad = 1;
-                }
-            }
-
-            if (cantidad <= 0) return false;
-
-            const existente = carrito.find(i => i.id === producto.id);
-            const prev = existente ? existente.cantidad : 0;
-            if (cantidad + prev > producto.stock) {
-                hablar(`Stock insuficiente. Solo quedan ${producto.stock - prev} unidades.`);
-                return false;
-            }
-            if (existente) existente.cantidad += cantidad;
-            else carrito.push({ id: producto.id, nombre: producto.nombre, precio: producto.precio, cantidad: cantidad });
-            actualizarCarrito();
-            hablar("Agregado");
-            return true;
-        }
-
-        function extraerProducto(frase) {
-            for (let prod of inventarioFirebase) {
-                if (frase.includes(prod.nombre.toLowerCase())) {
-                    return prod;
-                }
-            }
-            return null;
-        }
-
-        async function procesarInventario(frase) {
-            let prod = inventarioFirebase.find(p => frase.includes(p.nombre.toLowerCase()));
-            if (prod) {
-                let cant = 0;
-                let palabras = frase.split(" ");
-                for (let p of palabras) {
-                    let num = parseInt(p);
-                    if (!isNaN(num)) cant = num;
-                    else if (palabrasANumero(p) > 0) cant = palabrasANumero(p);
-                }
-                if (cant > 0) {
-                    await db.collection("inventario").doc(prod.id).update({ stock: firebase.firestore.FieldValue.increment(cant) });
-                    hablar(`Añadí ${cant} ${prod.nombre} al inventario.`);
-                } else { hablar("¿Cuántas unidades?"); }
-            } else { hablar("Producto no encontrado."); }
         }
 
         recognition.onresult = async (e) => {
             if (hablando) return;
-            let frase = e.results[0][0].transcript.toLowerCase().trim();
+            const frase = e.results[0][0].transcript;
             console.log("Voz:", frase);
-
-            if (adivinanzaActual !== null) {
-                const comandosEspeciales = ["adivinanza", "chiste", "fecha", "hora", "clima", "motivación", "ayuda", "desactivar voz", "dame la respuesta", "paso", "respuesta", "cuál es", "dímelo"];
-                const esComandoEspecial = comandosEspeciales.some(cmd => frase.includes(cmd));
-                if (frase.includes("dame la respuesta") || frase.includes("paso") || frase.includes("respuesta") || frase.includes("cuál es") || frase.includes("dímelo")) {
-                    darRespuestaAdivinanza();
-                    return;
-                }
-                if (!esComandoEspecial) {
-                    evaluarRespuesta(frase);
-                    return;
-                }
-            }
-
-            if (frase.includes("chiste")) { decirChiste(); return; }
-            if (frase.includes("adivinanza")) { decirAdivinanza(); return; }
-            if (frase.includes("fecha")) { decirFecha(); return; }
-            if (frase.includes("hora") && !frase.includes("ahora")) { decirHora(); return; }
-            if (frase.includes("clima") || frase.includes("tiempo")) { decirClima(); return; }
-            if (frase.includes("motivación") || frase.includes("ánimo") || frase.includes("motiva")) { decirMotivacion(); return; }
-            if (frase.includes("ayuda") || frase.includes("comandos")) { ayudaVoz(); return; }
-            if (frase.includes("desactivar voz") || frase.includes("apagar voz")) { if (modoVoz) activarVoz(); return; }
-            if (frase.includes("quién está trabajando")) { hablar(`Vendedor: ${vendedorActivo || "ninguno"}, turno: ${turnoActivo || "no definido"}.`); return; }
-            if (frase.includes("resumen del turno")) { resumenTurno(); return; }
-            if (frase.includes("ventas totales") || frase.includes("total de ventas")) { totalVentasHoy(); return; }
-            if (frase.includes("total del carrito") || frase.includes("cuánto llevo") || frase.includes("total carrito")) { totalCarrito(); return; }
-            if (frase.includes("qué productos hay") || frase.includes("lista de productos")) { listarProductos(); return; }
-            if (frase.includes("vaciar carrito") || frase.includes("limpiar carrito")) { vaciarCarritoCompleto(); return; }
-            if (frase.match(/quitar\s+(\w+)/i) || frase.match(/eliminar\s+(\w+)/i)) {
-                const match = frase.match(/quitar\s+(\w+)/i) || frase.match(/eliminar\s+(\w+)/i);
-                if (match && match[1]) eliminarProductoDelCarrito(match[1]);
-                else hablar("No entendí qué producto quitar.");
-                return;
-            }
-            if (frase.match(/stock de (\w+)/i) || frase.match(/cuánto (\w+) queda/i)) {
-                let match = frase.match(/stock de (\w+)/i) || frase.match(/cuánto (\w+) queda/i);
-                if (match && match[1]) consultarStock(match[1]);
-                else hablar("Dime el nombre del producto.");
-                return;
-            }
-            if (frase.includes("cuánto llevamos") || frase.includes("reporte de ventas")) {
-                let total = ventasGlobales.reduce((s, v) => s + v.total, 0);
-                hablar(`Ventas hasta ahora: ${formatearMonedaVoz(total)}.`);
-                return;
-            }
-            if (frase.includes("cobrar efectivo") || frase.includes("cerrar venta") || frase.includes("cobrar")) {
-                if (carrito.length === 0) { hablar("Carrito vacío."); return; }
-                hablar("Procesando venta en efectivo.");
-                await completarVenta('efectivo');
-                return;
-            }
-            if (frase.includes("fiar a") || frase.match(/fi[aá]r\s+a\s+(\w+)/i)) {
-                if (carrito.length === 0) { hablar("Agrega productos primero."); return; }
-                let cliente = "Cliente";
-                let match = frase.match(/fiar a (\w+)/i);
-                if (match && match[1]) cliente = match[1];
-                hablar(`Fiando a ${cliente}.`);
-                await completarVenta('fiar', cliente);
-                return;
-            }
-            if (frase.includes("entró pan") || frase.includes("agregar stock") || frase.includes("reabastecer")) {
-                procesarInventario(frase);
-                return;
-            }
-
-            const producto = extraerProducto(frase);
-            if (producto) {
-                await procesarPedido(frase, producto);
-            } else {
-                hablar("No entendí. Di 'ayuda' para comandos.");
-            }
+            const respuesta = await consultarGemini(frase);
+            hablar(respuesta);
         };
-
-        window.activarVoz = activarVoz;
+    } else {
+        alert("Tu navegador no soporta reconocimiento de voz.");
     }
 </script>
 </body>
