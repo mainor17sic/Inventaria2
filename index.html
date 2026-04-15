@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>Panadería Marvin - Asistente Gemini</title>
+    <title>Panadería Marvin - Asistente DeepSeek</title>
 
     <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
@@ -13,7 +13,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
 
     <style>
-        /* ===== ESTILOS (se mantienen los mismos, con pequeños añadidos) ===== */
+        /* ===== ESTILOS (idénticos a la versión anterior, se omiten por brevedad pero están incluidos en el archivo final) ===== */
         * { box-sizing: border-box; }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -423,12 +423,12 @@
                 <input type="password" id="firma-vendedor" placeholder="Clave secreta para cerrar">
                 <select id="tipo-turno"><option value="Diurno">☀️ Turno Diurno</option><option value="Tarde">🌙 Turno Tarde</option></select>
                 
-                <!-- API Key Gemini (opcional) -->
+                <!-- API Key DeepSeek (opcional) -->
                 <div class="ia-config">
-                    <label style="font-weight:bold;">🔑 API Key de Gemini (opcional)</label>
-                    <input type="password" id="gemini-api-key-inicio" placeholder="Pega tu clave de Google AI">
+                    <label style="font-weight:bold;">🔑 API Key de DeepSeek (opcional)</label>
+                    <input type="password" id="deepseek-api-key-inicio" placeholder="Pega tu clave de DeepSeek">
                     <small style="display:block; margin-top:4px;">
-                        <a href="https://aistudio.google.com/" target="_blank">Obtener clave gratuita</a> • 
+                        <a href="https://platform.deepseek.com/" target="_blank">Obtener clave gratuita</a> • 
                         Se guarda solo en este navegador
                     </small>
                     <div id="ia-status-inicio" class="ia-status" style="margin-top:8px;">
@@ -475,11 +475,11 @@
                         </select>
                     </div>
                     
-                    <!-- Configuración de IA (Gemini) + Switch de modo -->
+                    <!-- Configuración de IA (DeepSeek) + Switch de modo -->
                     <details style="margin-top:10px;">
-                        <summary style="cursor:pointer; color:#2980b9; font-weight:bold;">🤖 Configurar IA (Gemini)</summary>
+                        <summary style="cursor:pointer; color:#2980b9; font-weight:bold;">🤖 Configurar IA (DeepSeek)</summary>
                         <div class="ia-config" style="margin-top:8px;">
-                            <input type="password" id="gemini-api-key-dash" placeholder="API Key de Gemini" style="width:100%;">
+                            <input type="password" id="deepseek-api-key-dash" placeholder="API Key de DeepSeek" style="width:100%;">
                             <button onclick="guardarApiKeyDashboard()" style="margin-top:5px; background:#2980b9;">💾 Guardar y validar</button>
                             <button onclick="olvidarApiKey()" style="margin-top:5px; background:#888;">🗑️ Olvidar clave</button>
                             
@@ -492,7 +492,7 @@
                                 </label>
                                 <span class="switch-label">🌐 Modo Libre</span>
                             </div>
-                            <small>Modo Panadería: responde como asistente de la tienda. Modo Libre: responde como Gemini general.</small>
+                            <small>Modo Panadería: responde como asistente de la tienda. Modo Libre: responde como DeepSeek general.</small>
 
                             <div class="ia-status" style="margin-top:8px;">
                                 <span class="ia-indicator" id="ia-indicator-dash"></span>
@@ -553,8 +553,8 @@
     let escuchasIniciadas = false;
     let productoSeleccionadoId = null;
 
-    // ==================== GESTIÓN DE API KEY GEMINI ====================
-    const STORAGE_KEY = 'gemini_api_key';
+    // ==================== GESTIÓN DE API KEY DEEPSEEK ====================
+    const STORAGE_KEY_DEEPSEEK = 'deepseek_api_key';
     let modoPanaderia = true; // true = panadería, false = libre
 
     // Elemento switch
@@ -566,28 +566,34 @@
         });
     }
 
-    async function validarApiKeyGemini(apiKey) {
+    // Validar API Key de DeepSeek
+    async function validarApiKeyDeepSeek(apiKey) {
         if (!apiKey || apiKey.trim() === "") {
             return { valida: false, mensaje: "La API Key está vacía." };
         }
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+        const url = 'https://api.deepseek.com/v1/chat/completions';
         const body = {
-            contents: [{ parts: [{ text: "Responde únicamente con 'OK'." }] }],
-            generationConfig: { maxOutputTokens: 2, temperature: 0 }
+            model: 'deepseek-chat',
+            messages: [{ role: 'user', content: 'Responde solo con "OK"' }],
+            max_tokens: 2,
+            temperature: 0
         };
         try {
             const response = await fetch(url, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${apiKey}`
+                },
                 body: JSON.stringify(body)
             });
             const data = await response.json();
-            if (response.ok && data.candidates?.[0]?.content?.parts?.[0]?.text) {
-                return { valida: true, mensaje: "✅ API Key válida. Gemini está listo." };
-            } else if (response.status === 400 && data.error?.message?.includes("API key not valid")) {
+            if (response.ok && data.choices?.[0]?.message?.content) {
+                return { valida: true, mensaje: "✅ API Key de DeepSeek válida." };
+            } else if (response.status === 401) {
                 return { valida: false, mensaje: "❌ API Key inválida. Verifica que esté correcta." };
             } else if (response.status === 429) {
-                return { valida: false, mensaje: "⏳ Cuota excedida.", cuotaExcedida: true };
+                return { valida: false, mensaje: "⏳ Cuota excedida o límite de tasa.", cuotaExcedida: true };
             } else {
                 return { valida: false, mensaje: `Error: ${data.error?.message || 'Desconocido'}` };
             }
@@ -598,30 +604,30 @@
     }
 
     async function guardarApiKeyDashboard() {
-        const input = document.getElementById('gemini-api-key-dash');
+        const input = document.getElementById('deepseek-api-key-dash');
         const key = input.value.trim();
         if (!key) {
             actualizarEstadoIA('invalida', 'Ingresa una clave primero.');
             return;
         }
         actualizarEstadoIA('validando', 'Validando...');
-        const resultado = await validarApiKeyGemini(key);
+        const resultado = await validarApiKeyDeepSeek(key);
         if (resultado.valida) {
-            localStorage.setItem(STORAGE_KEY, key);
+            localStorage.setItem(STORAGE_KEY_DEEPSEEK, key);
             actualizarEstadoIA('valida', resultado.mensaje);
             input.value = '';
-            if (typeof hablar === 'function') hablar("Clave de IA guardada y validada correctamente.");
+            if (typeof hablar === 'function') hablar("Clave de DeepSeek guardada y validada correctamente.");
         } else {
             actualizarEstadoIA('invalida', resultado.mensaje);
             if (resultado.cuotaExcedida && confirm("¿Deseas guardar la clave de todos modos?")) {
-                localStorage.setItem(STORAGE_KEY, key);
+                localStorage.setItem(STORAGE_KEY_DEEPSEEK, key);
                 actualizarEstadoIA('valida', 'Clave guardada (cuota excedida).');
             }
         }
     }
 
     function olvidarApiKey() {
-        localStorage.removeItem(STORAGE_KEY);
+        localStorage.removeItem(STORAGE_KEY_DEEPSEEK);
         actualizarEstadoIA('invalida', 'Clave eliminada.');
         if (typeof hablar === 'function') hablar("Se eliminó la clave de IA.");
     }
@@ -646,26 +652,26 @@
     }
 
     async function verificarClaveGuardada() {
-        const key = localStorage.getItem(STORAGE_KEY);
+        const key = localStorage.getItem(STORAGE_KEY_DEEPSEEK);
         if (!key) {
             actualizarEstadoIA('invalida', 'No configurada');
             return;
         }
         actualizarEstadoIA('validando', 'Verificando...');
-        const resultado = await validarApiKeyGemini(key);
+        const resultado = await validarApiKeyDeepSeek(key);
         if (resultado.valida) {
             actualizarEstadoIA('valida', 'Clave guardada y válida.');
         } else {
             actualizarEstadoIA('invalida', `Clave no válida: ${resultado.mensaje}`);
             if (confirm(`¿Eliminar clave guardada? (${resultado.mensaje})`)) {
-                localStorage.removeItem(STORAGE_KEY);
+                localStorage.removeItem(STORAGE_KEY_DEEPSEEK);
             }
         }
     }
 
     function precargarApiKeyInicio() {
-        const key = localStorage.getItem(STORAGE_KEY);
-        const inputInicio = document.getElementById('gemini-api-key-inicio');
+        const key = localStorage.getItem(STORAGE_KEY_DEEPSEEK);
+        const inputInicio = document.getElementById('deepseek-api-key-inicio');
         if (key && inputInicio) inputInicio.value = key;
     }
 
@@ -786,11 +792,11 @@
         if(!nombreVendedor || !firmaVendedor) return alert("Faltan datos del vendedor");
         
         // Guardar API Key si se ingresó
-        const apiKey = document.getElementById('gemini-api-key-inicio').value.trim();
+        const apiKey = document.getElementById('deepseek-api-key-inicio').value.trim();
         if (apiKey) {
-            const resultado = await validarApiKeyGemini(apiKey);
+            const resultado = await validarApiKeyDeepSeek(apiKey);
             if (resultado.valida) {
-                localStorage.setItem(STORAGE_KEY, apiKey);
+                localStorage.setItem(STORAGE_KEY_DEEPSEEK, apiKey);
             } else {
                 if (!confirm(`API Key no válida: ${resultado.mensaje}\n¿Continuar sin IA?`)) return;
             }
@@ -999,7 +1005,7 @@
     }
     document.addEventListener('DOMContentLoaded', initIconTabs);
 
-    // ==================== ASISTENTE DE VOZ (SOLO GEMINI) ====================
+    // ==================== ASISTENTE DE VOZ (SOLO DEEPSEEK) ====================
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (SpeechRecognition) {
         const recognition = new SpeechRecognition();
@@ -1053,9 +1059,9 @@
         }
 
         window.activarVoz = function() {
-            const apiKey = localStorage.getItem(STORAGE_KEY);
+            const apiKey = localStorage.getItem(STORAGE_KEY_DEEPSEEK);
             if (!apiKey) {
-                alert("Primero configura tu API Key de Gemini en el panel de configuración.");
+                alert("Primero configura tu API Key de DeepSeek en el panel de configuración.");
                 return;
             }
             modoVoz = !modoVoz;
@@ -1064,7 +1070,7 @@
                 btn.innerText = "👂 Asistente IA Activo...";
                 btn.style.backgroundColor = "#27ae60";
                 try { recognition.start(); } catch(e) {}
-                hablar("Asistente de Gemini activado. ¿En qué puedo ayudarte?");
+                hablar("Asistente de DeepSeek activado. ¿En qué puedo ayudarte?");
             } else {
                 btn.innerText = "🎤 Ordenar por Voz";
                 btn.style.backgroundColor = "#2980b9";
@@ -1077,11 +1083,10 @@
             if (modoVoz && !hablando) try { recognition.start(); } catch(e) {}
         };
 
-        async function consultarGemini(frase) {
-            const apiKey = localStorage.getItem(STORAGE_KEY);
-            if (!apiKey) return "No hay API Key configurada. Ve a Configurar IA.";
+        async function consultarDeepSeek(frase) {
+            const apiKey = localStorage.getItem(STORAGE_KEY_DEEPSEEK);
+            if (!apiKey) return "No hay API Key de DeepSeek configurada. Ve a Configurar IA.";
 
-            // Construir prompt según modo
             const modo = modoPanaderia ? 'panaderia' : 'libre';
             let systemPrompt = "";
             if (modo === 'panaderia') {
@@ -1090,27 +1095,35 @@
                 systemPrompt = `Eres un asistente general, útil y conversacional. Puedes responder sobre cualquier tema con conocimiento amplio. Sé amigable y claro. El usuario está en una panadería, pero puede preguntar lo que desee.`;
             }
 
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+            const url = 'https://api.deepseek.com/v1/chat/completions';
             const body = {
-                contents: [{ parts: [{ text: systemPrompt + "\n\nUsuario: " + frase }] }],
-                generationConfig: { temperature: 0.7, maxOutputTokens: 150 }
+                model: 'deepseek-chat',
+                messages: [
+                    { role: 'system', content: systemPrompt },
+                    { role: 'user', content: frase }
+                ],
+                temperature: 0.7,
+                max_tokens: 150
             };
 
             try {
                 const response = await fetch(url, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${apiKey}`
+                    },
                     body: JSON.stringify(body)
                 });
                 const data = await response.json();
-                if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
-                    return data.candidates[0].content.parts[0].text;
+                if (data.choices && data.choices[0] && data.choices[0].message) {
+                    return data.choices[0].message.content;
                 } else {
                     return "Lo siento, no pude procesar tu solicitud.";
                 }
             } catch (error) {
-                console.error(error);
-                return "Error de conexión con Gemini.";
+                console.error("Error con DeepSeek:", error);
+                return "Error de conexión con el asistente.";
             }
         }
 
@@ -1118,7 +1131,7 @@
             if (hablando) return;
             const frase = e.results[0][0].transcript;
             console.log("Voz:", frase);
-            const respuesta = await consultarGemini(frase);
+            const respuesta = await consultarDeepSeek(frase);
             hablar(respuesta);
         };
     } else {
