@@ -884,7 +884,7 @@
             try { recognition.stop(); } catch(e) {}
             const utterance = new SpeechSynthesisUtterance(mensaje);
             utterance.lang = 'es-GT';
-            utterance.rate = 1.3;
+            utterance.rate = 1.2;
 
             const vozElegida = obtenerVozSeleccionada();
             if (vozElegida) {
@@ -1029,7 +1029,7 @@
             else hablar(`Total del carrito: ${formatearMonedaVoz(total)}.`);
         }
         function ayudaVoz() {
-            hablar("Comandos: chiste, adivinanza, fecha, hora, clima, motivación, agrega [cant] [producto], cuánto llevamos, cobrar efectivo, fiar a [nombre], stock de [producto], vaciar carrito, quitar [producto], resumen del turno, ventas totales, total del carrito, qué productos hay, ayuda, desactivar voz.");
+            hablar("Comandos: chiste, adivinanza, fecha, hora, clima, motivación, agrega [cant] [producto], cuánto llevamos, cobrar efectivo, fiar a [nombre], stock de [producto], vaciar carrito, quitar [producto], resumen del turno, ventas totales, total del carrito, cambio por un billete de [cantidad], qué productos hay, ayuda, desactivar voz.");
         }
         function listarProductos() {
             if (inventarioFirebase.length === 0) { hablar("Sin productos."); return; }
@@ -1227,6 +1227,44 @@
             if (frase.includes("entró pan") || frase.includes("agregar stock") || frase.includes("reabastecer")) {
                 procesarInventario(frase);
                 return;
+            }
+
+            // *** NUEVA FUNCIONALIDAD: CÁLCULO DE CAMBIO POR VOZ ***
+            if (frase.includes("cambio por") || frase.includes("billete de") || frase.includes("pagó con") || frase.includes("pago con") || frase.includes("vuelto") || frase.includes("cambio de")) {
+                let denominacion = null;
+                // Buscar números en dígitos
+                const matchNum = frase.match(/\b(\d+)\b/);
+                if (matchNum) {
+                    denominacion = parseInt(matchNum[1]);
+                } else {
+                    // Palabras clave para billetes
+                    const palabrasClave = { "cien":100, "cincuenta":50, "veinte":20, "diez":10, "doscientos":200, "quinientos":500, "mil":1000 };
+                    for (let [palabra, valor] of Object.entries(palabrasClave)) {
+                        if (frase.includes(palabra)) {
+                            denominacion = valor;
+                            break;
+                        }
+                    }
+                }
+                if (denominacion) {
+                    if (carrito.length === 0) {
+                        hablar("No hay productos en el carrito.");
+                    } else {
+                        const total = carrito.reduce((s, i) => s + i.precio * i.cantidad, 0);
+                        if (denominacion < total) {
+                            const falta = total - denominacion;
+                            hablar(`El billete de ${denominacion} quetzales no alcanza. Faltan ${formatearMonedaVoz(falta)}.`);
+                        } else {
+                            const cambio = denominacion - total;
+                            if (cambio === 0) {
+                                hablar("Pago exacto, no hay cambio.");
+                            } else {
+                                hablar(`El cambio es de ${formatearMonedaVoz(cambio)}.`);
+                            }
+                        }
+                    }
+                    return;
+                }
             }
 
             const producto = extraerProducto(frase);
