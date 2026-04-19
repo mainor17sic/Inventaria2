@@ -1,0 +1,1282 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Panadería - Control de Turno 2026</title>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+
+    <style>
+        /* === ESTILOS === */
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f2f5;
+            margin: 0;
+            padding: 10px;
+            display: flex;
+            justify-content: center;
+        }
+        h1, h2, h3, h4 { color: #333; margin-top: 0; }
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            background: #fff;
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            margin-top: 10px;
+        }
+        input, select, button {
+            padding: 12px 15px;
+            margin: 5px 0;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 16px;
+            width: 100%;
+        }
+        button {
+            background-color: #d35400;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        button:hover { background-color: #e67e22; transform: translateY(-1px); }
+        .btn-danger { background-color: #c0392b; }
+        .btn-success { background-color: #27ae60; }
+
+        .tabs {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            background: #f8f9fa;
+            border-radius: 50px;
+            padding: 6px;
+            margin-bottom: 25px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            gap: 8px;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            scrollbar-width: none;
+        }
+        .tabs::-webkit-scrollbar { display: none; }
+        .tab {
+            flex: 0 0 auto;
+            background: transparent;
+            border: none;
+            border-radius: 40px;
+            padding: 10px 16px;
+            font-size: 24px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: #888;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            width: auto;
+            margin: 0;
+        }
+        .tab::after {
+            content: attr(data-label);
+            font-size: 12px;
+            font-weight: normal;
+            display: none;
+            margin-left: 4px;
+            color: #555;
+        }
+        @media (min-width: 768px) {
+            .tab::after { display: inline-block; }
+            .tab { padding: 8px 20px; font-size: 22px; }
+        }
+        .tab.active {
+            background: #d35400;
+            color: white;
+            box-shadow: 0 2px 8px rgba(211,84,0,0.3);
+        }
+        .tab.active::after { color: white; }
+        .tab:hover:not(.active) {
+            background: #e9ecef;
+            color: #d35400;
+            transform: translateY(-2px);
+        }
+
+        .tab-content {
+            display: none;
+            animation: fadeSlide 0.3s ease-out;
+        }
+        .tab-content.active { display: block; }
+        @keyframes fadeSlide {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .table-responsive { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; min-width: 500px; }
+        th, td { padding: 12px; border: 1px solid #eee; text-align: left; }
+        th { background-color: #f8f9fa; }
+        #dashboard, #inicio-turno-section { display: none; }
+        #pantalla-carga { text-align: center; padding: 60px 20px; background: #fff; position: fixed; inset: 0; z-index: 10000; display: flex; align-items: center; justify-content: center; flex-direction: column; background: radial-gradient(circle, #fff9f0, #f7e6d2); }
+        .form-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+        .inicio-layout, .pos-container { display: flex; gap: 20px; flex-direction: column; }
+        .productos-section { flex: 2; }
+        .cart-section { flex: 1; padding: 15px; border: 2px dashed #d35400; border-radius: 8px; background: #fffaf5; height: fit-content; }
+
+        #productos-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 18px;
+            margin-bottom: 20px;
+        }
+        .producto-card {
+            background: #fff;
+            border: 2px solid #e1e1e1;
+            border-radius: 12px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+            padding: 0 0 12px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        .producto-img {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+            background-color: #f9f9f9;
+            display: block;
+        }
+        .producto-card h4 {
+            margin: 8px 6px 4px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #333;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .producto-card p {
+            margin: 4px 0;
+            color: #e67e22;
+            font-weight: bold;
+            font-size: 16px;
+        }
+        .producto-card small {
+            font-size: 11px;
+            color: #7f8c8d;
+            margin-bottom: 6px;
+            display: block;
+        }
+        .producto-card.selected { border-color: #27ae60; background: #eafaf1; }
+        .producto-card.selected::after {
+            content: '✓';
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: #27ae60;
+            color: white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: bold;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        .producto-card.sin-stock {
+            opacity: 0.5;
+            cursor: not-allowed;
+            filter: grayscale(0.3);
+        }
+
+        @media (max-width: 560px) {
+            #productos-grid {
+                grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+                gap: 12px;
+            }
+            .producto-img { height: 120px; }
+            .producto-card h4 { font-size: 12px; white-space: normal; line-height: 1.3; }
+            .producto-card p { font-size: 15px; }
+            .producto-card small { font-size: 10px; }
+        }
+
+        #carrito-lista {
+            list-style: none;
+            padding: 0;
+            margin: 0 0 15px;
+            max-height: 280px;
+            overflow-y: auto;
+            background: #fffaf5;
+            border: 1px dashed #e67e22;
+            border-radius: 5px;
+        }
+        @media (min-width: 768px) { #carrito-lista { max-height: 500px; } }
+        #carrito-lista li {
+            background: #fff;
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .cart-total-area { border-top: 2px solid #ddd; padding-top: 10px; text-align: right; }
+        .cart-botones { display: flex; flex-direction: column; gap: 8px; margin-top: 15px; }
+        .text-rojo { color: #c0392b; font-weight: bold; }
+
+        .overlay-vendedor {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.2);
+            backdrop-filter: blur(2px);
+            z-index: 999;
+        }
+        .barra-accion-venta {
+            display: none;
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            max-width: 380px;
+            background: rgba(30,30,30,0.85);
+            backdrop-filter: blur(10px);
+            border-radius: 30px;
+            padding: 12px 18px;
+            z-index: 1000;
+            gap: 12px;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        .barra-accion-venta #info-seleccion { color: #fff; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .barra-accion-venta #nombre-prod-sel { font-weight: bold; color: #f39c12; }
+        .barra-accion-venta input { width: 70px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; text-align: center; padding: 8px 0; border-radius: 40px; }
+        .barra-accion-venta button { background: #e67e22; padding: 8px 15px; border-radius: 40px; font-size: 0.9rem; width: auto; margin: 0; }
+        .barra-accion-venta .cerrar-flotante { background: none; color: #ccc; font-size: 24px; padding: 0; width: auto; }
+        @media (max-width: 480px) {
+            .barra-accion-venta { padding: 10px 15px; }
+            .barra-accion-venta input { width: 60px; }
+        }
+        @media (min-width: 850px) {
+            .inicio-layout { flex-direction: row; }
+            .pos-container { flex-direction: row; align-items: flex-start; }
+            .cart-section { position: sticky; top: 20px; min-width: 300px; max-width: 350px; }
+        }
+
+        /* Estilo para el selector de voz */
+        .voice-selector-container {
+            margin-top: 8px;
+        }
+        #selector-voz {
+            width: 100%;
+            padding: 8px;
+            border-radius: 20px;
+            background: white;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+
+<div id="pantalla-carga" class="bakery-loader">
+    <div class="oven-container">
+        <div class="steam-wrap"><span class="steam s1"></span><span class="steam s2"></span><span class="steam s3"></span></div>
+        <div class="bread-glow"><svg viewBox="0 0 512 512" class="main-bread"><path fill="#D97706" d="M394,171c-15-26-43-43-74-43c-10,0-20,2-29,5c-14-32-47-55-86-55c-35,0-65,19-81,47c-13-5-27-8-41-8 c-56,0-101,45-101,101c0,5,0,10,1,14c-31,17-63,65-63,121c0,82,67,149,149,149h213c82,0,149-67,149-149C512,259,461,185,394,171z"/></svg></div>
+        <h2 class="bakery-title">Panadería Marvin</h2>
+        <div class="dough-track"><div id="progress-fill" class="dough-fill"></div></div>
+        <p class="loading-msg">Preparando algo delicioso...</p>
+    </div>
+</div>
+<style>
+    .bakery-loader { position: fixed; inset: 0; background: radial-gradient(circle, #fff9f0 0%, #f7e6d2 100%); display: flex; justify-content: center; align-items: center; z-index: 10000; font-family: 'Segoe UI', cursive; }
+    .oven-container { text-align: center; position: relative; }
+    .steam-wrap { display: flex; justify-content: center; gap: 10px; margin-bottom: -15px; }
+    .steam { width: 4px; height: 20px; background: rgba(217, 119, 6, 0.3); border-radius: 10px; animation: steamRise 2s infinite ease-out; }
+    .s1 { animation-delay: 0.2s; } .s2 { animation-delay: 0.8s; } .s3 { animation-delay: 0.5s; }
+    .bread-glow { width: 120px; height: 120px; margin: 0 auto 20px; filter: drop-shadow(0 0 20px rgba(217, 119, 6, 0.4)); animation: breadPulse 2s infinite; }
+    .main-bread { width: 100%; height: 100%; }
+    .bakery-title { color: #451a03; font-size: 1.8rem; margin: 10px 0; }
+    .dough-track { width: 250px; height: 12px; background: #e2d1c3; border-radius: 20px; margin: 15px auto; overflow: hidden; border: 2px solid #d4bda9; }
+    .dough-fill { width: 0%; height: 100%; background: linear-gradient(90deg, #d97706, #f59e0b); transition: width 0.4s; }
+    .loading-msg { color: #92400e; font-style: italic; }
+    @keyframes steamRise { 0% { transform: translateY(0) scaleX(1); opacity: 0; } 50% { opacity: 0.8; } 100% { transform: translateY(-40px) scaleX(2); opacity: 0; } }
+    @keyframes breadPulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+    @media (max-width: 480px) { .bakery-title { font-size: 1.4rem; } .bread-glow { width: 90px; height: 90px; } .dough-track { width: 200px; } }
+</style>
+
+<div class="container" id="inicio-turno-section">
+    <div style="text-align: center; margin-bottom: 25px;">
+        <h1 style="color: #d35400;">🥐 PANADERIA MARVIN</h1>
+        <p style="color: #666;">Configure el inventario y sus datos para comenzar.</p>
+    </div>
+    <div class="inicio-layout">
+        <div class="inicio-inventario" style="background: #f9f9f9; padding: 15px; border-radius: 8px;">
+            <h3>CARGAR DATOS DEL DIA</h3>
+            <div class="table-responsive" style="max-height: 450px; overflow-y: auto;">
+                <table style="margin-top:0; min-width:400px;">
+                    <thead> <tr><th>Pan</th><th>Precio</th><th>Cantidad</th></tr> </thead>
+                    <tbody id="tabla-automatica"></tbody>
+                </table>
+            </div>
+            <div style="margin-top: 20px; padding-top: 15px; border-top: 2px dashed #ccc;">
+                <h4>¿Agregar otro producto extra?</h4>
+                <div class="form-row">
+                    <input type="text" id="nuevo-pan" placeholder="Nombre" style="flex:2;">
+                    <input type="number" id="nuevo-precio" placeholder="Q" step="0.50" style="width:80px;">
+                    <input type="number" id="nueva-cantidad" placeholder="Cant" style="width:80px;">
+                    <button onclick="agregarAInventarioLocal()" style="background:#333;">+ Agregar</button>
+                </div>
+                <ul id="lista-inventario-local" style="font-size:14px; padding-left:20px;"></ul>
+            </div>
+        </div>
+        <div class="inicio-vendedor" style="background: #f9f9f9; padding: 15px; border-radius: 8px;">
+           <h3>ADMINISTADOR</h3>
+            <div style="display:flex; flex-direction:column; gap:10px;">
+                <input type="text" id="nombre-vendedor" placeholder="Admin.">
+                <input type="password" id="firma-vendedor" placeholder="Clave para cerrar Turno">
+                <select id="tipo-turno"><option value="Diurno">☀️ Turno Diurno</option><option value="Tarde">🌙 Turno Tarde</option></select>
+                <button onclick="iniciarTurno()" class="btn-success" style="width:100%; font-size:18px; padding:15px;">Iniciar Turno</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container" id="dashboard">
+    <div class="header-dashboard" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; margin-bottom:20px;">
+        <div><h1 style="margin:0; color:#d35400;">🍞 Panadería Marvin</h1><p>Turno: <strong id="display-vendedor"></strong></p></div>
+        <button class="btn-danger" onclick="cerrarTurno()">📄🔒 Cerrar Turno y Reporte</button>
+    </div>
+
+    <div class="tabs">
+        <button class="tab active" data-tab="punto-venta" data-label="Venta">🛒</button>
+        <button class="tab" data-tab="inventario-vivo" data-label="Inventario">📦</button>
+        <button class="tab" data-tab="historial-ventas" data-label="Historial">📜</button>
+        <button class="tab" data-tab="historial-cierres" data-label="Cierres">🗂️</button>
+    </div>
+
+    <div id="punto-venta" class="tab-content active">
+        <div class="pos-container">
+            <div class="productos-section"><div id="productos-grid"><p>Cargando productos...</p></div></div>
+            <div class="cart-section">
+                <h3 style="text-align:center;">🛒 Carrito Actual</h3>
+                <ul id="carrito-lista"></ul>
+                <div class="cart-total-area"><span>Total:</span><div style="font-size:2em; font-weight:bold; color:#27ae60;">Q<span id="carrito-total">0.00</span></div></div>
+                <div class="cart-botones">
+                    <button id="btn-voz" onclick="activarVoz()" style="background:#2980b9;">Asistente Artificial</button>
+                    <div class="voice-selector-container">
+                        <select id="selector-voz" title="Elige la voz del asistente">
+                            <option value="default">🔊 Voz por defecto del navegador</option>
+                        </select>
+                    </div>
+                    <button onclick="completarVenta('efectivo')" class="btn-success">✅ Cobrar Efectivo</button>
+                    <button onclick="completarVenta('fiar')" class="btn-danger" style="background:#e67e22;">📒 Fiar (Crédito)</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="inventario-vivo" class="tab-content"><h2>Inventario en Tiempo Real</h2><div class="table-responsive"><table><thead><tr><th>Producto</th><th>Precio</th><th>Inicial</th><th>Disponible</th></tr></thead><tbody id="tabla-inventario"></tbody></table></div></div>
+    <div id="historial-ventas" class="tab-content">
+        <h2>Historial de Ventas</h2>
+        <div class="table-responsive">
+            <table>
+                <thead><tr><th>Hora</th><th>Productos</th><th>Total</th><th>Método</th></tr></thead>
+                <tbody id="tabla-historial"></tbody>
+            </table>
+        </div>
+    </div>
+    <div id="historial-cierres" class="tab-content"><h2>Historial de Cierres de Turno</h2><div class="table-responsive"><table><thead><tr><th>Fecha</th><th>Turno</th><th>Vendedor</th><th>Total Efectivo</th><th>Total Fiado</th><th>Total General</th><th>PDF</th></tr></thead><tbody id="tabla-cierres"></tbody></table></div></div>
+</div>
+
+<div id="overlay-pos" class="overlay-vendedor" onclick="cerrarFlotante()"></div>
+<div class="barra-accion-venta" id="barra-flotante">
+    <div id="info-seleccion" style="display:flex; align-items:center; gap:8px; flex:1;">
+        <strong>🍞</strong> <span id="nombre-prod-sel" style="font-weight:bold;">Ninguno</span>
+    </div>
+    <input type="number" id="cantidad-venta" min="1" value="1" style="width:70px;">
+    <button onclick="agregarAlCarrito()">Añadir</button>
+    <button class="cerrar-flotante" onclick="cerrarFlotante()">×</button>
+</div>
+
+<script>
+    // ==================== CONFIGURACIÓN FIREBASE ====================
+    const firebaseConfig = {
+        apiKey: "AIzaSyD7iqWBCoScuHSID15itaShi7dRQuQwkEo",
+        authDomain: "panaderia-marvin.firebaseapp.com",
+        projectId: "panaderia-marvin",
+        storageBucket: "panaderia-marvin.firebasestorage.app",
+        messagingSenderId: "908203563116",
+        appId: "1:908203563116:web:69995ce1866a536bf3e049"
+    };
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    let inventarioLocal = [];
+    let carrito = [];
+    let inventarioFirebase = [];
+    let ventasGlobales = [];
+    let firmaActivaEnNube = "";
+    let vendedorActivo = "";
+    let turnoActivo = "";
+    let escuchasIniciadas = false;
+    let productoSeleccionadoId = null;
+
+    const IMAGENES_PRODUCTOS = {
+        "tira": "https://i.postimg.cc/KYCgF76d/20260314-170824.jpg",
+        "francés": "https://i.postimg.cc/Sxvn77x4/20260314-170912.jpg",
+        "pan-dulce-grande": "https://i.postimg.cc/vBWDsJLZ/20260314-170934.jpg",
+        "pan-dulce-pequeño": "https://i.postimg.cc/Rh4hVgg5/20260314-171043.jpg",
+        "pirujos-pequeños": "https://i.postimg.cc/VL7vmBMh/20260314-171021.jpg",
+        "pirujos-grande": "https://i.postimg.cc/DZKyBCkm/20260314-171124.jpg",
+        "pan-chata": "https://i.postimg.cc/3N8rHdwT/20260314-171315.jpg",
+        "pan-galleta": "https://i.postimg.cc/CLKMPBtJ/20260314-171406.jpg",
+        "bollo": "https://i.postimg.cc/VNXzrjrc/20260314-171418.jpg",
+        "cemita": "",
+        "gallina": "",
+        "campechana-grande": "https://i.postimg.cc/RVq9Qr6T/20260314-171501.jpg",
+        "campechana-pequeña": "https://i.postimg.cc/mkg45Jdh/20260314-171448.jpg",
+        "volovanes": "https://i.postimg.cc/pLFH4DBY/20260314-171608.jpg",
+        "donas": "https://i.postimg.cc/q7cdM4S7/20260314-171655.jpg",
+        "roles-de-canela": "https://i.postimg.cc/bwCmxMnm/20260314-174211.jpg",
+        "salpora": "",
+        "bolsa-de-galleta": "https://i.postimg.cc/65BcDwL0/20260314-174254.jpg",
+        "conos-de-manjar": "https://i.postimg.cc/767XyZWn/20260314-174225.jpg",
+        "default": "https://via.placeholder.com/300x200?text=Panaderia+Marvin"
+    };
+
+    // ==================== ANIMACIÓN DE CARGA ====================
+    let progreso = 0;
+    const progressFill = document.getElementById('progress-fill');
+    const loadingMsg = document.querySelector('.loading-msg');
+    const interval = setInterval(() => {
+        progreso += Math.floor(Math.random() * 10) + 5;
+        if (progreso >= 100) {
+            progreso = 100;
+            clearInterval(interval);
+        }
+        progressFill.style.width = progreso + '%';
+        if (progreso < 30) loadingMsg.innerText = 'Preparando masa...';
+        else if (progreso < 60) loadingMsg.innerText = 'Horneando delicias...';
+        else if (progreso < 90) loadingMsg.innerText = 'Decorando con azúcar...';
+        else loadingMsg.innerText = '¡Listo para servir!';
+    }, 200);
+
+    db.collection("configuracion").doc("estado_turno").onSnapshot((doc) => {
+        clearInterval(interval);
+        progressFill.style.width = '100%';
+        loadingMsg.innerText = '¡Listo para servir!';
+        setTimeout(() => {
+            document.getElementById('pantalla-carga').style.display = 'none';
+        }, 300);
+
+        if (doc.exists && doc.data().activo === true) {
+            document.getElementById('inicio-turno-section').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'block';
+            vendedorActivo = doc.data().vendedor;
+            turnoActivo = doc.data().turno || "General";
+            firmaActivaEnNube = doc.data().firma;
+            document.getElementById('display-vendedor').innerText = `${vendedorActivo} (${turnoActivo})`;
+            if (!escuchasIniciadas) {
+                iniciarEscuchasEnTiempoReal();
+                escuchasIniciadas = true;
+            }
+        } else {
+            document.getElementById('inicio-turno-section').style.display = 'block';
+            document.getElementById('dashboard').style.display = 'none';
+            inventarioLocal = [];
+            carrito = [];
+            actualizarListaLocal();
+            escuchasIniciadas = false;
+        }
+    });
+
+    const CATALOGO_PREDETERMINADO = [
+        { nombre: "Tira", precio: 3.00 }, { nombre: "Francés", precio: 0.50 }, { nombre: "Pan Dulce Grande", precio: 1.00 },
+        { nombre: "Pan Dulce Pequeño", precio: 0.50 }, { nombre: "Pirujos Pequeños", precio: 0.50 }, { nombre: "Pirujos Grande", precio: 1.00 },
+        { nombre: "Pan chata", precio: 0.50 }, { nombre: "Pan Galleta", precio: 1.00 }, { nombre: "Bollo", precio: 0.50 },
+        { nombre: "Cemita", precio: 1.00 }, { nombre: "Gallina", precio: 1.00 }, { nombre: "Campechana Grande", precio: 1.00 },
+        { nombre: "Campechana pequeña", precio: 0.50 }, { nombre: "Volovanes", precio: 1.50 }, { nombre: "Donas", precio: 2.00 },
+        { nombre: "Roles de Canela", precio: 2.00 }, { nombre: "Salpora", precio: 1.00 }, { nombre: "Bolsa de galleta", precio: 3.00 },
+        { nombre: "Conos de manjar", precio: 3.00 }
+    ];
+    function cargarCatalogo() {
+        const tabla = document.getElementById('tabla-automatica');
+        tabla.innerHTML = "";
+        CATALOGO_PREDETERMINADO.forEach(item => {
+            tabla.innerHTML += `<tr><td>${item.nombre}</td><td>Q${item.precio.toFixed(2)}</td><td><input type="number" class="cant-auto" data-nombre="${item.nombre}" data-precio="${item.precio}" placeholder="0" style="width:80px;"></td></tr>`;
+        });
+    }
+    window.onload = cargarCatalogo;
+
+    function agregarAInventarioLocal() {
+        const nombre = document.getElementById('nuevo-pan').value.trim();
+        const precio = parseFloat(document.getElementById('nuevo-precio').value);
+        const cantidad = parseInt(document.getElementById('nueva-cantidad').value);
+        if (nombre && !isNaN(precio) && !isNaN(cantidad)) {
+            inventarioLocal.push({ nombre, precio, stock: cantidad, stockInicial: cantidad });
+            actualizarListaLocal();
+            document.getElementById('nuevo-pan').value = '';
+            document.getElementById('nuevo-precio').value = '';
+            document.getElementById('nueva-cantidad').value = '';
+        } else alert("Completa todos los campos.");
+    }
+    function actualizarListaLocal() {
+        const lista = document.getElementById('lista-inventario-local');
+        lista.innerHTML = "";
+        inventarioLocal.forEach((item, idx) => {
+            lista.innerHTML += `<li>${item.nombre} - Q${item.precio} (Cant: ${item.stock}) <button class="btn-danger" style="padding:2px 5px; width:auto;" onclick="eliminarLocal(${idx})">X</button></li>`;
+        });
+    }
+    function eliminarLocal(idx) { inventarioLocal.splice(idx,1); actualizarListaLocal(); }
+
+    async function iniciarTurno() {
+        const nombreVendedor = document.getElementById('nombre-vendedor').value.trim();
+        const firmaVendedor = document.getElementById('firma-vendedor').value.trim();
+        const tipoTurno = document.getElementById('tipo-turno').value;
+        if(!nombreVendedor || !firmaVendedor) return alert("Faltan datos del vendedor");
+        let inventarioFinal = [];
+        document.querySelectorAll('.cant-auto').forEach(input => {
+            const cant = parseInt(input.value);
+            if(cant > 0) inventarioFinal.push({ nombre: input.dataset.nombre, precio: parseFloat(input.dataset.precio), stock: cant, stockInicial: cant });
+        });
+        inventarioFinal = inventarioFinal.concat(inventarioLocal);
+        if(inventarioFinal.length === 0) return alert("Debes ingresar al menos un producto.");
+        try {
+            const batch = db.batch();
+            inventarioFinal.forEach(item => {
+                const docRef = db.collection("inventario").doc(item.nombre.toLowerCase().replace(/\s+/g, '-'));
+                batch.set(docRef, item);
+            });
+            await batch.commit();
+            await db.collection("configuracion").doc("estado_turno").set({ activo: true, vendedor: nombreVendedor, firma: firmaVendedor, turno: tipoTurno });
+            window.location.reload();
+        } catch (error) { alert("Error al conectar con la base de datos."); }
+    }
+
+    function iniciarEscuchasEnTiempoReal() {
+        db.collection("inventario").onSnapshot((snap) => {
+            const grid = document.getElementById('productos-grid');
+            const tablaInv = document.getElementById('tabla-inventario');
+            grid.innerHTML = ''; tablaInv.innerHTML = ''; inventarioFirebase = [];
+            snap.forEach(doc => {
+                const prod = doc.data(); prod.id = doc.id;
+                inventarioFirebase.push(prod);
+                tablaInv.innerHTML += `<tr><td>${prod.nombre}</td><td>Q${prod.precio.toFixed(2)}</td><td>${prod.stockInicial || prod.stock}</td><td><strong>${prod.stock}</strong></td></tr>`;
+                const sinStock = prod.stock <= 0;
+                const card = document.createElement('div');
+                card.className = `producto-card ${sinStock ? 'sin-stock' : ''}`;
+                if (productoSeleccionadoId === prod.id) card.classList.add('selected');
+                const imgUrl = IMAGENES_PRODUCTOS[prod.id] || IMAGENES_PRODUCTOS["default"];
+                card.innerHTML = `
+                    <img src="${imgUrl}" class="producto-img" alt="${prod.nombre}">
+                    <h4>${prod.nombre}</h4>
+                    <p>Q${prod.precio.toFixed(2)}</p>
+                    <small>Disponible: ${prod.stock}</small>
+                `;
+                if (!sinStock) card.onclick = () => seleccionarParaVenta(prod.id, prod.nombre, card);
+                grid.appendChild(card);
+            });
+        });
+        db.collection("ventas").orderBy("timestamp","desc").onSnapshot(snap => {
+            const tablaHist = document.getElementById('tabla-historial');
+            tablaHist.innerHTML = ''; ventasGlobales = [];
+            snap.forEach(doc => {
+                const venta = doc.data();
+                ventasGlobales.push(venta);
+                const hora = venta.timestamp ? new Date(venta.timestamp.toDate()).toLocaleTimeString() : 'Reciente';
+                const resumen = venta.productos.map(p=>`${p.cantidad}x ${p.nombre}`).join(', ');
+                const metodo = venta.tipo === 'fiar' ? `<span class="text-rojo">Fiado: ${venta.cliente}</span>` : '<span style="color:#27ae60;">Efectivo</span>';
+                tablaHist.innerHTML += `<tr><td>${hora}</td><td>${resumen}</td><td><strong>Q${venta.total.toFixed(2)}</strong></td><td>${metodo}</td></tr>`;
+            });
+            ventasGlobales.reverse();
+        });
+        db.collection("cierres").orderBy("fecha","desc").onSnapshot(snap => {
+            const tabla = document.getElementById('tabla-cierres');
+            tabla.innerHTML = '';
+            snap.forEach(doc => {
+                const c = doc.data();
+                const fecha = c.fecha ? new Date(c.fecha.toDate()).toLocaleString() : "Fecha desconocida";
+                tabla.innerHTML += `<tr><td>${fecha}</td><td>${c.turno}</td><td>${c.vendedor}</td><td>Q${c.totales.efectivo.toFixed(2)}</td><td>Q${c.totales.fiado.toFixed(2)}</td><td>Q${c.totales.general.toFixed(2)}</td><td><button class="btn-success" onclick="generarPDFDesdeCierre('${doc.id}')">Generar PDF</button></td></tr>`;
+            });
+        });
+    }
+
+    function seleccionarParaVenta(id, nombre, elemento) {
+        productoSeleccionadoId = id;
+        document.getElementById('nombre-prod-sel').innerText = nombre;
+        document.getElementById('barra-flotante').style.display = 'flex';
+        document.getElementById('overlay-pos').style.display = 'block';
+        document.querySelectorAll('.producto-card').forEach(c => c.classList.remove('selected'));
+        elemento.classList.add('selected');
+        setTimeout(() => { document.getElementById('cantidad-venta').focus(); document.getElementById('cantidad-venta').select(); }, 100);
+    }
+    function cerrarFlotante() {
+        document.getElementById('barra-flotante').style.display = 'none';
+        document.getElementById('overlay-pos').style.display = 'none';
+        productoSeleccionadoId = null;
+        document.querySelectorAll('.producto-card').forEach(c => c.classList.remove('selected'));
+    }
+    function agregarAlCarrito() {
+        if (!productoSeleccionadoId) return alert("Selecciona un pan.");
+        const prod = inventarioFirebase.find(p => p.id === productoSeleccionadoId);
+        const cant = parseInt(document.getElementById('cantidad-venta').value);
+        if (isNaN(cant) || cant <= 0) return alert("Cantidad válida.");
+        const existente = carrito.find(i => i.id === prod.id);
+        const prev = existente ? existente.cantidad : 0;
+        if (cant + prev > prod.stock) return alert(`Stock insuficiente. Quedan ${prod.stock - prev} unidades.`);
+        if (existente) existente.cantidad += cant;
+        else carrito.push({ id: prod.id, nombre: prod.nombre, precio: prod.precio, cantidad: cant });
+        actualizarCarrito();
+        document.getElementById('cantidad-venta').value = 1;
+        cerrarFlotante();
+    }
+    function actualizarCarrito() {
+        const lista = document.getElementById('carrito-lista');
+        let total = 0;
+        lista.innerHTML = '';
+        carrito.forEach((item, idx) => {
+            const subtotal = item.precio * item.cantidad;
+            total += subtotal;
+            lista.innerHTML += `<li>${item.cantidad}x ${item.nombre} - Q${subtotal.toFixed(2)} <button class="btn-danger" style="padding:2px 5px;" onclick="carrito.splice(${idx},1); actualizarCarrito();">X</button></li>`;
+        });
+        document.getElementById('carrito-total').innerText = total.toFixed(2);
+    }
+    async function completarVenta(tipo, clienteFiar = "") {
+        if (carrito.length === 0) {
+            hablar("El carrito está vacío.");
+            return;
+        }
+        if (tipo === 'fiar') {
+            if (!clienteFiar) {
+                clienteFiar = prompt("Nombre de la persona que fía:");
+                if (!clienteFiar) {
+                    hablar("Venta cancelada.");
+                    return;
+                }
+            }
+        }
+        try {
+            await db.collection("ventas").add({
+                vendedor: document.getElementById('display-vendedor').innerText,
+                productos: carrito.map(({id,nombre,precio,cantidad}) => ({id,nombre,precio,cantidad})),
+                total: carrito.reduce((s,i)=>s+i.precio*i.cantidad,0),
+                tipo: tipo,
+                cliente: clienteFiar,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            const batch = db.batch();
+            carrito.forEach(item => batch.update(db.collection("inventario").doc(item.id), { stock: firebase.firestore.FieldValue.increment(-item.cantidad) }));
+            await batch.commit();
+            if (tipo === 'fiar') {
+                hablar(`Venta fiada a ${clienteFiar} registrada.`);
+            } else {
+                hablar("Venta en efectivo registrada.");
+            }
+            carrito = [];
+            actualizarCarrito();
+            cerrarFlotante();
+        } catch(e) {
+            hablar("Error al procesar venta.");
+            console.error(e);
+        }
+    }
+
+    async function generarPDFDesdeCierre(cierreId) {
+        const docCierre = await db.collection("cierres").doc(cierreId).get();
+        if (!docCierre.exists) return alert("No se encontró el cierre.");
+        const c = docCierre.data();
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF();
+        pdf.setFont("helvetica","bold"); pdf.setFontSize(16); pdf.text("REPORTE DE CIERRE - PANADERÍA",14,20);
+        pdf.setFont("helvetica","normal"); pdf.setFontSize(10);
+        const fechaHora = c.fecha ? new Date(c.fecha.toDate()).toLocaleString() : "Fecha desconocida";
+        pdf.text(`Fecha: ${fechaHora} | Turno: ${c.turno}`,14,30);
+        pdf.text(`Encargado: ${c.vendedor}`,14,36);
+        const ventasTabla = c.ventas.map((v,i) => {
+            const hora = v.timestamp ? new Date(v.timestamp.toDate()).toLocaleTimeString() : 'N/A';
+            const detalle = v.productos.map(p=>`${p.nombre}(${p.cantidad})`).join(', ');
+            const metodo = v.tipo === 'fiar' ? `Fiado: ${v.cliente}` : "Efectivo";
+            return [i+1, hora, detalle, `Q${v.total.toFixed(2)}`, metodo];
+        });
+        pdf.autoTable({ startY:45, head:[['ID','Hora','Detalle','Total','Método']], body:ventasTabla, headStyles:{fillColor:[139,69,19]}, theme:'grid' });
+        const invTabla = c.inventarioFinal.map(p => [p.nombre, p.stockInicial || p.stock, p.stock, (p.stockInicial||p.stock)-p.stock]);
+        pdf.autoTable({ startY:pdf.lastAutoTable.finalY+10, head:[['Producto','Inicial','Final','Vendidos']], body:invTabla, headStyles:{fillColor:[105,105,105]}, theme:'grid' });
+        let y = pdf.lastAutoTable.finalY+15;
+        pdf.setFont("helvetica","bold");
+        pdf.text(`TOTAL EFECTIVO: Q${c.totales.efectivo.toFixed(2)}`,14,y);
+        pdf.setTextColor(192,57,43); pdf.text(`TOTAL FIADO: Q${c.totales.fiado.toFixed(2)}`,14,y+6);
+        pdf.setTextColor(0,0,0); pdf.text(`TOTAL GENERAL: Q${c.totales.general.toFixed(2)}`,14,y+12);
+        pdf.save(`${c.turno}_${c.fecha?.toDate().toISOString().split('T')[0] || 'reporte'}.pdf`);
+    }
+
+    async function cerrarTurno() {
+        const clave = prompt("Ingresa tu clave para cerrar turno:");
+        if (clave !== firmaActivaEnNube && clave !== "admin123") { if(clave !== null) alert("Clave incorrecta."); return; }
+        if (!confirm("Se guardará el cierre en el historial y se reiniciará el inventario. ¿Continuar?")) return;
+        try {
+            const ventasSnap = await db.collection("ventas").get();
+            const invSnap = await db.collection("inventario").get();
+            const ventas = ventasSnap.docs.map(d=>d.data());
+            const invFinal = invSnap.docs.map(d=>d.data());
+            let totalEf=0, totalFi=0;
+            ventas.forEach(v => v.tipo === 'fiar' ? totalFi+=v.total : totalEf+=v.total);
+            await db.collection("cierres").add({
+                fecha: firebase.firestore.FieldValue.serverTimestamp(),
+                turno: turnoActivo,
+                vendedor: vendedorActivo,
+                ventas: ventas,
+                inventarioFinal: invFinal,
+                totales: { efectivo: totalEf, fiado: totalFi, general: totalEf+totalFi }
+            });
+            alert("Cierre guardado. Se limpiarán los datos del turno actual.");
+            const batchInv = db.batch(); invSnap.docs.forEach(d=>batchInv.delete(d.ref)); await batchInv.commit();
+            const batchVen = db.batch(); ventasSnap.docs.forEach(d=>batchVen.delete(d.ref)); await batchVen.commit();
+            await db.collection("configuracion").doc("estado_turno").set({ activo: false, vendedor: "", firma: "" });
+        } catch(e) { alert("Error al cerrar turno."); }
+    }
+
+    function initIconTabs() {
+        const tabs = document.querySelectorAll('.tab');
+        tabs.forEach(tab => {
+            tab.addEventListener('click', function(e) {
+                const tabId = this.getAttribute('data-tab');
+                if (!tabId) return;
+                document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+                const activeContent = document.getElementById(tabId);
+                if (activeContent) activeContent.classList.add('active');
+                tabs.forEach(t => t.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+    }
+    document.addEventListener('DOMContentLoaded', initIconTabs);
+
+    // ==================== ASISTENTE DE VOZ MEJORADO (CON SELECTOR DE VOZ) ====================
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRecognition) {
+        const recognition = new SpeechRecognition();
+        recognition.lang = 'es-GT';
+        recognition.interimResults = false;
+        let modoVoz = false;
+        let hablando = false;
+        let adivinanzaActual = null;
+
+        // --- Variables para selector de voz ---
+        let vocesDisponibles = [];
+
+        function cargarVoces() {
+            vocesDisponibles = window.speechSynthesis.getVoices();
+            const selector = document.getElementById('selector-voz');
+            if (!selector) return;
+            selector.innerHTML = '<option value="default">🔊 Voz por defecto del navegador</option>';
+            const vocesEspanol = vocesDisponibles.filter(v => v.lang.includes('es'));
+            vocesEspanol.forEach((voz, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                option.textContent = `${voz.name} (${voz.lang}) ${voz.localService ? '💻 Local' : '🌐 Online'}`;
+                selector.appendChild(option);
+            });
+            const savedVoice = localStorage.getItem('vozSeleccionada');
+            if (savedVoice !== null) {
+                selector.value = savedVoice;
+            }
+        }
+
+        function obtenerVozSeleccionada() {
+            const selector = document.getElementById('selector-voz');
+            if (!selector || selector.value === 'default') return null;
+            const index = parseInt(selector.value);
+            const vocesEspanol = vocesDisponibles.filter(v => v.lang.includes('es'));
+            return vocesEspanol[index] || null;
+        }
+
+        window.speechSynthesis.onvoiceschanged = cargarVoces;
+        cargarVoces();
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const selector = document.getElementById('selector-voz');
+            if (selector) {
+                selector.addEventListener('change', (e) => {
+                    localStorage.setItem('vozSeleccionada', e.target.value);
+                });
+            }
+        });
+
+        // Función para convertir números a texto en español guatemalteco (hasta 9,999.99)
+        function formatearMonedaVoz(monto) {
+            const entero = Math.floor(monto);
+            const centavos = Math.round((monto - entero) * 100);
+
+            const unidades = [
+                "cero", "un", "dos", "tres", "cuatro", "cinco", "seis", "siete", "ocho", "nueve",
+                "diez", "once", "doce", "trece", "catorce", "quince", "dieciséis", "diecisiete",
+                "dieciocho", "diecinueve", "veinte"
+            ];
+            const decenas = [
+                "", "", "veinti", "treinta", "cuarenta", "cincuenta", "sesenta", "setenta", "ochenta", "noventa"
+            ];
+            const centenas = [
+                "", "ciento", "doscientos", "trescientos", "cuatrocientos", "quinientos",
+                "seiscientos", "setecientos", "ochocientos", "novecientos"
+            ];
+
+            function numeroATexto(n) {
+                if (n === 0) return "cero";
+                if (n === 100) return "cien";
+                if (n <= 20) return unidades[n];
+                if (n < 100) {
+                    const d = Math.floor(n / 10);
+                    const u = n % 10;
+                    if (n < 30) return "veinti" + unidades[u];
+                    if (u === 0) return decenas[d];
+                    return decenas[d] + " y " + unidades[u];
+                }
+                if (n < 1000) {
+                    const c = Math.floor(n / 100);
+                    const resto = n % 100;
+                    if (c === 1 && resto === 0) return "cien";
+                    const base = centenas[c];
+                    if (resto === 0) return base === "ciento" ? "cien" : base.replace("cientos", "cientos");
+                    return base + " " + numeroATexto(resto);
+                }
+                if (n < 10000) {
+                    const m = Math.floor(n / 1000);
+                    const resto = n % 1000;
+                    let milesTexto = "";
+                    if (m === 1) milesTexto = "mil";
+                    else milesTexto = numeroATexto(m) + " mil";
+                    if (resto === 0) return milesTexto;
+                    return milesTexto + " " + numeroATexto(resto);
+                }
+                return n.toString();
+            }
+
+            let textoEntero = numeroATexto(entero);
+            if (entero === 1) textoEntero = "un";
+            const parteQuetzal = entero === 1 ? "quetzal" : "quetzales";
+
+            if (centavos === 0) {
+                return `${textoEntero} ${parteQuetzal} exactos`;
+            } else {
+                let textoCentavos = numeroATexto(centavos);
+                if (centavos === 1) textoCentavos = "un";
+                const parteCentavo = centavos === 1 ? "centavo" : "centavos";
+                return `${textoEntero} ${parteQuetzal} con ${textoCentavos} ${parteCentavo}`;
+            }
+        }
+
+        function hablar(mensaje) {
+            if (!modoVoz) return;
+            if (hablando) return;
+            hablando = true;
+            try { recognition.stop(); } catch(e) {}
+            const utterance = new SpeechSynthesisUtterance(mensaje);
+            utterance.lang = 'es-GT';
+            utterance.rate = 1.3;
+
+            const vozElegida = obtenerVozSeleccionada();
+            if (vozElegida) {
+                utterance.voice = vozElegida;
+            }
+
+            utterance.onend = () => {
+                hablando = false;
+                if (modoVoz) {
+                    try { recognition.start(); } catch(e) {}
+                }
+            };
+            window.speechSynthesis.cancel();
+            window.speechSynthesis.speak(utterance);
+        }
+
+        function activarVoz() {
+            modoVoz = !modoVoz;
+            const btn = document.getElementById('btn-voz');
+            if (modoVoz) {
+                btn.innerText = "👂 Asistente Activo...";
+                btn.style.backgroundColor = "#27ae60";
+                iniciarEscucha();
+                hablar("Hola, soy tu asistente.");
+            } else {
+                btn.innerText = "🎤 Ordenar por Voz";
+                btn.style.backgroundColor = "#2980b9";
+                try { recognition.stop(); } catch(e) {}
+                hablar("Asistente desactivado.");
+            }
+        }
+
+        function iniciarEscucha() {
+            if (modoVoz && !hablando) {
+                try { recognition.start(); } catch(e) {}
+            }
+        }
+
+        recognition.onend = () => {
+            if (modoVoz && !hablando) iniciarEscucha();
+        };
+
+        // --- Funciones de entretenimiento ---
+        const chistes = [
+            "¿Qué le dice un pan a otro pan? ¡Nos vemos en el horno!",
+            "¿Por qué el pan no tiene amigos? Porque es muy hojaldrado.",
+            "¿Cómo se despide un pan? ¡Hasta luego, miga!",
+            "¿Qué le dijo el pan francés al pan dulce? Eres muy empalagoso.",
+            "¿Cuál es el pan más deportista? El pan con correa.",
+            "¿Qué hace una tira en el gimnasio? Ejercicios de estiramiento."
+        ];
+        const adivinanzas = [
+            { p: "Blanco por dentro, verde por fuera. Si no lo sabes, espera.", r: "perejil" },
+            { p: "Oro parece, plata no es. El que no lo adivine, bien tonto es.", r: "plátano" },
+            { p: "Tengo agujas pero no sé coser, tengo números pero no sé leer. ¿Qué soy?", r: "reloj" },
+            { p: "Vuelo sin alas, lloro sin ojos. ¿Quién soy?", r: "nube" },
+            { p: "Cuanto más grande, menos se ve. ¿Qué es?", r: "oscuridad" },
+            { p: "Blanco es, la gallina lo pone, con aceite se come y a la masa se le pone.", r: "huevo" },
+            { p: "Chiquito como un ratón, guarda la casa como un león.", r: "cerrojo" }
+        ];
+        const motivaciones = [
+            "¡Tú puedes! Cada venta es un paso al éxito.",
+            "Eres el mejor vendedor de pan, sigue así.",
+            "El día está para triunfar, ¡ánimo!",
+            "Sonríe, que el pan se vende solo con buena actitud.",
+            "Hoy es un gran día para hornear muchas ventas."
+        ];
+
+        function decirChiste() { hablar(chistes[Math.floor(Math.random() * chistes.length)]); }
+        function decirAdivinanza() {
+            const random = Math.floor(Math.random() * adivinanzas.length);
+            adivinanzaActual = { ...adivinanzas[random] };
+            hablar(`Adivinanza: ${adivinanzaActual.p}`);
+            hablar("Puedes responder ahora o decir 'dame la respuesta'.");
+        }
+        function evaluarRespuesta(respuestaUsuario) {
+            if (!adivinanzaActual) { hablar("No hay adivinanza activa."); return; }
+            const respNorm = respuestaUsuario.toLowerCase().trim();
+            const correcta = adivinanzaActual.r.toLowerCase();
+            if (respNorm.includes(correcta) || correcta.includes(respNorm)) {
+                hablar("¡Correcto! Muy bien.");
+            } else {
+                hablar(`Incorrecto. La respuesta era: ${adivinanzaActual.r}`);
+            }
+            adivinanzaActual = null;
+        }
+        function darRespuestaAdivinanza() {
+            if (adivinanzaActual) {
+                hablar(`La respuesta es: ${adivinanzaActual.r}`);
+                adivinanzaActual = null;
+            } else { hablar("No hay adivinanza activa."); }
+        }
+        function decirClima() {
+            const climas = ["soleado", "nublado", "lluvioso", "ventoso", "caluroso", "fresco"];
+            const temp = Math.floor(Math.random() * 25) + 15;
+            const clima = climas[Math.floor(Math.random() * climas.length)];
+            hablar(`Clima simulado: ${clima}, ${temp}°C.`);
+        }
+        function decirFecha() {
+            const ahora = new Date();
+            const opciones = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            hablar(`Hoy es ${ahora.toLocaleDateString('es-ES', opciones)}.`);
+        }
+        function decirHora() {
+            const ahora = new Date();
+            let horas = ahora.getHours();
+            let minutos = ahora.getMinutes();
+            const ampm = horas >= 12 ? 'de la tarde' : 'de la mañana';
+            horas = horas % 12 || 12;
+            hablar(`Son las ${horas} con ${minutos} minutos ${ampm}.`);
+        }
+        function decirMotivacion() { hablar(motivaciones[Math.floor(Math.random() * motivaciones.length)]); }
+
+        // --- Funciones de negocio ---
+        function eliminarProductoDelCarrito(nombreProducto) {
+            const idx = carrito.findIndex(item => item.nombre.toLowerCase() === nombreProducto.toLowerCase());
+            if (idx !== -1) {
+                carrito.splice(idx, 1);
+                actualizarCarrito();
+                hablar(`Quité ${nombreProducto} del carrito.`);
+            } else { hablar(`No encontré ${nombreProducto}.`); }
+        }
+        function vaciarCarritoCompleto() {
+            if (carrito.length === 0) { hablar("Carrito vacío."); return; }
+            carrito = [];
+            actualizarCarrito();
+            hablar("Carrito vaciado.");
+        }
+        function consultarStock(productoNombre) {
+            const prod = inventarioFirebase.find(p => p.nombre.toLowerCase() === productoNombre.toLowerCase());
+            if (prod) hablar(`${prod.nombre}: ${prod.stock} unidades.`);
+            else hablar(`No encontré ${productoNombre}.`);
+        }
+        function resumenTurno() { hablar(`Turno ${turnoActivo}, vendedor ${vendedorActivo}.`); }
+        function totalVentasHoy() {
+            let total = ventasGlobales.reduce((s, v) => s + v.total, 0);
+            hablar(`Ventas totales: ${formatearMonedaVoz(total)}.`);
+        }
+        function totalCarrito() {
+            let total = carrito.reduce((s, i) => s + i.precio * i.cantidad, 0);
+            if (carrito.length === 0) hablar("Carrito vacío.");
+            else hablar(`Total del carrito: ${formatearMonedaVoz(total)}.`);
+        }
+        function ayudaVoz() {
+            hablar("Comandos: chiste, adivinanza, fecha, hora, clima, motivación, agrega [cant] [producto], cuánto llevamos, cobrar efectivo, fiar a [nombre], stock de [producto], vaciar carrito, quitar [producto], resumen del turno, ventas totales, total del carrito, cambio por un billete de [cantidad], qué productos hay, ayuda, desactivar voz.");
+        }
+        function listarProductos() {
+            if (inventarioFirebase.length === 0) { hablar("Sin productos."); return; }
+            let nombres = inventarioFirebase.map(p => p.nombre).join(", ");
+            hablar(`Productos: ${nombres}`);
+        }
+
+        // --- Función para convertir palabras a número (hasta 100) ---
+        function palabrasANumero(texto) {
+            const unidades = {
+                "cero":0, "un":1, "uno":1, "una":1, "dos":2, "tres":3, "cuatro":4, "cinco":5,
+                "seis":6, "siete":7, "ocho":8, "nueve":9, "diez":10, "once":11, "doce":12,
+                "trece":13, "catorce":14, "quince":15, "dieciseis":16, "diecisiete":17,
+                "dieciocho":18, "diecinueve":19, "veinte":20, "veintiuno":21, "veintidos":22,
+                "veintitres":23, "veinticuatro":24, "veinticinco":25, "veintiseis":26,
+                "veintisiete":27, "veintiocho":28, "veintinueve":29, "treinta":30,
+                "cuarenta":40, "cincuenta":50, "sesenta":60, "setenta":70, "ochenta":80,
+                "noventa":90, "cien":100
+            };
+            const palabras = texto.toLowerCase().split(/[ ,y]+/);
+            let total = 0;
+            for (let i = 0; i < palabras.length; i++) {
+                let p = palabras[i];
+                if (unidades[p] !== undefined) {
+                    if (p === "cien") total += 100;
+                    else total += unidades[p];
+                } else if (p === "y" || p === "") continue;
+                else if (!isNaN(parseInt(p))) total += parseInt(p);
+            }
+            return total;
+        }
+
+        // --- Procesar frase para agregar productos al carrito ---
+        async function procesarPedido(frase, producto) {
+            if (!producto) return false;
+            let esModoPrecio = false;
+            let monto = 0;
+            let cantidad = 0;
+
+            if (frase.includes("quetzal")) {
+                esModoPrecio = true;
+                const match = frase.match(/(\d+|\w+)\s+quetzal/);
+                if (match) {
+                    let numStr = match[1];
+                    monto = palabrasANumero(numStr);
+                } else {
+                    monto = 0;
+                }
+            }
+            else if (frase.includes("centavos")) {
+                esModoPrecio = true;
+                const match = frase.match(/(\d+|\w+)\s+centavos/);
+                if (match) {
+                    let numStr = match[1];
+                    let centavos = palabrasANumero(numStr);
+                    monto = centavos / 100;
+                } else {
+                    monto = 0;
+                }
+            }
+            else if (frase.match(/\b(\w+)\s+cincuenta\b/)) {
+                esModoPrecio = true;
+                const match = frase.match(/\b(\w+)\s+cincuenta\b/);
+                if (match) {
+                    let num = palabrasANumero(match[1]);
+                    monto = num + 0.50;
+                }
+            }
+            else if (frase.includes("cincuenta") && !frase.match(/\d/)) {
+                esModoPrecio = true;
+                monto = 0.50;
+            }
+
+            if (esModoPrecio && monto > 0) {
+                cantidad = Math.floor(monto / producto.precio);
+                if (cantidad === 0) {
+                    hablar(`Con ${monto.toFixed(2)} quetzales no alcanza para ni un ${producto.nombre}.`);
+                    return false;
+                }
+            } else {
+                const numerosEnFrase = frase.match(/\d+|\b(?:un|uno|una|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|once|doce|trece|catorce|quince|veinte|treinta|cuarenta|cincuenta|sesenta|setenta|ochenta|noventa|cien)\b/gi);
+                if (numerosEnFrase && numerosEnFrase.length > 0) {
+                    let numStr = numerosEnFrase[0];
+                    cantidad = palabrasANumero(numStr);
+                } else {
+                    cantidad = 1;
+                }
+            }
+
+            if (cantidad <= 0) return false;
+
+            const existente = carrito.find(i => i.id === producto.id);
+            const prev = existente ? existente.cantidad : 0;
+            if (cantidad + prev > producto.stock) {
+                hablar(`Stock insuficiente. Solo quedan ${producto.stock - prev} unidades.`);
+                return false;
+            }
+            if (existente) existente.cantidad += cantidad;
+            else carrito.push({ id: producto.id, nombre: producto.nombre, precio: producto.precio, cantidad: cantidad });
+            actualizarCarrito();
+            hablar("Agregado");
+            return true;
+        }
+
+        function extraerProducto(frase) {
+            for (let prod of inventarioFirebase) {
+                if (frase.includes(prod.nombre.toLowerCase())) {
+                    return prod;
+                }
+            }
+            return null;
+        }
+
+        async function procesarInventario(frase) {
+            let prod = inventarioFirebase.find(p => frase.includes(p.nombre.toLowerCase()));
+            if (prod) {
+                let cant = 0;
+                let palabras = frase.split(" ");
+                for (let p of palabras) {
+                    let num = parseInt(p);
+                    if (!isNaN(num)) cant = num;
+                    else if (palabrasANumero(p) > 0) cant = palabrasANumero(p);
+                }
+                if (cant > 0) {
+                    await db.collection("inventario").doc(prod.id).update({ stock: firebase.firestore.FieldValue.increment(cant) });
+                    hablar(`Añadí ${cant} ${prod.nombre} al inventario.`);
+                } else { hablar("¿Cuántas unidades?"); }
+            } else { hablar("Producto no encontrado."); }
+        }
+
+        recognition.onresult = async (e) => {
+            if (hablando) return;
+            let frase = e.results[0][0].transcript.toLowerCase().trim();
+            console.log("Voz:", frase);
+
+            if (adivinanzaActual !== null) {
+                const comandosEspeciales = ["adivinanza", "chiste", "fecha", "hora", "clima", "motivación", "ayuda", "desactivar voz", "dame la respuesta", "paso", "respuesta", "cuál es", "dímelo"];
+                const esComandoEspecial = comandosEspeciales.some(cmd => frase.includes(cmd));
+                if (frase.includes("dame la respuesta") || frase.includes("paso") || frase.includes("respuesta") || frase.includes("cuál es") || frase.includes("dímelo")) {
+                    darRespuestaAdivinanza();
+                    return;
+                }
+                if (!esComandoEspecial) {
+                    evaluarRespuesta(frase);
+                    return;
+                }
+            }
+
+            if (frase.includes("chiste")) { decirChiste(); return; }
+            if (frase.includes("adivinanza")) { decirAdivinanza(); return; }
+            if (frase.includes("fecha")) { decirFecha(); return; }
+            if (frase.includes("hora") && !frase.includes("ahora")) { decirHora(); return; }
+            if (frase.includes("clima") || frase.includes("tiempo")) { decirClima(); return; }
+            if (frase.includes("motivación") || frase.includes("ánimo") || frase.includes("motiva")) { decirMotivacion(); return; }
+            if (frase.includes("ayuda") || frase.includes("comandos")) { ayudaVoz(); return; }
+            if (frase.includes("desactivar voz") || frase.includes("apagar voz")) { if (modoVoz) activarVoz(); return; }
+            if (frase.includes("quién está trabajando")) { hablar(`Vendedor: ${vendedorActivo || "ninguno"}, turno: ${turnoActivo || "no definido"}.`); return; }
+            if (frase.includes("resumen del turno")) { resumenTurno(); return; }
+            if (frase.includes("ventas totales") || frase.includes("total de ventas")) { totalVentasHoy(); return; }
+            if (frase.includes("total del carrito") || frase.includes("cuánto llevo") || frase.includes("total carrito")) { totalCarrito(); return; }
+            if (frase.includes("qué productos hay") || frase.includes("lista de productos")) { listarProductos(); return; }
+            if (frase.includes("vaciar carrito") || frase.includes("limpiar carrito")) { vaciarCarritoCompleto(); return; }
+            if (frase.match(/quitar\s+(\w+)/i) || frase.match(/eliminar\s+(\w+)/i)) {
+                const match = frase.match(/quitar\s+(\w+)/i) || frase.match(/eliminar\s+(\w+)/i);
+                if (match && match[1]) eliminarProductoDelCarrito(match[1]);
+                else hablar("No entendí qué producto quitar.");
+                return;
+            }
+            if (frase.match(/stock de (\w+)/i) || frase.match(/cuánto (\w+) queda/i)) {
+                let match = frase.match(/stock de (\w+)/i) || frase.match(/cuánto (\w+) queda/i);
+                if (match && match[1]) consultarStock(match[1]);
+                else hablar("Dime el nombre del producto.");
+                return;
+            }
+            if (frase.includes("cuánto llevamos") || frase.includes("reporte de ventas")) {
+                let total = ventasGlobales.reduce((s, v) => s + v.total, 0);
+                hablar(`Ventas hasta ahora: ${formatearMonedaVoz(total)}.`);
+                return;
+            }
+            if (frase.includes("cobrar efectivo") || frase.includes("cerrar venta") || frase.includes("cobrar")) {
+                if (carrito.length === 0) { hablar("Carrito vacío."); return; }
+                hablar("Procesando venta en efectivo.");
+                await completarVenta('efectivo');
+                return;
+            }
+            if (frase.includes("fiar a") || frase.match(/fi[aá]r\s+a\s+(\w+)/i)) {
+                if (carrito.length === 0) { hablar("Agrega productos primero."); return; }
+                let cliente = "Cliente";
+                let match = frase.match(/fiar a (\w+)/i);
+                if (match && match[1]) cliente = match[1];
+                hablar(`Fiando a ${cliente}.`);
+                await completarVenta('fiar', cliente);
+                return;
+            }
+            if (frase.includes("entró pan") || frase.includes("agregar stock") || frase.includes("reabastecer")) {
+                procesarInventario(frase);
+                return;
+            }
+
+            // *** NUEVA FUNCIONALIDAD: CÁLCULO DE CAMBIO POR VOZ ***
+            if (frase.includes("cambio por") || frase.includes("billete de") || frase.includes("pagó con") || frase.includes("pago con") || frase.includes("vuelto") || frase.includes("cambio de")) {
+                let denominacion = null;
+                // Buscar números en dígitos
+                const matchNum = frase.match(/\b(\d+)\b/);
+                if (matchNum) {
+                    denominacion = parseInt(matchNum[1]);
+                } else {
+                    // Palabras clave para billetes
+                    const palabrasClave = { "cien":100, "cincuenta":50, "veinte":20, "diez":10, "doscientos":200, "quinientos":500, "mil":1000 };
+                    for (let [palabra, valor] of Object.entries(palabrasClave)) {
+                        if (frase.includes(palabra)) {
+                            denominacion = valor;
+                            break;
+                        }
+                    }
+                }
+                if (denominacion) {
+                    if (carrito.length === 0) {
+                        hablar("No hay productos en el carrito.");
+                    } else {
+                        const total = carrito.reduce((s, i) => s + i.precio * i.cantidad, 0);
+                        if (denominacion < total) {
+                            const falta = total - denominacion;
+                            hablar(`El billete de ${denominacion} quetzales no alcanza. Faltan ${formatearMonedaVoz(falta)}.`);
+                        } else {
+                            const cambio = denominacion - total;
+                            if (cambio === 0) {
+                                hablar("Pago exacto, no hay cambio.");
+                            } else {
+                                hablar(`El cambio es de ${formatearMonedaVoz(cambio)}.`);
+                            }
+                        }
+                    }
+                    return;
+                }
+            }
+
+            const producto = extraerProducto(frase);
+            if (producto) {
+                await procesarPedido(frase, producto);
+            } else {
+                hablar("No entendí. Di 'ayuda' para comandos.");
+            }
+        };
+
+        window.activarVoz = activarVoz;
+    }
+</script>
+</body>
+</html>
