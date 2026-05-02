@@ -287,6 +287,22 @@
             background: white;
             font-size: 14px;
         }
+        /* ===== NUEVO ESTILO PARA EL BOTÓN DE CIERRE ===== */
+.btn-cierre {
+    width: auto !important;      /* Anula el width:100% de los botones */
+    padding: 8px 16px;           /* Más compacto */
+    font-size: 14px;             /* Texto más pequeño */
+    white-space: nowrap;         /* Evita salto de línea en desktop */
+}
+
+/* En móviles muy pequeños, permitimos que el texto se divida */
+@media (max-width: 560px) {
+    .btn-cierre {
+        white-space: normal;
+        font-size: 12px;
+        padding: 6px 12px;
+    }
+}
     </style>
 </head>
 <body>
@@ -356,9 +372,12 @@
 
 <div class="container" id="dashboard">
     <div class="header-dashboard" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; margin-bottom:20px;">
-        <div><h1 style="margin:0; color:#d35400;">🍞 Panadería Marvin</h1><p>Turno: <strong id="display-vendedor"></strong></p></div>
-        <button class="btn-danger" onclick="cerrarTurno()">📄🔒 Cerrar Turno y Reporte</button>
+    <div>
+        <h1 style="margin:0; color:#d35400;">🍞 Panadería Marvin</h1>
+        <p>Turno: <strong id="display-vendedor"></strong></p>
     </div>
+    <button class="btn-danger btn-cierre" onclick="cerrarTurno()">📄🔒 Cerrar Turno y Reporte</button>
+</div>
 
     <div class="tabs">
         <button class="tab active" data-tab="punto-venta" data-label="Venta">🛒</button>
