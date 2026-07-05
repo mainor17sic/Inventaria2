@@ -222,13 +222,38 @@
         }
         @media (min-width: 768px) { #carrito-lista { max-height: 500px; } }
         #carrito-lista li {
-            background: #fff;
-            padding: 10px;
-            border-bottom: 1px solid #eee;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 10px;
+}
+.cantidad {
+    color: #2980b9;
+    font-weight: bold;
+}
+.precio {
+    color: #27ae60;
+    font-weight: bold;
+}
+.btn-eliminar {
+    background: #e74c3c;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    width: 24px;
+    height: 24px;
+    font-size: 14px;
+    line-height: 1;
+    padding: 0;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.btn-eliminar:hover {
+    background: #c0392b;
+}
         .cart-total-area { border-top: 2px solid #ddd; padding-top: 10px; text-align: right; }
         .cart-botones { display: flex; flex-direction: column; gap: 8px; margin-top: 15px; }
         .text-rojo { color: #c0392b; font-weight: bold; }
@@ -662,16 +687,24 @@
         cerrarFlotante();
     }
     function actualizarCarrito() {
-        const lista = document.getElementById('carrito-lista');
-        let total = 0;
-        lista.innerHTML = '';
-        carrito.forEach((item, idx) => {
-            const subtotal = item.precio * item.cantidad;
-            total += subtotal;
-            lista.innerHTML += `<li>${item.cantidad}x ${item.nombre} - Q${subtotal.toFixed(2)} <button class="btn-danger" style="padding:2px 5px;" onclick="carrito.splice(${idx},1); actualizarCarrito();">X</button></li>`;
-        });
-        document.getElementById('carrito-total').innerText = total.toFixed(2);
-    }
+    const lista = document.getElementById('carrito-lista');
+    let total = 0;
+    lista.innerHTML = '';
+    carrito.forEach((item, idx) => {
+        const subtotal = item.precio * item.cantidad;
+        total += subtotal;
+        lista.innerHTML += `
+            <li>
+                <span class="cantidad">${item.cantidad}</span> 
+                <span class="nombre">${item.nombre}</span>
+                -
+                <span class="precio">Q${subtotal.toFixed(2)}</span>
+                <button class="btn-eliminar" onclick="carrito.splice(${idx},1); actualizarCarrito();">✕</button>
+            </li>
+        `;
+    });
+    document.getElementById('carrito-total').innerText = total.toFixed(2);
+}
     async function completarVenta(tipo, clienteFiar = "") {
         if (carrito.length === 0) {
             hablar("El carrito está vacío.");
