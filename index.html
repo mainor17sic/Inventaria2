@@ -11,11 +11,9 @@
     <!-- jspdf -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
-    <!-- face-api.js -->
-    <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
 
     <style>
-        /* === ESTILOS ORIGINALES (se mantienen) === */
+        /* ===== ESTILOS ORIGINALES (se mantienen) ===== */
         * { box-sizing: border-box; }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -310,142 +308,76 @@
             .btn-cierre { white-space: normal; font-size: 12px; padding: 6px 12px; }
         }
 
-        /* ===== NUEVOS ESTILOS PARA REGISTRO Y VERIFICACIÓN FACIAL ===== */
-        .cam-box {
-            width: 300px;
-            height: 220px;
-            background: #000;
-            border-radius: 12px;
-            overflow: hidden;
-            position: relative;
-            margin: 10px auto;
-            display: none;
-            border: 4px solid #555;
-            transition: border-color 0.3s ease;
-        }
-        .cam-box video {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            display: block;
-        }
-        .cam-box .cam-overlay {
-            position: absolute;
-            bottom: 5px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0,0,0,0.7);
-            padding: 4px 14px;
-            border-radius: 20px;
-            color: #fff;
-            font-size: 13px;
-            white-space: nowrap;
-            pointer-events: none;
-        }
-        .cam-box .btn-capture {
-            position: absolute;
-            bottom: 10px;
-            right: 10px;
-            background: #27ae60;
-            border: none;
-            color: white;
-            padding: 6px 16px;
-            border-radius: 20px;
-            cursor: pointer;
-            font-size: 14px;
-            z-index: 5;
-        }
-        .cam-box .btn-close-cam {
-            position: absolute;
-            top: 5px;
-            right: 8px;
-            background: transparent;
-            border: none;
-            color: #fff;
-            font-size: 22px;
-            cursor: pointer;
-            z-index: 5;
-            text-shadow: 0 0 8px rgba(0,0,0,0.8);
-        }
-        .cam-box .btn-close-cam:hover { color: #e74c3c; }
-        .facial-status {
-            font-size: 14px;
-            margin-top: 6px;
-            color: #555;
-            text-align: center;
-        }
-        .cam-box.verde { border-color: #27ae60; }
-        .cam-box.rojo { border-color: #e74c3c; }
-
-        /* Overlay de verificación (cubre toda la pantalla) */
-        #overlay-verificacion {
+        /* ===== NUEVOS ESTILOS PARA LOGIN Y GESTIÓN ===== */
+        #overlay-login {
             display: none;
             position: fixed;
             inset: 0;
-            background: rgba(0,0,0,0.65);
+            background: rgba(0,0,0,0.6);
             backdrop-filter: blur(4px);
             z-index: 9999;
             justify-content: center;
             align-items: center;
-            flex-direction: column;
         }
-        #overlay-verificacion .verif-box {
+        #overlay-login .login-box {
             background: white;
-            padding: 20px 25px 25px;
+            padding: 25px 30px;
             border-radius: 16px;
             max-width: 360px;
             width: 100%;
             box-shadow: 0 10px 40px rgba(0,0,0,0.3);
             text-align: center;
         }
-        #overlay-verificacion .verif-box h3 {
+        #overlay-login .login-box h3 {
             margin: 0 0 6px;
             color: #d35400;
         }
-        #overlay-verificacion .verif-box p.instruccion {
+        #overlay-login .login-box p {
             font-size: 14px;
             color: #666;
-            margin: 4px 0 12px;
+            margin: 4px 0 16px;
         }
-        #overlay-verificacion .cam-box {
-            margin: 0 auto 10px;
-            display: block; /* se muestra por defecto dentro del overlay */
-        }
-        #overlay-verificacion .fallback-manual {
-            margin-top: 14px;
-            border-top: 1px solid #eee;
-            padding-top: 14px;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-        #overlay-verificacion .fallback-manual input {
+        #overlay-login .login-box input {
             width: 100%;
             padding: 10px;
+            margin-bottom: 10px;
             border: 1px solid #ccc;
             border-radius: 6px;
             font-size: 15px;
         }
-        #overlay-verificacion .fallback-manual .btn-verificar {
+        #overlay-login .login-box button {
+            width: 100%;
             background: #2980b9;
             color: white;
             border: none;
-            padding: 10px;
+            padding: 12px;
             border-radius: 6px;
             font-size: 16px;
             cursor: pointer;
-            width: 100%;
         }
-        #overlay-verificacion .fallback-manual .btn-verificar:hover {
+        #overlay-login .login-box button:hover {
             background: #1f6a8a;
         }
-        .verif-status {
-            margin: 8px 0 0;
-            font-weight: 600;
+        #overlay-login .login-error {
+            color: #e74c3c;
+            font-size: 14px;
+            margin-top: 8px;
             min-height: 1.5em;
         }
 
-        /* Gestión de usuarios (lista dentro de inicio de turno) */
+        .btn-gestion {
+            background: #7f8c8d;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            width: auto;
+            margin-top: 4px;
+        }
+        .btn-gestion:hover { background: #5d6d7e; }
+
         #lista-usuarios-container {
             margin-top: 12px;
             border-top: 1px solid #ddd;
@@ -473,23 +405,11 @@
         #lista-usuarios-container .btn-eliminar-user:hover {
             background: #a93226;
         }
-        .btn-gestion {
-            background: #7f8c8d;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 14px;
-            width: auto;
-            margin-top: 4px;
-        }
-        .btn-gestion:hover { background: #5d6d7e; }
     </style>
 </head>
 <body>
 
-<!-- ======= PANTALLA DE CARGA (HORNO/PAN) ======= -->
+<!-- ======= PANTALLA DE CARGA ======= -->
 <div id="pantalla-carga" class="bakery-loader">
     <div class="oven-container">
         <div class="steam-wrap"><span class="steam s1"></span><span class="steam s2"></span><span class="steam s3"></span></div>
@@ -500,22 +420,15 @@
     </div>
 </div>
 
-<!-- ======= OVERLAY DE VERIFICACIÓN FACIAL (Escenario B) ======= -->
-<div id="overlay-verificacion">
-    <div class="verif-box">
-        <h3>🔐 Verificación de identidad</h3>
-        <p class="instruccion">Coloca tu rostro frente a la cámara</p>
-        <div id="cam-verificacion" class="cam-box">
-            <video id="video-verificacion" autoplay muted></video>
-            <button class="btn-close-cam" onclick="cerrarVerificacion()">✕</button>
-            <div class="cam-overlay" id="status-verif-overlay">Detectando...</div>
-        </div>
-        <div id="verif-status" class="verif-status">Iniciando cámara...</div>
-        <div class="fallback-manual">
-            <input type="text" id="fallback-usuario" placeholder="Usuario">
-            <input type="password" id="fallback-pin" placeholder="PIN">
-            <button class="btn-verificar" onclick="verificarManual()">🔑 Verificar</button>
-        </div>
+<!-- ======= OVERLAY DE LOGIN ======= -->
+<div id="overlay-login">
+    <div class="login-box">
+        <h3>🔐 Acceso al sistema</h3>
+        <p>Ingresa tu usuario y PIN</p>
+        <input type="text" id="login-usuario" placeholder="Usuario">
+        <input type="password" id="login-pin" placeholder="PIN">
+        <button onclick="loginManual()">Ingresar</button>
+        <div id="login-error" class="login-error"></div>
     </div>
 </div>
 
@@ -549,31 +462,22 @@
         <div class="inicio-vendedor" style="background: #f9f9f9; padding: 15px; border-radius: 8px; min-width: 280px;">
             <h3>ADMINISTRADOR</h3>
             <div style="display:flex; flex-direction:column; gap:10px;">
-                <!-- Campo Admin. se autocompleta si hay usuario autenticado -->
                 <input type="text" id="nombre-vendedor" placeholder="Admin.">
                 <input type="password" id="firma-vendedor" placeholder="Clave para cerrar Turno">
                 <select id="tipo-turno"><option value="Diurno">☀️ Turno Diurno</option><option value="Tarde">🌙 Turno Tarde</option></select>
                 <button onclick="iniciarTurno()" class="btn-success" style="width:100%; font-size:18px; padding:15px;">Iniciar Turno</button>
             </div>
 
-            <!-- NUEVO: Registro Facial y Gestión de Usuarios -->
+            <!-- Registro de usuarios y gestión -->
             <div style="margin-top: 18px; border-top: 1px solid #ddd; padding-top: 14px;">
                 <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; justify-content:center;">
-                    <input type="text" id="usuario-facial" placeholder="Usuario (nombre)" style="flex:1; min-width:120px;">
-                    <input type="password" id="pin-facial" placeholder="PIN (4 dígitos)" style="width:100px;" maxlength="4">
-                    <button onclick="registrarRostro()" style="background:#2980b9; width:auto; padding:10px 18px;">📷 Registrar Rostro</button>
+                    <input type="text" id="usuario-registro" placeholder="Nuevo usuario" style="flex:1; min-width:120px;">
+                    <input type="password" id="pin-registro" placeholder="PIN (4 dígitos)" style="width:100px;" maxlength="4">
+                    <button onclick="registrarUsuario()" style="background:#2980b9; width:auto; padding:10px 18px;">➕ Registrar Usuario</button>
                     <button onclick="toggleGestionUsuarios()" class="btn-gestion">👥 Gestionar usuarios</button>
                 </div>
-                <!-- Recuadro de cámara para registro -->
-                <div id="cam-registro-container" class="cam-box">
-                    <video id="video-registro" autoplay muted></video>
-                    <button class="btn-close-cam" onclick="cerrarCamaraRegistro()">✕</button>
-                    <button class="btn-capture" onclick="capturarYGuardar()">💾 Guardar</button>
-                    <div class="cam-overlay">Coloca tu rostro</div>
-                </div>
-                <div id="estado-facial" class="facial-status">Listo</div>
+                <div id="estado-registro" class="facial-status" style="margin-top:6px; text-align:center;">Listo</div>
 
-                <!-- Lista de usuarios (se oculta por defecto) -->
                 <div id="lista-usuarios-container">
                     <h4 style="margin:10px 0 4px;">👥 Usuarios registrados</h4>
                     <div class="table-responsive" style="max-height:200px; overflow-y:auto;">
@@ -640,7 +544,7 @@
     <div id="historial-cierres" class="tab-content"><h2>Historial de Cierres de Turno</h2><div class="table-responsive"><table><thead><tr><th>Fecha</th><th>Turno</th><th>Vendedor</th><th>Total Efectivo</th><th>Total Fiado</th><th>Total General</th><th>PDF</th></tr></thead><tbody id="tabla-cierres"></tbody></table></div></div>
 </div>
 
-<!-- ======= OVERLAY Y BARRA FLOTANTE (para agregar productos) ======= -->
+<!-- ======= OVERLAY Y BARRA FLOTANTE ======= -->
 <div id="overlay-pos" class="overlay-vendedor" onclick="cerrarFlotante()"></div>
 <div class="barra-accion-venta" id="barra-flotante">
     <div id="info-seleccion" style="display:flex; align-items:center; gap:8px; flex:1;">
@@ -678,19 +582,11 @@ let vendedorActivo = "";
 let turnoActivo = "";
 let escuchasIniciadas = false;
 let productoSeleccionadoId = null;
-
-// NUEVAS VARIABLES PARA AUTENTICACIÓN FACIAL
-let usuarioAutenticado = null;       // nombre del usuario autenticado
-let pinAutenticado = null;          // PIN del usuario autenticado (solo para referencia)
-let modelosFaceApiCargados = false;
-let currentStreamRegistro = null;
-let currentStreamVerificacion = null;
-let verifIntentos = 0;
-let verifInterval = null;
-let usuarioEliminando = null;        // para gestión de usuarios
+let usuarioAutenticado = null;
+let pinAutenticado = null;
 
 // ================================================================
-// IMÁGENES DE PRODUCTOS
+// IMÁGENES DE PRODUCTOS (igual que antes)
 // ================================================================
 const IMAGENES_PRODUCTOS = {
     "tira": "https://i.postimg.cc/KYCgF76d/20260314-170824.jpg",
@@ -736,9 +632,6 @@ function cargarCatalogo() {
 }
 window.onload = cargarCatalogo;
 
-// ================================================================
-// FUNCIONES DE INVENTARIO LOCAL Y AGREGAR PRODUCTOS EXTRA
-// ================================================================
 function agregarAInventarioLocal() {
     const nombre = document.getElementById('nuevo-pan').value.trim();
     const precio = parseFloat(document.getElementById('nuevo-precio').value);
@@ -761,363 +654,108 @@ function actualizarListaLocal() {
 function eliminarLocal(idx) { inventarioLocal.splice(idx,1); actualizarListaLocal(); }
 
 // ================================================================
-// CARGA DE MODELOS FACE-API
-// ================================================================
-async function cargarModelosFaceApi() {
-    if (modelosFaceApiCargados) return;
-    try {
-        const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@justadudewhohacks/face-api.js@0.22.2/weights';
-        await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
-        await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
-        await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
-        modelosFaceApiCargados = true;
-        console.log("Modelos face-api cargados");
-    } catch (e) {
-        console.error("Error cargando modelos face-api:", e);
-        alert("No se pudieron cargar los modelos de reconocimiento facial. Verifica tu conexión.");
-    }
-}
-
-// ================================================================
-// FUNCIÓN PARA DETECTAR SI HAY USUARIOS REGISTRADOS
+// DETECTAR SI HAY USUARIOS REGISTRADOS
 // ================================================================
 async function hayUsuariosRegistrados() {
     try {
-        const snap = await db.collection("usuarios_faciales").limit(1).get();
+        const snap = await db.collection("usuarios").limit(1).get();
         return !snap.empty;
     } catch (e) {
-        console.error("Error verificando usuarios registrados:", e);
+        console.error("Error verificando usuarios:", e);
         return false;
     }
 }
 
 // ================================================================
-// FLUJO DE CARGA INICIAL (después de ocultar pantalla de carga)
+// LOGIN MANUAL (Escenario B)
 // ================================================================
-let flujoInicialEjecutado = false;
-
-async function ejecutarFlujoInicial() {
-    if (flujoInicialEjecutado) return;
-    flujoInicialEjecutado = true;
-
-    // Verificar si hay usuarios registrados
-    const hayUsuarios = await hayUsuariosRegistrados();
-
-    if (hayUsuarios) {
-        // Escenario B: mostrar verificación facial
-        mostrarVerificacionFacial();
-    } else {
-        // Escenario A: mostrar interfaz normal
-        mostrarInterfazNormal();
-    }
-}
-
-function mostrarInterfazNormal() {
-    const docEstado = { exists: true, data: () => ({ activo: false }) };
-    // Simulamos la evaluación de turno que ya hace el listener
-    // Pero el listener ya está corriendo, así que simplemente mostramos lo que corresponda según el estado actual.
-    // Para evitar duplicación, forzamos una reevaluación llamando al listener manualmente.
-    // Como el listener ya está activo, solo mostramos según el último estado conocido.
-    // Pero al inicio, el estado puede no estar cargado. Forzamos una lectura.
-    db.collection("configuracion").doc("estado_turno").get().then(doc => {
-        if (doc.exists && doc.data().activo === true) {
-            document.getElementById('inicio-turno-section').style.display = 'none';
-            document.getElementById('dashboard').style.display = 'block';
-            vendedorActivo = doc.data().vendedor;
-            turnoActivo = doc.data().turno || "General";
-            firmaActivaEnNube = doc.data().firma || "";
-            document.getElementById('display-vendedor').innerText = `${vendedorActivo} (${turnoActivo})`;
-            if (!escuchasIniciadas) {
-                iniciarEscuchasEnTiempoReal();
-                escuchasIniciadas = true;
-            }
-        } else {
-            document.getElementById('inicio-turno-section').style.display = 'block';
-            document.getElementById('dashboard').style.display = 'none';
-            inventarioLocal = [];
-            carrito = [];
-            actualizarListaLocal();
-            escuchasIniciadas = false;
-        }
-    }).catch(err => {
-        // Si hay error, mostrar inicio de turno por defecto
-        document.getElementById('inicio-turno-section').style.display = 'block';
-        document.getElementById('dashboard').style.display = 'none';
-    });
-}
-
-// ================================================================
-// VERIFICACIÓN FACIAL (Escenario B)
-// ================================================================
-let verificacionActiva = false;
-
-function mostrarVerificacionFacial() {
-    const overlay = document.getElementById('overlay-verificacion');
-    overlay.style.display = 'flex';
-    verificacionActiva = true;
-    // Iniciar cámara
-    iniciarCamaraVerificacion();
-}
-
-async function iniciarCamaraVerificacion() {
-    const video = document.getElementById('video-verificacion');
-    const container = document.getElementById('cam-verificacion');
-    try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 300, height: 220 } });
-        currentStreamVerificacion = stream;
-        video.srcObject = stream;
-        await video.play();
-        document.getElementById('verif-status').innerText = '📷 Detectando rostro...';
-        document.getElementById('status-verif-overlay').innerText = 'Detectando...';
-        container.className = 'cam-box'; // reset borde
-        // Iniciar verificación automática en bucle
-        if (verifInterval) clearInterval(verifInterval);
-        verifInterval = setInterval(verificarRostroAutomatico, 1500);
-    } catch (err) {
-        document.getElementById('verif-status').innerText = '❌ No se pudo acceder a la cámara';
-        console.error(err);
-        // Mostrar fallback manual
-        document.querySelector('.fallback-manual').style.display = 'flex';
-    }
-}
-
-async function verificarRostroAutomatico() {
-    if (!verificacionActiva) return;
-    const video = document.getElementById('video-verificacion');
-    if (!video.srcObject) return;
-
-    try {
-        // Cargar modelos si no están cargados
-        if (!modelosFaceApiCargados) {
-            await cargarModelosFaceApi();
-            if (!modelosFaceApiCargados) return;
-        }
-
-        const detections = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
-            .withFaceLandmarks()
-            .withFaceDescriptor();
-
-        if (!detections) {
-            // No se detectó rostro
-            document.getElementById('verif-status').innerText = '👀 No se detecta rostro. Acércate.';
-            document.getElementById('status-verif-overlay').innerText = 'Sin rostro';
-            document.getElementById('cam-verificacion').className = 'cam-box rojo';
-            return;
-        }
-
-        // Obtener descriptor del frame actual
-        const descriptor = Array.from(detections.descriptor);
-
-        // Buscar coincidencia en Firestore
-        const snap = await db.collection('usuarios_faciales').get();
-        let coincidencia = null;
-        for (const doc of snap.docs) {
-            const data = doc.data();
-            if (data.descriptor) {
-                const storedDescriptor = data.descriptor;
-                const distancia = faceapi.euclideanDistance(descriptor, storedDescriptor);
-                if (distancia < 0.6) { // umbral de coincidencia
-                    coincidencia = { usuario: data.usuario, pin: data.pin, docId: doc.id };
-                    break;
-                }
-            }
-        }
-
-        if (coincidencia) {
-            // Éxito
-            document.getElementById('verif-status').innerText = `✅ Bienvenido, ${coincidencia.usuario}`;
-            document.getElementById('status-verif-overlay').innerText = 'Acceso concedido';
-            document.getElementById('cam-verificacion').className = 'cam-box verde';
-            // Guardar sesión
-            usuarioAutenticado = coincidencia.usuario;
-            pinAutenticado = coincidencia.pin;
-            localStorage.setItem('usuario_facial', usuarioAutenticado);
-            localStorage.setItem('pin_facial', pinAutenticado);
-            // Actualizar display de sesión
-            document.getElementById('display-sesion').innerText = usuarioAutenticado;
-
-            // Cerrar verificación y mostrar interfaz normal
-            setTimeout(() => {
-                cerrarVerificacion();
-                mostrarInterfazNormal();
-            }, 1000);
-        } else {
-            // No coincidió
-            document.getElementById('verif-status').innerText = '❌ Rostro no reconocido. Reintenta o usa usuario/PIN.';
-            document.getElementById('status-verif-overlay').innerText = 'No reconocido';
-            document.getElementById('cam-verificacion').className = 'cam-box rojo';
-        }
-    } catch (e) {
-        console.error("Error en verificación automática:", e);
-    }
-}
-
-function cerrarVerificacion() {
-    verificacionActiva = false;
-    if (verifInterval) {
-        clearInterval(verifInterval);
-        verifInterval = null;
-    }
-    if (currentStreamVerificacion) {
-        currentStreamVerificacion.getTracks().forEach(track => track.stop());
-        currentStreamVerificacion = null;
-    }
-    document.getElementById('video-verificacion').srcObject = null;
-    document.getElementById('overlay-verificacion').style.display = 'none';
-    document.getElementById('cam-verificacion').className = 'cam-box';
-}
-
-// ================================================================
-// FALLBACK MANUAL (usuario + PIN)
-// ================================================================
-async function verificarManual() {
-    const usuario = document.getElementById('fallback-usuario').value.trim();
-    const pin = document.getElementById('fallback-pin').value.trim();
+async function loginManual() {
+    const usuario = document.getElementById('login-usuario').value.trim();
+    const pin = document.getElementById('login-pin').value.trim();
+    const errorDiv = document.getElementById('login-error');
     if (!usuario || !pin) {
-        alert('Ingresa usuario y PIN');
+        errorDiv.innerText = 'Ingresa usuario y PIN';
         return;
     }
     try {
-        const docRef = db.collection('usuarios_faciales').doc(usuario);
-        const doc = await docRef.get();
+        const doc = await db.collection('usuarios').doc(usuario).get();
         if (doc.exists && doc.data().pin === pin) {
-            // Correcto
+            // Éxito
             usuarioAutenticado = usuario;
             pinAutenticado = pin;
-            localStorage.setItem('usuario_facial', usuario);
-            localStorage.setItem('pin_facial', pin);
+            localStorage.setItem('usuario_autenticado', usuario);
+            localStorage.setItem('pin_autenticado', pin);
             document.getElementById('display-sesion').innerText = usuario;
-            cerrarVerificacion();
+            document.getElementById('login-error').innerText = '';
+            cerrarLogin();
             mostrarInterfazNormal();
         } else {
-            alert('Usuario o PIN incorrecto');
+            errorDiv.innerText = 'Usuario o PIN incorrecto';
         }
     } catch (e) {
-        alert('Error al verificar: ' + e.message);
+        errorDiv.innerText = 'Error al verificar: ' + e.message;
+        console.error(e);
     }
 }
 
+function cerrarLogin() {
+    document.getElementById('overlay-login').style.display = 'none';
+}
+
+function mostrarLogin() {
+    document.getElementById('overlay-login').style.display = 'flex';
+    document.getElementById('login-usuario').value = '';
+    document.getElementById('login-pin').value = '';
+    document.getElementById('login-error').innerText = '';
+    setTimeout(() => document.getElementById('login-usuario').focus(), 300);
+}
+
 // ================================================================
-// REGISTRO FACIAL (desde inicio de turno)
+// REGISTRO DE USUARIOS
 // ================================================================
-async function registrarRostro() {
-    const usuario = document.getElementById('usuario-facial').value.trim();
-    const pin = document.getElementById('pin-facial').value.trim();
+async function registrarUsuario() {
+    const usuario = document.getElementById('usuario-registro').value.trim();
+    const pin = document.getElementById('pin-registro').value.trim();
+    const status = document.getElementById('estado-registro');
     if (!usuario || !pin) {
-        alert('Ingresa usuario y PIN (4 dígitos)');
+        status.innerText = '❌ Completa usuario y PIN';
         return;
     }
     if (pin.length !== 4 || isNaN(pin)) {
-        alert('El PIN debe ser de 4 dígitos numéricos');
+        status.innerText = '❌ El PIN debe ser de 4 dígitos';
         return;
     }
-    // Cargar modelos
-    await cargarModelosFaceApi();
-    if (!modelosFaceApiCargados) {
-        alert('No se pudieron cargar los modelos. Revisa tu conexión.');
-        return;
-    }
-    // Abrir cámara de registro
-    await abrirCamaraRegistro();
-    document.getElementById('estado-facial').innerText = '👀 Mira a la cámara y presiona "Guardar"';
-}
-
-async function abrirCamaraRegistro() {
-    const container = document.getElementById('cam-registro-container');
-    container.style.display = 'block';
-    const video = document.getElementById('video-registro');
     try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 300, height: 220 } });
-        currentStreamRegistro = stream;
-        video.srcObject = stream;
-        await video.play();
-        document.getElementById('estado-facial').innerText = '📷 Cámara activa, detectando rostro...';
-    } catch (err) {
-        document.getElementById('estado-facial').innerText = '❌ No se pudo acceder a la cámara';
-        console.error(err);
-    }
-}
-
-function cerrarCamaraRegistro() {
-    const container = document.getElementById('cam-registro-container');
-    container.style.display = 'none';
-    if (currentStreamRegistro) {
-        currentStreamRegistro.getTracks().forEach(track => track.stop());
-        currentStreamRegistro = null;
-    }
-    document.getElementById('video-registro').srcObject = null;
-    document.getElementById('estado-facial').innerText = 'Cámara cerrada';
-}
-
-async function capturarYGuardar() {
-    const video = document.getElementById('video-registro');
-    if (!video.srcObject) {
-        alert('La cámara no está activa');
-        return;
-    }
-    const usuario = document.getElementById('usuario-facial').value.trim();
-    const pin = document.getElementById('pin-facial').value.trim();
-    if (!usuario || !pin) {
-        alert('Faltan usuario o PIN');
-        return;
-    }
-
-    try {
-        if (!modelosFaceApiCargados) {
-            await cargarModelosFaceApi();
-            if (!modelosFaceApiCargados) {
-                alert('Modelos no cargados');
-                return;
-            }
-        }
-
-        const detections = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
-            .withFaceLandmarks()
-            .withFaceDescriptor();
-
-        if (!detections) {
-            document.getElementById('estado-facial').innerText = '⚠️ No se detectó ningún rostro. Intenta de nuevo.';
+        const docRef = db.collection('usuarios').doc(usuario);
+        const doc = await docRef.get();
+        if (doc.exists) {
+            status.innerText = '❌ El usuario ya existe';
             return;
         }
-
-        const descriptor = Array.from(detections.descriptor);
-
-        // Guardar en Firestore
-        const userRef = db.collection('usuarios_faciales').doc(usuario);
-        await userRef.set({
+        await docRef.set({
             usuario: usuario,
             pin: pin,
-            descriptor: descriptor,
             timestamp: firebase.firestore.FieldValue.serverTimestamp()
         });
-
-        // Guardar en localStorage la sesión
-        localStorage.setItem('usuario_facial', usuario);
-        localStorage.setItem('pin_facial', pin);
-        usuarioAutenticado = usuario;
-        pinAutenticado = pin;
-        document.getElementById('display-sesion').innerText = usuario;
-
-        document.getElementById('estado-facial').innerText = `✅ Registro exitoso para ${usuario}`;
-        cerrarCamaraRegistro();
-
-        // Autocompletar campo de admin en inicio de turno
-        document.getElementById('nombre-vendedor').value = usuario;
-        document.getElementById('fallback-usuario').value = usuario;
-        document.getElementById('fallback-pin').value = pin;
-
-        // Actualizar lista de usuarios si está visible
+        status.innerText = `✅ Usuario ${usuario} registrado correctamente`;
+        // Autocompletar campo de admin si no hay turno
+        if (document.getElementById('dashboard').style.display === 'none') {
+            document.getElementById('nombre-vendedor').value = usuario;
+        }
+        // Si el overlay de lista está visible, recargar
         if (document.getElementById('lista-usuarios-container').style.display !== 'none') {
             cargarListaUsuarios();
         }
-    } catch (err) {
-        document.getElementById('estado-facial').innerText = '❌ Error al guardar: ' + err.message;
-        console.error(err);
+        document.getElementById('usuario-registro').value = '';
+        document.getElementById('pin-registro').value = '';
+    } catch (e) {
+        status.innerText = '❌ Error al registrar: ' + e.message;
+        console.error(e);
     }
 }
 
 // ================================================================
-// GESTIÓN DE USUARIOS (eliminar)
+// GESTIÓN DE USUARIOS
 // ================================================================
 function toggleGestionUsuarios() {
     const container = document.getElementById('lista-usuarios-container');
@@ -1133,7 +771,7 @@ async function cargarListaUsuarios() {
     const tbody = document.getElementById('tabla-usuarios');
     tbody.innerHTML = '<tr><td colspan="3">Cargando...</td></tr>';
     try {
-        const snap = await db.collection('usuarios_faciales').orderBy('timestamp', 'desc').get();
+        const snap = await db.collection('usuarios').orderBy('timestamp', 'desc').get();
         if (snap.empty) {
             tbody.innerHTML = '<tr><td colspan="3">No hay usuarios registrados</td></tr>';
             return;
@@ -1167,15 +805,13 @@ async function eliminarUsuario(docId, usuario) {
         return;
     }
     if (!confirm(`¿Eliminar definitivamente a ${usuario}?`)) return;
-
     try {
-        await db.collection('usuarios_faciales').doc(docId).delete();
+        await db.collection('usuarios').doc(docId).delete();
         alert(`Usuario ${usuario} eliminado.`);
         cargarListaUsuarios();
-        // Si no quedan usuarios registrados, recargar para cambiar a Escenario A
-        const snap = await db.collection('usuarios_faciales').limit(1).get();
+        // Si no quedan usuarios, recargar para Escenario A
+        const snap = await db.collection('usuarios').limit(1).get();
         if (snap.empty) {
-            // Ya no hay usuarios, recargar para aplicar Escenario A
             location.reload();
         }
     } catch (e) {
@@ -1184,31 +820,73 @@ async function eliminarUsuario(docId, usuario) {
 }
 
 // ================================================================
-// INICIO DE TURNO (modificado para autocompletar si hay sesión)
+// FLUJO INICIAL
+// ================================================================
+let flujoInicialEjecutado = false;
+
+async function ejecutarFlujoInicial() {
+    if (flujoInicialEjecutado) return;
+    flujoInicialEjecutado = true;
+
+    const hayUsuarios = await hayUsuariosRegistrados();
+    if (hayUsuarios) {
+        // Escenario B: mostrar login
+        mostrarLogin();
+    } else {
+        // Escenario A: interfaz normal directamente
+        mostrarInterfazNormal();
+    }
+}
+
+function mostrarInterfazNormal() {
+    db.collection("configuracion").doc("estado_turno").get().then(doc => {
+        if (doc.exists && doc.data().activo === true) {
+            document.getElementById('inicio-turno-section').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'block';
+            vendedorActivo = doc.data().vendedor;
+            turnoActivo = doc.data().turno || "General";
+            firmaActivaEnNube = doc.data().firma || "";
+            document.getElementById('display-vendedor').innerText = `${vendedorActivo} (${turnoActivo})`;
+            if (!escuchasIniciadas) {
+                iniciarEscuchasEnTiempoReal();
+                escuchasIniciadas = true;
+            }
+        } else {
+            document.getElementById('inicio-turno-section').style.display = 'block';
+            document.getElementById('dashboard').style.display = 'none';
+            inventarioLocal = [];
+            carrito = [];
+            actualizarListaLocal();
+            escuchasIniciadas = false;
+        }
+    }).catch(err => {
+        document.getElementById('inicio-turno-section').style.display = 'block';
+        document.getElementById('dashboard').style.display = 'none';
+    });
+}
+
+// ================================================================
+// INICIO DE TURNO (autocompletado si hay usuario autenticado)
 // ================================================================
 async function iniciarTurno() {
     let nombreVendedor = document.getElementById('nombre-vendedor').value.trim();
     const firmaVendedor = document.getElementById('firma-vendedor').value.trim();
     const tipoTurno = document.getElementById('tipo-turno').value;
 
-    // Si hay usuario autenticado, forzar su nombre en el campo (no editable)
     if (usuarioAutenticado) {
         document.getElementById('nombre-vendedor').value = usuarioAutenticado;
         nombreVendedor = usuarioAutenticado;
-        // El campo de firma debe ser ingresado manualmente, no se autocompleta con el PIN facial
         if (!firmaVendedor) {
-            alert('Debes ingresar una clave para cerrar el turno (puede ser diferente a tu PIN facial).');
+            alert('Debes ingresar una clave para cerrar el turno (puede ser diferente a tu PIN).');
             return;
         }
     } else {
-        // Escenario A: flujo original
         if (!nombreVendedor || !firmaVendedor) {
             alert('Faltan datos del vendedor');
             return;
         }
     }
 
-    // Recolectar inventario
     let inventarioFinal = [];
     document.querySelectorAll('.cant-auto').forEach(input => {
         const cant = parseInt(input.value);
@@ -1225,14 +903,12 @@ async function iniciarTurno() {
         });
         await batch.commit();
 
-        // Guardar estado del turno con la clave de cierre (firma) ingresada manualmente
         await db.collection("configuracion").doc("estado_turno").set({
             activo: true,
             vendedor: nombreVendedor,
-            firma: firmaVendedor,   // clave para cerrar turno (independiente del PIN facial)
+            firma: firmaVendedor,
             turno: tipoTurno
         });
-
         window.location.reload();
     } catch (error) {
         alert("Error al conectar con la base de datos.");
@@ -1241,11 +917,10 @@ async function iniciarTurno() {
 }
 
 // ================================================================
-// CIERRE DE TURNO (usa la clave guardada en estado_turno.firma)
+// CIERRE DE TURNO
 // ================================================================
 async function cerrarTurno() {
     const clave = prompt("Ingresa tu clave para cerrar turno:");
-    // La clave de cierre se guarda en firmaActivaEnNube (que viene de estado_turno.firma)
     if (clave !== firmaActivaEnNube && clave !== "admin123") {
         if (clave !== null) alert("Clave incorrecta.");
         return;
@@ -1280,14 +955,6 @@ async function cerrarTurno() {
         await batchVen.commit();
 
         await db.collection("configuracion").doc("estado_turno").set({ activo: false, vendedor: "", firma: "" });
-
-        // Limpiar sesión de usuario autenticado (opcional, para que pida autenticar de nuevo)
-        // Si se prefiere mantener sesión, comentar las siguientes líneas
-        // localStorage.removeItem('usuario_facial');
-        // localStorage.removeItem('pin_facial');
-        // usuarioAutenticado = null;
-        // pinAutenticado = null;
-
         window.location.reload();
     } catch (e) {
         alert("Error al cerrar turno.");
@@ -1296,7 +963,7 @@ async function cerrarTurno() {
 }
 
 // ================================================================
-// ESCUCHAS EN TIEMPO REAL (inventario, ventas, cierres)
+// ESCUCHAS EN TIEMPO REAL
 // ================================================================
 function iniciarEscuchasEnTiempoReal() {
     db.collection("inventario").onSnapshot((snap) => {
@@ -1350,7 +1017,7 @@ function iniciarEscuchasEnTiempoReal() {
 }
 
 // ================================================================
-// FUNCIONES DE VENTA (modificadas para guardar vendedorReal)
+// FUNCIONES DE VENTA (con vendedorReal)
 // ================================================================
 function seleccionarParaVenta(id, nombre, elemento) {
     productoSeleccionadoId = id;
@@ -1419,7 +1086,6 @@ async function completarVenta(tipo, clienteFiar = "") {
         }
     }
     try {
-        // Determinar quién realiza la venta
         const vendedorReal = usuarioAutenticado || vendedorActivo || 'Anónimo';
 
         await db.collection("ventas").add({
@@ -1514,7 +1180,7 @@ function initIconTabs() {
 document.addEventListener('DOMContentLoaded', initIconTabs);
 
 // ================================================================
-// ASISTENTE DE VOZ (con selector de voz)
+// ASISTENTE DE VOZ (completo, sin cambios)
 // ================================================================
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 if (SpeechRecognition) {
@@ -1646,7 +1312,6 @@ if (SpeechRecognition) {
         if (modoVoz && !hablando) iniciarEscucha();
     };
 
-    // Funciones de entretenimiento
     const chistes = [
         "¿Qué le dice un pan a otro pan? ¡Nos vemos en el horno!",
         "¿Por qué el pan no tiene amigos? Porque es muy hojaldrado.",
@@ -1716,7 +1381,6 @@ if (SpeechRecognition) {
     }
     function decirMotivacion() { hablar(motivaciones[Math.floor(Math.random() * motivaciones.length)]); }
 
-    // Funciones de negocio
     function eliminarProductoDelCarrito(nombreProducto) {
         const idx = carrito.findIndex(item => item.nombre.toLowerCase() === nombreProducto.toLowerCase());
         if (idx !== -1) {
@@ -1936,7 +1600,7 @@ if (SpeechRecognition) {
 }
 
 // ================================================================
-// LISTENER DE ESTADO DE TURNO (original)
+// LISTENER DE ESTADO DE TURNO (con carga y flujo inicial)
 // ================================================================
 let progreso = 0;
 const progressFill = document.getElementById('progress-fill');
@@ -1957,36 +1621,31 @@ db.collection("configuracion").doc("estado_turno").onSnapshot((doc) => {
     loadingMsg.innerText = '¡Listo para servir!';
     setTimeout(() => {
         document.getElementById('pantalla-carga').style.display = 'none';
+
         // Restaurar sesión desde localStorage
-        const usuarioLS = localStorage.getItem('usuario_facial');
-        const pinLS = localStorage.getItem('pin_facial');
+        const usuarioLS = localStorage.getItem('usuario_autenticado');
+        const pinLS = localStorage.getItem('pin_autenticado');
         if (usuarioLS && pinLS) {
             usuarioAutenticado = usuarioLS;
             pinAutenticado = pinLS;
             document.getElementById('display-sesion').innerText = usuarioLS;
-            // Autocompletar campos de admin
             document.getElementById('nombre-vendedor').value = usuarioLS;
-            document.getElementById('fallback-usuario').value = usuarioLS;
-            document.getElementById('fallback-pin').value = pinLS;
         }
 
-        // Ejecutar flujo inicial (decide Escenario A o B)
         ejecutarFlujoInicial();
     }, 300);
 });
 
 // ================================================================
-// RESTAURAR SESIÓN EN CAMPOS DEL INICIO DE TURNO (si ya hay usuario)
+// RESTAURAR SESIÓN EN CAMPOS DEL INICIO DE TURNO
 // ================================================================
 document.addEventListener('DOMContentLoaded', () => {
-    const usuarioLS = localStorage.getItem('usuario_facial');
-    const pinLS = localStorage.getItem('pin_facial');
+    const usuarioLS = localStorage.getItem('usuario_autenticado');
+    const pinLS = localStorage.getItem('pin_autenticado');
     if (usuarioLS && pinLS) {
-        document.getElementById('usuario-facial').value = usuarioLS;
-        document.getElementById('pin-facial').value = pinLS;
+        document.getElementById('usuario-registro').value = usuarioLS;
+        document.getElementById('pin-registro').value = pinLS;
         document.getElementById('nombre-vendedor').value = usuarioLS;
-        document.getElementById('fallback-usuario').value = usuarioLS;
-        document.getElementById('fallback-pin').value = pinLS;
         usuarioAutenticado = usuarioLS;
         pinAutenticado = pinLS;
         document.getElementById('display-sesion').innerText = usuarioLS;
