@@ -12,7 +12,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
 
     <style>
-        /* === ESTILOS BASE (originales, sin cambios) === */
+        /* === ESTILOS BASE (originales) === */
         * { box-sizing: border-box; }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -564,7 +564,7 @@
 </head>
 <body>
 
-<!-- ===== PANTALLA DE CARGA (HORNO) ===== -->
+<!-- ===== PANTALLA DE CARGA (HORNO) - EXACTAMENTE ORIGINAL ===== -->
 <div id="pantalla-carga" class="bakery-loader">
     <div class="oven-container">
         <div class="steam-wrap"><span class="steam s1"></span><span class="steam s2"></span><span class="steam s3"></span></div>
@@ -574,6 +574,23 @@
         <p class="loading-msg">Preparando algo delicioso...</p>
     </div>
 </div>
+<style>
+    /* Estilos específicos de la carga (reforzados) */
+    .bakery-loader { position: fixed; inset: 0; background: radial-gradient(circle, #fff9f0, #f7e6d2); display: flex; justify-content: center; align-items: center; z-index: 10000; font-family: 'Segoe UI', cursive; }
+    .oven-container { text-align: center; position: relative; }
+    .steam-wrap { display: flex; justify-content: center; gap: 10px; margin-bottom: -15px; }
+    .steam { width: 4px; height: 20px; background: rgba(217, 119, 6, 0.3); border-radius: 10px; animation: steamRise 2s infinite ease-out; }
+    .s1 { animation-delay: 0.2s; } .s2 { animation-delay: 0.8s; } .s3 { animation-delay: 0.5s; }
+    .bread-glow { width: 120px; height: 120px; margin: 0 auto 20px; filter: drop-shadow(0 0 20px rgba(217, 119, 6, 0.4)); animation: breadPulse 2s infinite; }
+    .main-bread { width: 100%; height: 100%; }
+    .bakery-title { color: #451a03; font-size: 1.8rem; margin: 10px 0; }
+    .dough-track { width: 250px; height: 12px; background: #e2d1c3; border-radius: 20px; margin: 15px auto; overflow: hidden; border: 2px solid #d4bda9; }
+    .dough-fill { width: 0%; height: 100%; background: linear-gradient(90deg, #d97706, #f59e0b); transition: width 0.4s; }
+    .loading-msg { color: #92400e; font-style: italic; }
+    @keyframes steamRise { 0% { transform: translateY(0) scaleX(1); opacity: 0; } 50% { opacity: 0.8; } 100% { transform: translateY(-40px) scaleX(2); opacity: 0; } }
+    @keyframes breadPulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+    @media (max-width: 480px) { .bakery-title { font-size: 1.4rem; } .bread-glow { width: 90px; height: 90px; } .dough-track { width: 200px; } }
+</style>
 
 <!-- ===== PANTALLA DE LOGIN ===== -->
 <div id="pantalla-login">
@@ -637,7 +654,6 @@
             <p style="font-size:0.9rem; color:#888;">Usuario: <span id="display-usuario-login"></span></p>
         </div>
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
-            <!-- Botón administrar usuarios (visible solo para admin) -->
             <button id="btn-admin-usuarios" class="btn-secondary btn-cierre" onclick="abrirModalUsuarios()" style="display:none;">👥 Usuarios</button>
             <button class="btn-danger btn-cierre" onclick="cerrarTurno()">📄🔒 Cerrar Turno</button>
             <button class="btn-danger btn-cierre" onclick="cerrarSesion()" style="background:#7f8c8d;">🚪 Cerrar Sesión</button>
@@ -690,7 +706,6 @@
         <button class="cerrar-modal" onclick="cerrarModalUsuarios()">✕</button>
         <h2>👥 Administrar Usuarios</h2>
 
-        <!-- Formulario de usuario (agregar/editar) -->
         <div class="form-usuario">
             <div id="mensaje-form" class="mensaje-form"></div>
             <div class="form-row">
@@ -710,13 +725,12 @@
             <input type="hidden" id="form-editar-id" value="">
         </div>
 
-        <!-- Tabla de usuarios -->
-        <button class="btn-agregar-usuario" onclick="nuevoUsuario()">+ Nuevo Usuario</button>
+        <button class="btn-agregar-usuario" onclick="nuevoUsuario()" style="background:#27ae60; margin-bottom:15px; width:auto; padding:10px 24px; border-radius:30px; font-size:16px;">+ Nuevo Usuario</button>
         <div class="table-responsive">
             <table class="tabla-usuarios">
-                <thead><tr><th>Usuario</th><th>Acciones</th></tr></thead>
+                <thead><tr><th>Usuario</th><th>Rol</th><th>Acciones</th></tr></thead>
                 <tbody id="tabla-usuarios-body">
-                    <tr><td colspan="2">Cargando usuarios...</td></tr>
+                    <tr><td colspan="3">Cargando usuarios...</td></tr>
                 </tbody>
             </table>
         </div>
@@ -758,9 +772,9 @@
     let escuchasIniciadas = false;
     let productoSeleccionadoId = null;
     let usuarioLogueado = null;
-    let usuarioContrasena = null;
-    let modoEdicion = false;          // true = editando, false = agregando
-    let idEditando = null;            // ID del documento que se está editando
+    let usuarioRol = null;
+    let modoEdicion = false;
+    let idEditando = null;
 
     const IMAGENES_PRODUCTOS = {
         "tira": "https://i.postimg.cc/KYCgF76d/20260314-170824.jpg",
@@ -785,7 +799,7 @@
         "default": "https://via.placeholder.com/300x200?text=Panaderia+Marvin"
     };
 
-    // ==================== ANIMACIÓN DE CARGA ====================
+    // ==================== ANIMACIÓN DE CARGA (IDÉNTICA A LA ORIGINAL) ====================
     let progreso = 0;
     const progressFill = document.getElementById('progress-fill');
     const loadingMsg = document.querySelector('.loading-msg');
@@ -808,18 +822,38 @@
         loadingMsg.innerText = '¡Listo para servir!';
         setTimeout(() => {
             document.getElementById('pantalla-carga').style.display = 'none';
+            crearAdminPorDefecto();
             verificarSesionPrevia();
         }, 400);
     }, 3000);
+
+    // ==================== CREAR ADMIN POR DEFECTO ====================
+    async function crearAdminPorDefecto() {
+        try {
+            const snapshot = await db.collection('usuarios')
+                .where('usuario', '==', 'Minor')
+                .get();
+            if (snapshot.empty) {
+                await db.collection('usuarios').add({
+                    usuario: 'Minor',
+                    contrasena: 'Sic',
+                    rol: 'admin'
+                });
+                console.log('Usuario Minor creado con rol admin');
+            }
+        } catch (e) {
+            console.error('Error al crear admin por defecto:', e);
+        }
+    }
 
     // ==================== FUNCIONES DE LOGIN ====================
 
     function verificarSesionPrevia() {
         const usuarioGuardado = localStorage.getItem('usuarioLogueado');
-        const contrasenaGuardada = localStorage.getItem('usuarioContrasena');
-        if (usuarioGuardado && contrasenaGuardada) {
+        const rolGuardado = localStorage.getItem('usuarioRol');
+        if (usuarioGuardado && rolGuardado) {
             usuarioLogueado = usuarioGuardado;
-            usuarioContrasena = contrasenaGuardada;
+            usuarioRol = rolGuardado;
             verificarTurno();
         } else {
             document.getElementById('pantalla-login').style.display = 'flex';
@@ -850,20 +884,20 @@
             }
 
             let coincide = false;
-            let contrasenaEncontrada = null;
+            let rol = 'user';
             snapshot.forEach(doc => {
                 const data = doc.data();
                 if (data.contrasena === contrasena) {
                     coincide = true;
-                    contrasenaEncontrada = data.contrasena;
+                    rol = data.rol || 'user';
                 }
             });
 
             if (coincide) {
                 localStorage.setItem('usuarioLogueado', usuario);
-                localStorage.setItem('usuarioContrasena', contrasenaEncontrada);
+                localStorage.setItem('usuarioRol', rol);
                 usuarioLogueado = usuario;
-                usuarioContrasena = contrasenaEncontrada;
+                usuarioRol = rol;
                 document.getElementById('pantalla-login').style.display = 'none';
                 errorDiv.style.display = 'none';
                 verificarTurno();
@@ -909,7 +943,7 @@
         }
 
         const btnAdmin = document.getElementById('btn-admin-usuarios');
-        if (usuarioContrasena === 'admin') {
+        if (usuarioRol === 'admin') {
             btnAdmin.style.display = 'inline-block';
         } else {
             btnAdmin.style.display = 'none';
@@ -1192,9 +1226,9 @@
     function cerrarSesion() {
         if (confirm("¿Cerrar sesión? Se olvidarán tus credenciales en este navegador.")) {
             localStorage.removeItem('usuarioLogueado');
-            localStorage.removeItem('usuarioContrasena');
+            localStorage.removeItem('usuarioRol');
             usuarioLogueado = null;
-            usuarioContrasena = null;
+            usuarioRol = null;
             window.location.reload();
         }
     }
@@ -1202,13 +1236,12 @@
     // ==================== GESTIÓN DE USUARIOS (CON FORMULARIO INTEGRADO) ====================
 
     function abrirModalUsuarios() {
-        if (usuarioContrasena !== 'admin') {
-            alert('Solo el administrador (contraseña "admin") puede gestionar usuarios.');
+        if (usuarioRol !== 'admin') {
+            alert('Solo el administrador puede gestionar usuarios.');
             return;
         }
         document.getElementById('modal-usuarios').classList.add('activo');
         cargarListaUsuarios();
-        // Resetear formulario al abrir
         resetearFormulario();
     }
 
@@ -1217,7 +1250,6 @@
         resetearFormulario();
     }
 
-    // Resetear formulario a modo "agregar"
     function resetearFormulario() {
         document.getElementById('form-usuario').value = '';
         document.getElementById('form-contrasena').value = '';
@@ -1236,13 +1268,11 @@
         ocultarMensajeForm();
     }
 
-    // Iniciar modo "nuevo usuario"
     function nuevoUsuario() {
         resetearFormulario();
         document.getElementById('form-usuario').focus();
     }
 
-    // Cargar datos en el formulario para editar
     function abrirEditar(id, usuario, contrasena) {
         modoEdicion = true;
         idEditando = id;
@@ -1252,7 +1282,6 @@
         document.getElementById('btn-guardar-usuario').textContent = 'Actualizar';
         document.getElementById('btn-guardar-usuario').className = 'btn-success';
         document.getElementById('btn-cancelar-form').style.display = 'inline-block';
-        // Bloquear edición del nombre de usuario (solo se puede cambiar la contraseña)
         document.getElementById('form-usuario').disabled = true;
         document.getElementById('form-usuario').readOnly = true;
         document.getElementById('form-usuario').style.background = '#f0f0f0';
@@ -1263,13 +1292,11 @@
         document.getElementById('form-contrasena').focus();
     }
 
-    // Cancelar edición / limpiar formulario
     function cancelarFormulario() {
         resetearFormulario();
         document.getElementById('form-usuario').focus();
     }
 
-    // Guardar (agregar o actualizar)
     async function guardarUsuario() {
         const usuario = document.getElementById('form-usuario').value.trim();
         const contrasena = document.getElementById('form-contrasena').value.trim();
@@ -1282,7 +1309,6 @@
 
         try {
             if (modoEdicion && idEditando) {
-                // Actualizar usuario existente
                 await db.collection('usuarios').doc(idEditando).update({
                     contrasena: contrasena
                 });
@@ -1290,8 +1316,6 @@
                 resetearFormulario();
                 cargarListaUsuarios();
             } else {
-                // Agregar nuevo usuario
-                // Verificar que no exista otro con el mismo nombre
                 const existentes = await db.collection('usuarios')
                     .where('usuario', '==', usuario)
                     .get();
@@ -1301,7 +1325,8 @@
                 }
                 await db.collection('usuarios').add({
                     usuario: usuario,
-                    contrasena: contrasena
+                    contrasena: contrasena,
+                    rol: 'user'
                 });
                 mostrarMensajeForm(`Usuario "${usuario}" agregado correctamente.`, 'exito');
                 resetearFormulario();
@@ -1313,12 +1338,10 @@
         }
     }
 
-    // Eliminar usuario
     async function eliminarUsuario(id, usuario) {
         if (!confirm(`¿Eliminar al usuario "${usuario}"?`)) return;
         try {
             await db.collection('usuarios').doc(id).delete();
-            // Si se eliminó a sí mismo, cerrar sesión después de un momento
             if (usuario === usuarioLogueado) {
                 alert('Te has eliminado a ti mismo. La sesión se cerrará.');
                 cerrarSesion();
@@ -1331,28 +1354,27 @@
         }
     }
 
-    // Cargar lista de usuarios en la tabla
     async function cargarListaUsuarios() {
         const tbody = document.getElementById('tabla-usuarios-body');
-        tbody.innerHTML = '<tr><td colspan="2">Cargando...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="3">Cargando...</td></tr>';
         try {
             const snapshot = await db.collection('usuarios').orderBy('usuario').get();
             if (snapshot.empty) {
-                tbody.innerHTML = '<tr><td colspan="2">No hay usuarios registrados.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="3">No hay usuarios registrados.</td></tr>';
                 return;
             }
             let html = '';
             snapshot.forEach(doc => {
                 const data = doc.data();
                 const usuario = data.usuario || 'sin nombre';
-                const contrasena = data.contrasena || '';
-                const esAdmin = (contrasena === 'admin');
-                const badge = esAdmin ? `<span class="badge-admin">🔵 Admin</span>` : '';
+                const rol = data.rol || 'user';
+                const badge = (rol === 'admin') ? `<span class="badge-admin">🔵 Admin</span>` : '';
                 html += `
                     <tr>
-                        <td>${usuario} ${badge}</td>
+                        <td>${usuario}</td>
+                        <td>${badge}</td>
                         <td class="acciones">
-                            <button class="btn-success" onclick="abrirEditar('${doc.id}', '${usuario}', '${contrasena}')">✏️ Editar</button>
+                            <button class="btn-success" onclick="abrirEditar('${doc.id}', '${usuario}', '${data.contrasena || ''}')">✏️ Editar</button>
                             <button class="btn-danger" onclick="eliminarUsuario('${doc.id}', '${usuario}')">🗑️ Eliminar</button>
                         </td>
                     </tr>
@@ -1360,12 +1382,11 @@
             });
             tbody.innerHTML = html;
         } catch (e) {
-            tbody.innerHTML = '<tr><td colspan="2">Error al cargar usuarios.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="3">Error al cargar usuarios.</td></tr>';
             console.error(e);
         }
     }
 
-    // Utilidades para el mensaje del formulario
     function mostrarMensajeForm(texto, tipo) {
         const div = document.getElementById('mensaje-form');
         div.textContent = texto;
@@ -1398,8 +1419,558 @@
         });
     }
 
-    
+    // ==================== FUNCIÓN PARA GENERAR PDF DESDE CIERRE (actualizada con columna Usuario) ====================
+    async function generarPDFDesdeCierre(cierreId) {
+        const docCierre = await db.collection("cierres").doc(cierreId).get();
+        if (!docCierre.exists) return alert("No se encontró el cierre.");
+        const c = docCierre.data();
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF();
+        pdf.setFont("helvetica","bold"); pdf.setFontSize(16); pdf.text("REPORTE DE CIERRE - PANADERÍA",14,20);
+        pdf.setFont("helvetica","normal"); pdf.setFontSize(10);
+        const fechaHora = c.fecha ? new Date(c.fecha.toDate()).toLocaleString() : "Fecha desconocida";
+        pdf.text(`Fecha: ${fechaHora} | Turno: ${c.turno}`,14,30);
+        pdf.text(`Encargado: ${c.vendedor}`,14,36);
 
+        // Tabla de ventas con columna "Usuario"
+        const ventasTabla = c.ventas.map((v,i) => {
+            const hora = v.timestamp ? new Date(v.timestamp.toDate()).toLocaleTimeString() : 'N/A';
+            const detalle = v.productos.map(p=>`${p.nombre}(${p.cantidad})`).join(', ');
+            const metodo = v.tipo === 'fiar' ? `Fiado: ${v.cliente}` : "Efectivo";
+            const usuario = v.vendedorLogin || 'Desconocido';
+            return [i+1, hora, detalle, `Q${v.total.toFixed(2)}`, metodo, usuario];
+        });
+        pdf.autoTable({
+            startY:45,
+            head:[['ID','Hora','Detalle','Total','Método','Usuario']],
+            body:ventasTabla,
+            headStyles:{fillColor:[139,69,19]},
+            theme:'grid'
+        });
+
+        const invTabla = c.inventarioFinal.map(p => [p.nombre, p.stockInicial || p.stock, p.stock, (p.stockInicial||p.stock)-p.stock]);
+        pdf.autoTable({
+            startY:pdf.lastAutoTable.finalY+10,
+            head:[['Producto','Inicial','Final','Vendidos']],
+            body:invTabla,
+            headStyles:{fillColor:[105,105,105]},
+            theme:'grid'
+        });
+
+        let y = pdf.lastAutoTable.finalY+15;
+        pdf.setFont("helvetica","bold");
+        pdf.text(`TOTAL EFECTIVO: Q${c.totales.efectivo.toFixed(2)}`,14,y);
+        pdf.setTextColor(192,57,43); pdf.text(`TOTAL FIADO: Q${c.totales.fiado.toFixed(2)}`,14,y+6);
+        pdf.setTextColor(0,0,0); pdf.text(`TOTAL GENERAL: Q${c.totales.general.toFixed(2)}`,14,y+12);
+        pdf.save(`${c.turno}_${c.fecha?.toDate().toISOString().split('T')[0] || 'reporte'}.pdf`);
+    }
+
+    // ==================== ASISTENTE DE VOZ (COMPLETO, SIN CAMBIOS) ====================
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRecognition) {
+        const recognition = new SpeechRecognition();
+        recognition.lang = 'es-GT';
+        recognition.interimResults = false;
+        let modoVoz = false;
+        let hablando = false;
+        let adivinanzaActual = null;
+        let vocesDisponibles = [];
+
+        function cargarVoces() {
+            vocesDisponibles = window.speechSynthesis.getVoices();
+            const selector = document.getElementById('selector-voz');
+            if (!selector) return;
+            selector.innerHTML = '<option value="default">🔊 Voz por defecto del navegador</option>';
+            const vocesEspanol = vocesDisponibles.filter(v => v.lang.includes('es'));
+            vocesEspanol.forEach((voz, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                option.textContent = `${voz.name} (${voz.lang}) ${voz.localService ? '💻 Local' : '🌐 Online'}`;
+                selector.appendChild(option);
+            });
+            const savedVoice = localStorage.getItem('vozSeleccionada');
+            if (savedVoice !== null) {
+                selector.value = savedVoice;
+            }
+        }
+
+        function obtenerVozSeleccionada() {
+            const selector = document.getElementById('selector-voz');
+            if (!selector || selector.value === 'default') return null;
+            const index = parseInt(selector.value);
+            const vocesEspanol = vocesDisponibles.filter(v => v.lang.includes('es'));
+            return vocesEspanol[index] || null;
+        }
+
+        window.speechSynthesis.onvoiceschanged = cargarVoces;
+        cargarVoces();
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const selector = document.getElementById('selector-voz');
+            if (selector) {
+                selector.addEventListener('change', (e) => {
+                    localStorage.setItem('vozSeleccionada', e.target.value);
+                });
+            }
+        });
+
+        function formatearMonedaVoz(monto) {
+            const entero = Math.floor(monto);
+            const centavos = Math.round((monto - entero) * 100);
+
+            const unidades = [
+                "cero", "un", "dos", "tres", "cuatro", "cinco", "seis", "siete", "ocho", "nueve",
+                "diez", "once", "doce", "trece", "catorce", "quince", "dieciséis", "diecisiete",
+                "dieciocho", "diecinueve", "veinte"
+            ];
+            const decenas = [
+                "", "", "veinti", "treinta", "cuarenta", "cincuenta", "sesenta", "setenta", "ochenta", "noventa"
+            ];
+            const centenas = [
+                "", "ciento", "doscientos", "trescientos", "cuatrocientos", "quinientos",
+                "seiscientos", "setecientos", "ochocientos", "novecientos"
+            ];
+
+            function numeroATexto(n) {
+                if (n === 0) return "cero";
+                if (n === 100) return "cien";
+                if (n <= 20) return unidades[n];
+                if (n < 100) {
+                    const d = Math.floor(n / 10);
+                    const u = n % 10;
+                    if (n < 30) return "veinti" + unidades[u];
+                    if (u === 0) return decenas[d];
+                    return decenas[d] + " y " + unidades[u];
+                }
+                if (n < 1000) {
+                    const c = Math.floor(n / 100);
+                    const resto = n % 100;
+                    if (c === 1 && resto === 0) return "cien";
+                    const base = centenas[c];
+                    if (resto === 0) return base === "ciento" ? "cien" : base.replace("cientos", "cientos");
+                    return base + " " + numeroATexto(resto);
+                }
+                if (n < 10000) {
+                    const m = Math.floor(n / 1000);
+                    const resto = n % 1000;
+                    let milesTexto = "";
+                    if (m === 1) milesTexto = "mil";
+                    else milesTexto = numeroATexto(m) + " mil";
+                    if (resto === 0) return milesTexto;
+                    return milesTexto + " " + numeroATexto(resto);
+                }
+                return n.toString();
+            }
+
+            let textoEntero = numeroATexto(entero);
+            if (entero === 1) textoEntero = "un";
+            const parteQuetzal = entero === 1 ? "quetzal" : "quetzales";
+
+            if (centavos === 0) {
+                return `${textoEntero} ${parteQuetzal} exactos`;
+            } else {
+                let textoCentavos = numeroATexto(centavos);
+                if (centavos === 1) textoCentavos = "un";
+                const parteCentavo = centavos === 1 ? "centavo" : "centavos";
+                return `${textoEntero} ${parteQuetzal} con ${textoCentavos} ${parteCentavo}`;
+            }
+        }
+
+        function hablar(mensaje) {
+            if (!modoVoz) return;
+            if (hablando) return;
+            hablando = true;
+            try { recognition.stop(); } catch(e) {}
+            const utterance = new SpeechSynthesisUtterance(mensaje);
+            utterance.lang = 'es-GT';
+            utterance.rate = 1.2;
+
+            const vozElegida = obtenerVozSeleccionada();
+            if (vozElegida) {
+                utterance.voice = vozElegida;
+            }
+
+            utterance.onend = () => {
+                hablando = false;
+                if (modoVoz) {
+                    try { recognition.start(); } catch(e) {}
+                }
+            };
+            window.speechSynthesis.cancel();
+            window.speechSynthesis.speak(utterance);
+        }
+
+        function activarVoz() {
+            modoVoz = !modoVoz;
+            const btn = document.getElementById('btn-voz');
+            if (modoVoz) {
+                btn.innerText = "👂 Asistente Activo...";
+                btn.style.backgroundColor = "#27ae60";
+                iniciarEscucha();
+                hablar("Hola, soy tu asistente.");
+            } else {
+                btn.innerText = "🎤 Ordenar por Voz";
+                btn.style.backgroundColor = "#2980b9";
+                try { recognition.stop(); } catch(e) {}
+                hablar("Asistente desactivado.");
+            }
+        }
+
+        function iniciarEscucha() {
+            if (modoVoz && !hablando) {
+                try { recognition.start(); } catch(e) {}
+            }
+        }
+
+        recognition.onend = () => {
+            if (modoVoz && !hablando) iniciarEscucha();
+        };
+
+        const chistes = [
+            "¿Qué le dice un pan a otro pan? ¡Nos vemos en el horno!",
+            "¿Por qué el pan no tiene amigos? Porque es muy hojaldrado.",
+            "¿Cómo se despide un pan? ¡Hasta luego, miga!",
+            "¿Qué le dijo el pan francés al pan dulce? Eres muy empalagoso.",
+            "¿Cuál es el pan más deportista? El pan con correa.",
+            "¿Qué hace una tira en el gimnasio? Ejercicios de estiramiento."
+        ];
+        const adivinanzas = [
+            { p: "Blanco por dentro, verde por fuera. Si no lo sabes, espera.", r: "perejil" },
+            { p: "Oro parece, plata no es. El que no lo adivine, bien tonto es.", r: "plátano" },
+            { p: "Tengo agujas pero no sé coser, tengo números pero no sé leer. ¿Qué soy?", r: "reloj" },
+            { p: "Vuelo sin alas, lloro sin ojos. ¿Quién soy?", r: "nube" },
+            { p: "Cuanto más grande, menos se ve. ¿Qué es?", r: "oscuridad" },
+            { p: "Blanco es, la gallina lo pone, con aceite se come y a la masa se le pone.", r: "huevo" },
+            { p: "Chiquito como un ratón, guarda la casa como un león.", r: "cerrojo" }
+        ];
+        const motivaciones = [
+            "¡Tú puedes! Cada venta es un paso al éxito.",
+            "Eres el mejor vendedor de pan, sigue así.",
+            "El día está para triunfar, ¡ánimo!",
+            "Sonríe, que el pan se vende solo con buena actitud.",
+            "Hoy es un gran día para hornear muchas ventas."
+        ];
+
+        function decirChiste() { hablar(chistes[Math.floor(Math.random() * chistes.length)]); }
+        function decirAdivinanza() {
+            const random = Math.floor(Math.random() * adivinanzas.length);
+            adivinanzaActual = { ...adivinanzas[random] };
+            hablar(`Adivinanza: ${adivinanzaActual.p}`);
+            hablar("Puedes responder ahora o decir 'dame la respuesta'.");
+        }
+        function evaluarRespuesta(respuestaUsuario) {
+            if (!adivinanzaActual) { hablar("No hay adivinanza activa."); return; }
+            const respNorm = respuestaUsuario.toLowerCase().trim();
+            const correcta = adivinanzaActual.r.toLowerCase();
+            if (respNorm.includes(correcta) || correcta.includes(respNorm)) {
+                hablar("¡Correcto! Muy bien.");
+            } else {
+                hablar(`Incorrecto. La respuesta era: ${adivinanzaActual.r}`);
+            }
+            adivinanzaActual = null;
+        }
+        function darRespuestaAdivinanza() {
+            if (adivinanzaActual) {
+                hablar(`La respuesta es: ${adivinanzaActual.r}`);
+                adivinanzaActual = null;
+            } else { hablar("No hay adivinanza activa."); }
+        }
+        function decirClima() {
+            const climas = ["soleado", "nublado", "lluvioso", "ventoso", "caluroso", "fresco"];
+            const temp = Math.floor(Math.random() * 25) + 15;
+            const clima = climas[Math.floor(Math.random() * climas.length)];
+            hablar(`Clima simulado: ${clima}, ${temp}°C.`);
+        }
+        function decirFecha() {
+            const ahora = new Date();
+            const opciones = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            hablar(`Hoy es ${ahora.toLocaleDateString('es-ES', opciones)}.`);
+        }
+        function decirHora() {
+            const ahora = new Date();
+            let horas = ahora.getHours();
+            let minutos = ahora.getMinutes();
+            const ampm = horas >= 12 ? 'de la tarde' : 'de la mañana';
+            horas = horas % 12 || 12;
+            hablar(`Son las ${horas} con ${minutos} minutos ${ampm}.`);
+        }
+        function decirMotivacion() { hablar(motivaciones[Math.floor(Math.random() * motivaciones.length)]); }
+
+        function eliminarProductoDelCarrito(nombreProducto) {
+            const idx = carrito.findIndex(item => item.nombre.toLowerCase() === nombreProducto.toLowerCase());
+            if (idx !== -1) {
+                carrito.splice(idx, 1);
+                actualizarCarrito();
+                hablar(`Quité ${nombreProducto} del carrito.`);
+            } else { hablar(`No encontré ${nombreProducto}.`); }
+        }
+        function vaciarCarritoCompleto() {
+            if (carrito.length === 0) { hablar("Carrito vacío."); return; }
+            carrito = [];
+            actualizarCarrito();
+            hablar("Carrito vaciado.");
+        }
+        function consultarStock(productoNombre) {
+            const prod = inventarioFirebase.find(p => p.nombre.toLowerCase() === productoNombre.toLowerCase());
+            if (prod) hablar(`${prod.nombre}: ${prod.stock} unidades.`);
+            else hablar(`No encontré ${productoNombre}.`);
+        }
+        function resumenTurno() { hablar(`Turno ${turnoActivo}, vendedor ${vendedorActivo}.`); }
+        function totalVentasHoy() {
+            let total = ventasGlobales.reduce((s, v) => s + v.total, 0);
+            hablar(`Ventas totales: ${formatearMonedaVoz(total)}.`);
+        }
+        function totalCarrito() {
+            let total = carrito.reduce((s, i) => s + i.precio * i.cantidad, 0);
+            if (carrito.length === 0) hablar("Carrito vacío.");
+            else hablar(`Total del carrito: ${formatearMonedaVoz(total)}.`);
+        }
+        function ayudaVoz() {
+            hablar("Comandos: chiste, adivinanza, fecha, hora, clima, motivación, agrega [cant] [producto], cuánto llevamos, cobrar efectivo, fiar a [nombre], stock de [producto], vaciar carrito, quitar [producto], resumen del turno, ventas totales, total del carrito, cambio por un billete de [cantidad], qué productos hay, ayuda, desactivar voz.");
+        }
+        function listarProductos() {
+            if (inventarioFirebase.length === 0) { hablar("Sin productos."); return; }
+            let nombres = inventarioFirebase.map(p => p.nombre).join(", ");
+            hablar(`Productos: ${nombres}`);
+        }
+
+        function palabrasANumero(texto) {
+            const unidades = {
+                "cero":0, "un":1, "uno":1, "una":1, "dos":2, "tres":3, "cuatro":4, "cinco":5,
+                "seis":6, "siete":7, "ocho":8, "nueve":9, "diez":10, "once":11, "doce":12,
+                "trece":13, "catorce":14, "quince":15, "dieciseis":16, "diecisiete":17,
+                "dieciocho":18, "diecinueve":19, "veinte":20, "veintiuno":21, "veintidos":22,
+                "veintitres":23, "veinticuatro":24, "veinticinco":25, "veintiseis":26,
+                "veintisiete":27, "veintiocho":28, "veintinueve":29, "treinta":30,
+                "cuarenta":40, "cincuenta":50, "sesenta":60, "setenta":70, "ochenta":80,
+                "noventa":90, "cien":100
+            };
+            const palabras = texto.toLowerCase().split(/[ ,y]+/);
+            let total = 0;
+            for (let i = 0; i < palabras.length; i++) {
+                let p = palabras[i];
+                if (unidades[p] !== undefined) {
+                    if (p === "cien") total += 100;
+                    else total += unidades[p];
+                } else if (p === "y" || p === "") continue;
+                else if (!isNaN(parseInt(p))) total += parseInt(p);
+            }
+            return total;
+        }
+
+        async function procesarPedido(frase, producto) {
+            if (!producto) return false;
+            let esModoPrecio = false;
+            let monto = 0;
+            let cantidad = 0;
+
+            if (frase.includes("quetzal")) {
+                esModoPrecio = true;
+                const match = frase.match(/(\d+|\w+)\s+quetzal/);
+                if (match) {
+                    let numStr = match[1];
+                    monto = palabrasANumero(numStr);
+                } else {
+                    monto = 0;
+                }
+            }
+            else if (frase.includes("centavos")) {
+                esModoPrecio = true;
+                const match = frase.match(/(\d+|\w+)\s+centavos/);
+                if (match) {
+                    let numStr = match[1];
+                    let centavos = palabrasANumero(numStr);
+                    monto = centavos / 100;
+                } else {
+                    monto = 0;
+                }
+            }
+            else if (frase.match(/\b(\w+)\s+cincuenta\b/)) {
+                esModoPrecio = true;
+                const match = frase.match(/\b(\w+)\s+cincuenta\b/);
+                if (match) {
+                    let num = palabrasANumero(match[1]);
+                    monto = num + 0.50;
+                }
+            }
+            else if (frase.includes("cincuenta") && !frase.match(/\d/)) {
+                esModoPrecio = true;
+                monto = 0.50;
+            }
+
+            if (esModoPrecio && monto > 0) {
+                cantidad = Math.floor(monto / producto.precio);
+                if (cantidad === 0) {
+                    hablar(`Con ${monto.toFixed(2)} quetzales no alcanza para ni un ${producto.nombre}.`);
+                    return false;
+                }
+            } else {
+                const numerosEnFrase = frase.match(/\d+|\b(?:un|uno|una|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|once|doce|trece|catorce|quince|veinte|treinta|cuarenta|cincuenta|sesenta|setenta|ochenta|noventa|cien)\b/gi);
+                if (numerosEnFrase && numerosEnFrase.length > 0) {
+                    let numStr = numerosEnFrase[0];
+                    cantidad = palabrasANumero(numStr);
+                } else {
+                    cantidad = 1;
+                }
+            }
+
+            if (cantidad <= 0) return false;
+
+            const existente = carrito.find(i => i.id === producto.id);
+            const prev = existente ? existente.cantidad : 0;
+            if (cantidad + prev > producto.stock) {
+                hablar(`Stock insuficiente. Solo quedan ${producto.stock - prev} unidades.`);
+                return false;
+            }
+            if (existente) existente.cantidad += cantidad;
+            else carrito.push({ id: producto.id, nombre: producto.nombre, precio: producto.precio, cantidad: cantidad });
+            actualizarCarrito();
+            hablar("Agregado");
+            return true;
+        }
+
+        function extraerProducto(frase) {
+            for (let prod of inventarioFirebase) {
+                if (frase.includes(prod.nombre.toLowerCase())) {
+                    return prod;
+                }
+            }
+            return null;
+        }
+
+        async function procesarInventario(frase) {
+            let prod = inventarioFirebase.find(p => frase.includes(p.nombre.toLowerCase()));
+            if (prod) {
+                let cant = 0;
+                let palabras = frase.split(" ");
+                for (let p of palabras) {
+                    let num = parseInt(p);
+                    if (!isNaN(num)) cant = num;
+                    else if (palabrasANumero(p) > 0) cant = palabrasANumero(p);
+                }
+                if (cant > 0) {
+                    await db.collection("inventario").doc(prod.id).update({ stock: firebase.firestore.FieldValue.increment(cant) });
+                    hablar(`Añadí ${cant} ${prod.nombre} al inventario.`);
+                } else { hablar("¿Cuántas unidades?"); }
+            } else { hablar("Producto no encontrado."); }
+        }
+
+        recognition.onresult = async (e) => {
+            if (hablando) return;
+            let frase = e.results[0][0].transcript.toLowerCase().trim();
+            console.log("Voz:", frase);
+
+            if (adivinanzaActual !== null) {
+                const comandosEspeciales = ["adivinanza", "chiste", "fecha", "hora", "clima", "motivación", "ayuda", "desactivar voz", "dame la respuesta", "paso", "respuesta", "cuál es", "dímelo"];
+                const esComandoEspecial = comandosEspeciales.some(cmd => frase.includes(cmd));
+                if (frase.includes("dame la respuesta") || frase.includes("paso") || frase.includes("respuesta") || frase.includes("cuál es") || frase.includes("dímelo")) {
+                    darRespuestaAdivinanza();
+                    return;
+                }
+                if (!esComandoEspecial) {
+                    evaluarRespuesta(frase);
+                    return;
+                }
+            }
+
+            if (frase.includes("chiste")) { decirChiste(); return; }
+            if (frase.includes("adivinanza")) { decirAdivinanza(); return; }
+            if (frase.includes("fecha")) { decirFecha(); return; }
+            if (frase.includes("hora") && !frase.includes("ahora")) { decirHora(); return; }
+            if (frase.includes("clima") || frase.includes("tiempo")) { decirClima(); return; }
+            if (frase.includes("motivación") || frase.includes("ánimo") || frase.includes("motiva")) { decirMotivacion(); return; }
+            if (frase.includes("ayuda") || frase.includes("comandos")) { ayudaVoz(); return; }
+            if (frase.includes("desactivar voz") || frase.includes("apagar voz")) { if (modoVoz) activarVoz(); return; }
+            if (frase.includes("quién está trabajando")) { hablar(`Vendedor: ${vendedorActivo || "ninguno"}, turno: ${turnoActivo || "no definido"}.`); return; }
+            if (frase.includes("resumen del turno")) { resumenTurno(); return; }
+            if (frase.includes("ventas totales") || frase.includes("total de ventas")) { totalVentasHoy(); return; }
+            if (frase.includes("total del carrito") || frase.includes("cuánto llevo") || frase.includes("total carrito")) { totalCarrito(); return; }
+            if (frase.includes("qué productos hay") || frase.includes("lista de productos")) { listarProductos(); return; }
+            if (frase.includes("vaciar carrito") || frase.includes("limpiar carrito")) { vaciarCarritoCompleto(); return; }
+            if (frase.match(/quitar\s+(\w+)/i) || frase.match(/eliminar\s+(\w+)/i)) {
+                const match = frase.match(/quitar\s+(\w+)/i) || frase.match(/eliminar\s+(\w+)/i);
+                if (match && match[1]) eliminarProductoDelCarrito(match[1]);
+                else hablar("No entendí qué producto quitar.");
+                return;
+            }
+            if (frase.match(/stock de (\w+)/i) || frase.match(/cuánto (\w+) queda/i)) {
+                let match = frase.match(/stock de (\w+)/i) || frase.match(/cuánto (\w+) queda/i);
+                if (match && match[1]) consultarStock(match[1]);
+                else hablar("Dime el nombre del producto.");
+                return;
+            }
+            if (frase.includes("cuánto llevamos") || frase.includes("reporte de ventas")) {
+                let total = ventasGlobales.reduce((s, v) => s + v.total, 0);
+                hablar(`Ventas hasta ahora: ${formatearMonedaVoz(total)}.`);
+                return;
+            }
+            if (frase.includes("cobrar efectivo") || frase.includes("cerrar venta") || frase.includes("cobrar")) {
+                if (carrito.length === 0) { hablar("Carrito vacío."); return; }
+                hablar("Procesando venta en efectivo.");
+                await completarVenta('efectivo');
+                return;
+            }
+            if (frase.includes("fiar a") || frase.match(/fi[aá]r\s+a\s+(\w+)/i)) {
+                if (carrito.length === 0) { hablar("Agrega productos primero."); return; }
+                let cliente = "Cliente";
+                let match = frase.match(/fiar a (\w+)/i);
+                if (match && match[1]) cliente = match[1];
+                hablar(`Fiando a ${cliente}.`);
+                await completarVenta('fiar', cliente);
+                return;
+            }
+            if (frase.includes("entró pan") || frase.includes("agregar stock") || frase.includes("reabastecer")) {
+                procesarInventario(frase);
+                return;
+            }
+
+            if (frase.includes("cambio por") || frase.includes("billete de") || frase.includes("pagó con") || frase.includes("pago con") || frase.includes("vuelto") || frase.includes("cambio de")) {
+                let denominacion = null;
+                const matchNum = frase.match(/\b(\d+)\b/);
+                if (matchNum) {
+                    denominacion = parseInt(matchNum[1]);
+                } else {
+                    const palabrasClave = { "cien":100, "cincuenta":50, "veinte":20, "diez":10, "doscientos":200, "quinientos":500, "mil":1000 };
+                    for (let [palabra, valor] of Object.entries(palabrasClave)) {
+                        if (frase.includes(palabra)) {
+                            denominacion = valor;
+                            break;
+                        }
+                    }
+                }
+                if (denominacion) {
+                    if (carrito.length === 0) {
+                        hablar("No hay productos en el carrito.");
+                    } else {
+                        const total = carrito.reduce((s, i) => s + i.precio * i.cantidad, 0);
+                        if (denominacion < total) {
+                            const falta = total - denominacion;
+                            hablar(`El billete de ${denominacion} quetzales no alcanza. Faltan ${formatearMonedaVoz(falta)}.`);
+                        } else {
+                            const cambio = denominacion - total;
+                            if (cambio === 0) {
+                                hablar("Pago exacto, no hay cambio.");
+                            } else {
+                                hablar(`El cambio es de ${formatearMonedaVoz(cambio)}.`);
+                            }
+                        }
+                    }
+                    return;
+                }
+            }
+
+            const producto = extraerProducto(frase);
+            if (producto) {
+                await procesarPedido(frase, producto);
+            } else {
+                hablar("No entendí. Di 'ayuda' para comandos.");
+            }
+        };
+
+        window.activarVoz = activarVoz;
+    }
+
+    console.log('App iniciada correctamente.');
 </script>
 </body>
 </html>
