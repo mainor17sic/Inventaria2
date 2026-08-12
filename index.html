@@ -831,15 +831,15 @@
     async function crearAdminPorDefecto() {
         try {
             const snapshot = await db.collection('usuarios')
-                .where('usuario', '==', 'Minor')
+                .where('usuario', '==', 'mainor')
                 .get();
             if (snapshot.empty) {
                 await db.collection('usuarios').add({
-                    usuario: 'Minor',
-                    contrasena: 'Sic',
+                    usuario: 'mainor',
+                    contrasena: 'sic',
                     rol: 'admin'
                 });
-                console.log('Usuario Minor creado con rol admin');
+                console.log('Usuario mainor creado con rol admin');
             }
         } catch (e) {
             console.error('Error al crear admin por defecto:', e);
